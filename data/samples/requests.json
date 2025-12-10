@@ -1,0 +1,20 @@
+[
+  {
+    "request_id": "R-101",
+    "priority": "High",
+    "status": "pending",
+    "department": "IT"
+  },
+  {
+    "request_id": "R-102",
+    "priority": "Low",
+    "status": "completed",
+    "department": "HR"
+  },
+  {
+    "request_id": "R-103",
+    "priority": "Medium",
+    "status": "canceled",
+    "department": "Finance"
+  }
+]

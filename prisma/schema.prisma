@@ -1,0 +1,762 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String                  @id @default(cuid())
+  username              String                  @unique
+  email                 String?                 @unique
+  passwordHash          String
+  role                  String                  @default("user")
+  // legacy roleId removed
+  unitId                String?                 // Bağlı olduğu birim
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  // Relations
+  requestsOwned         Request[]               @relation("RequestOwner")
+  requestsResponsible   Request[]               @relation("RequestResponsible")
+  comments              Comment[]               @relation("UserComments")
+  // CAPA relations removed
+  notifications         Notification[]
+  notificationPref      NotificationPreference?
+  Order                 Order[]
+  Contract              Contract[]
+  Invoice               Invoice[]
+  // roleId and roleRef removed
+  unit                  OptionItem?             @relation("UserUnit", fields: [unitId], references: [id], onDelete: SetNull)
+  Meeting               Meeting[]
+  MeetingAttendee       MeetingAttendee[]
+  MeetingNote           MeetingNote[]
+  MeetingActionItem     MeetingActionItem[]
+  MeetingSurveyResponse MeetingSurveyResponse[]
+  // Approval workflow
+  approvalRecords       ApprovalRecord[]        @relation("ApprovalRecordApprover")
+  deliveriesReceived    DeliveryReceipt[]
+}
+
+model OptionCategory {
+  id    String       @id @default(cuid())
+  key   String       @unique
+  name  String
+  items OptionItem[]
+}
+
+model OptionItem {
+  id                      String         @id @default(cuid())
+  label                   String
+  active                  Boolean        @default(true)
+  sort                    Int            @default(1)
+  categoryId              String
+  category                OptionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  email                   String?
+  // Back-relations for named relations
+  requestsAsRelatedPerson Request[]      @relation("RequestRelatedPerson")
+  requestsAsUnit          Request[]      @relation("RequestUnit")
+  requestsAsStatus        Request[]      @relation("RequestStatus")
+  requestsAsCurrency      Request[]      @relation("RequestCurrency")
+  requestItemsAsUnit      RequestItem[]  @relation("RequestItemUnit")
+  ordersAsStatus          Order[]        @relation("OrderStatus")
+  ordersAsMethod          Order[]        @relation("OrderMethod")
+  ordersAsRegulation      Order[]        @relation("OrderRegulation")
+  ordersAsCurrency        Order[]        @relation("OrderCurrency")
+  usersAsUnit             User[]         @relation("UserUnit")
+  orderItemsAsUnit        OrderItem[]    
+  deliveriesReceivedAsUnit DeliveryReceipt[] @relation("UnitDeliveries")
+}
+
+model Supplier {
+  id                  String                      @id @default(cuid())
+  name                String                      @unique
+  active              Boolean                     @default(true)
+  // Essentials
+  taxId               String?                     @unique
+  contactName         String?
+  email               String?                     @unique
+  phone               String?
+  address             String?                     @db.VarChar(500)
+  website             String?
+  notes               String?
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  // Relations
+  orders              Order[]
+  // Supplier-related relations
+  evaluations         SupplierEvaluation[]
+  // CAPA relation removed
+  performanceMetrics  SupplierPerformanceMetric[] @relation("SupplierPerformanceMetrics")
+  evaluationSummaries SupplierEvaluationSummary[] @relation("SupplierEvaluationSummaries")
+  alerts              SupplierAlert[]             @relation("SupplierAlerts")
+
+  @@index([active])
+}
+
+model Company {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  active    Boolean @default(true)
+  taxId     String? @unique
+  address   String? @db.VarChar(500)
+  taxOffice String? @db.VarChar(200)
+  phone     String? @db.VarChar(50)
+  email     String? @db.VarChar(200)
+  orders    Order[]
+}
+
+model Request {
+  id                String        @id @default(cuid())
+  barcode           String        @unique
+  createdAt         DateTime      @default(now())
+  subject           String        @db.VarChar(500)
+  justification     String?       @db.VarChar(2000)
+  budget            Decimal       @db.Decimal(18, 2)
+  relatedPersonId   String
+  unitId            String
+  statusId          String
+  currencyId        String
+  unitEmail         String?
+  relatedPerson     OptionItem    @relation("RequestRelatedPerson", fields: [relatedPersonId], references: [id])
+  unit              OptionItem    @relation("RequestUnit", fields: [unitId], references: [id])
+  status            OptionItem    @relation("RequestStatus", fields: [statusId], references: [id])
+  currency          OptionItem    @relation("RequestCurrency", fields: [currencyId], references: [id])
+  items             RequestItem[]
+  orders            Order[]
+  // New: Owner and Responsible relations to User
+  ownerUserId       String?
+  responsibleUserId String?
+  owner             User?         @relation("RequestOwner", fields: [ownerUserId], references: [id])
+  responsible       User?         @relation("RequestResponsible", fields: [responsibleUserId], references: [id])
+  // New: Attachments & Comments
+  attachments       Attachment[]
+  comments          Comment[]
+}
+
+model Attachment {
+  id          String           @id @default(cuid())
+  requestId   String?
+  deliveryId  String?
+  fileName    String
+  url         String
+  type        String?
+  createdAt   DateTime         @default(now())
+  request     Request?         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  delivery    DeliveryReceipt? @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  requestId String
+  text      String
+  authorId  String
+  createdAt DateTime @default(now())
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author    User     @relation("UserComments", fields: [authorId], references: [id])
+}
+
+model RequestItem {
+  id        String     @id @default(cuid())
+  requestId String
+  name      String
+  quantity  Decimal    @db.Decimal(18, 2)
+  unitPrice Decimal    @default(0) @db.Decimal(18, 2)
+  unitId    String
+  unit      OptionItem @relation("RequestItemUnit", fields: [unitId], references: [id])
+  request   Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id                String               @id @default(cuid())
+  barcode           String               @unique
+  createdAt         DateTime             @default(now())
+  estimatedDelivery DateTime?
+  requestId         String?
+  statusId          String
+  methodId          String
+  regulationId      String
+  currencyId        String
+  supplierId        String
+  companyId         String
+  realizedTotal     Decimal              @db.Decimal(18, 2)
+  responsibleUserId String?
+  request           Request?             @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  status            OptionItem           @relation("OrderStatus", fields: [statusId], references: [id])
+  method            OptionItem           @relation("OrderMethod", fields: [methodId], references: [id])
+  regulation        OptionItem           @relation("OrderRegulation", fields: [regulationId], references: [id])
+  currency          OptionItem           @relation("OrderCurrency", fields: [currencyId], references: [id])
+  supplier          Supplier             @relation(fields: [supplierId], references: [id])
+  company           Company              @relation(fields: [companyId], references: [id])
+  items             OrderItem[]
+  // existing relations...
+  contracts           Contract[]
+  invoices            Invoice[]
+  deliveries          DeliveryReceipt[]
+
+  // Supplier-related relations
+  evaluations         SupplierEvaluation[]
+  // CAPA relation removed
+  responsible         User?                @relation(fields: [responsibleUserId], references: [id])
+  deliveryTokens      DeliveryToken[]
+}
+
+model DeliveryToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model DeliveryReceipt {
+  id            String         @id @default(cuid())
+  code          String         @unique // İrsaliye No
+  date          DateTime       // İrsaliye Tarihi
+  deliveryDate  DateTime       @default(now()) // Fiili Teslim Tarihi
+  
+  orderId       String
+  order         Order          @relation(fields: [orderId], references: [id])
+  
+  receiverId    String?        // Made Optional for public
+  receiver      User?          @relation(fields: [receiverId], references: [id]) // Optional relation
+  
+  receiverName  String?        // Public user name
+  receiverUnitId String? // If they select a unit from dropdown
+  receiverUnit  OptionItem? @relation("UnitDeliveries", fields: [receiverUnitId], references: [id])
+  receiverEmail  String?     // For public delivery contact info
+
+  status        String         @default("pending") // pending, approved, rejected
+  notes         String?
+  
+  items         DeliveryItem[]
+  attachments   Attachment[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model DeliveryItem {
+  id               String          @id @default(cuid())
+  deliveryId       String
+  delivery         DeliveryReceipt @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  
+  orderItemId      String
+  orderItem        OrderItem       @relation(fields: [orderItemId], references: [id])
+  
+  quantity         Decimal         @db.Decimal(18, 2)
+  approvedQuantity Decimal?        @db.Decimal(18, 2)
+  
+  notes            String?
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  name        String
+  quantity    Decimal  @db.Decimal(18, 2)
+  unitPrice   Decimal  @default(0) @db.Decimal(18, 2)
+  unitId      String?
+  unit        OptionItem? @relation(fields: [unitId], references: [id])
+  extraCosts  Decimal? @default(0) @db.Decimal(18, 2)
+  
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // Back-relation for delivery items
+  deliveries  DeliveryItem[]
+}
+
+model Contract {
+  id                String               @id @default(cuid())
+  number            String               @unique
+  title             String
+  parties           String               @db.VarChar(500)
+  startDate         DateTime
+  endDate           DateTime?
+  status            String               @db.VarChar(50) // Taslak, Onaylanmış, Aktif, Sonlanmış
+  type              String?              @db.VarChar(50)
+  template          String?              @db.VarChar(50)
+  version           Int                  @default(1)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  deletedAt         DateTime?
+  orderId           String?
+  order             Order?               @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  responsibleUserId String?
+  responsible       User?                @relation(fields: [responsibleUserId], references: [id])
+  histories         ContractHistory[]
+  attachments       ContractAttachment[]
+  revisions         ContractRevision[]
+  events            ContractEvent[]
+}
+
+model ContractHistory {
+  id         String   @id @default(cuid())
+  contractId String
+  date       DateTime @default(now())
+  fromStatus String   @db.VarChar(50)
+  toStatus   String   @db.VarChar(50)
+  version    Int
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+}
+
+model ContractAttachment {
+  id         String   @id @default(cuid())
+  contractId String
+  title      String   @db.VarChar(200)
+  url        String   @db.VarChar(500)
+  mimeType   String   @db.VarChar(100)
+  uploadedAt DateTime @default(now())
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+}
+
+model ContractRevision {
+  id               String    @id @default(cuid())
+  contractId       String
+  createdAt        DateTime  @default(now())
+  createdByUserId  String?
+  pending          Boolean   @default(true)
+  approvedAt       DateTime?
+  approvedByUserId String?
+  changes          Json
+  contract         Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+}
+
+model ContractEvent {
+  id         String   @id @default(cuid())
+  contractId String
+  type       String   @db.VarChar(50) // ör: milestone, reminder, extension
+  date       DateTime
+  note       String?  @db.VarChar(500)
+  createdAt  DateTime @default(now())
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  number            String        @unique
+  orderNo           String        @db.VarChar(100)
+  amount            Decimal       @db.Decimal(18, 2)
+  dueDate           DateTime
+  status            String        @db.VarChar(50) // Beklemede, Ödenmiş, Gecikmiş
+  bank              String?       @db.VarChar(100)
+  createdAt         DateTime      @default(now())
+  orderId           String?
+  order             Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  vatRate           Int?
+  withholdingCode   String?
+  items             InvoiceItem[]
+  responsibleUserId String?
+  responsible       User?         @relation(fields: [responsibleUserId], references: [id])
+}
+
+model InvoiceItem {
+  id        String  @id @default(cuid())
+  invoiceId String
+  name      String
+  quantity  Decimal @db.Decimal(18, 2)
+  unitPrice Decimal @db.Decimal(18, 2)
+  taxRate   Int?
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+// Evaluation question and options (manageable dropdowns)
+model EvaluationQuestion {
+  id            String                     @id @default(cuid())
+  text          String
+  type          String // e.g., "dropdown" | "text" | "rating"
+  active        Boolean                    @default(true)
+  required      Boolean                    @default(false)
+  section       String?                    @db.VarChar(10) // A, B, C gibi
+  sort          Int                        @default(0)
+  // Yeni: puanlama tipi ilişkisi
+  scoringType   ScoringType?               @relation(fields: [scoringTypeId], references: [id], onDelete: SetNull)
+  scoringTypeId String?
+  options       EvaluationOption[]
+  answers       SupplierEvaluationAnswer[]
+}
+
+model EvaluationOption {
+  id         String             @id @default(cuid())
+  label      String
+  question   EvaluationQuestion @relation(fields: [questionId], references: [id])
+  questionId String
+}
+
+// Skor ölçekleri (ör: 1-5, yıldız, yüzdelik)
+model ScoringType {
+  id          String               @id @default(cuid())
+  code        String               @unique // kısa anahtar, ör: rating_1_5
+  name        String
+  kind        String               @db.VarChar(50) // rating | stars | percentage | custom
+  scaleMin    Int                  @default(1)
+  scaleMax    Int                  @default(5)
+  step        Int                  @default(1)
+  active      Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  description String?
+  // Weights for calculation (A, B, C groups)
+  weightA     Float                @default(0.40)
+  weightB     Float                @default(0.30)
+  weightC     Float                @default(0.30)
+  // İlişkiler
+  questions   EvaluationQuestion[]
+}
+
+// Per-order supplier evaluation (ISO 9001)
+model SupplierEvaluation {
+  id          String                     @id @default(cuid())
+  order       Order                      @relation(fields: [orderId], references: [id])
+  orderId     String
+  supplier    Supplier                   @relation(fields: [supplierId], references: [id])
+  supplierId  String
+  submittedAt DateTime?
+  totalScore  Decimal?                   @db.Decimal(18, 2)
+  answers     SupplierEvaluationAnswer[]
+  // CAPA relation removed
+}
+
+model SupplierEvaluationAnswer {
+  id           String             @id @default(cuid())
+  evaluation   SupplierEvaluation @relation(fields: [evaluationId], references: [id])
+  evaluationId String
+  question     EvaluationQuestion @relation(fields: [questionId], references: [id])
+  questionId   String
+  value        String // stores selected option id or free text
+}
+
+// Corrective and Preventive Actions (CAPA)
+// CAPA models removed
+
+// User-defined reporting templates
+model ReportTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  config    Json
+  ownerId   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- Supplier Performance Automation Models ---
+
+// Raw performance metrics collected per supplier and period
+model SupplierPerformanceMetric {
+  id           String   @id @default(cuid())
+  supplier     Supplier @relation("SupplierPerformanceMetrics", fields: [supplierId], references: [id])
+  supplierId   String
+  period       String   @db.VarChar(20) // e.g., "2025-11" (YYYY-MM)
+  source       String   @db.VarChar(50) // ERP | QA | Purchasing | Manual | API
+  // Common KPIs
+  onTimeRate   Float? // 0..1
+  defectRate   Float? // 0..1 (lower is better)
+  avgLeadTime  Float? // days
+  priceIndex   Float? // relative cost index, 1.0 baseline; lower is better
+  serviceScore Float? // 0..1
+  // Additional metadata
+  createdAt    DateTime @default(now())
+
+  @@unique([supplierId, period, source])
+  @@index([supplierId, period])
+}
+
+// Periodic evaluation summary per supplier
+model SupplierEvaluationSummary {
+  id            String   @id @default(cuid())
+  supplier      Supplier @relation("SupplierEvaluationSummaries", fields: [supplierId], references: [id])
+  supplierId    String
+  period        String   @db.VarChar(20)
+  qualityScore  Float
+  deliveryScore Float
+  costScore     Float
+  serviceScore  Float
+  totalScore    Float
+  decision      String   @db.VarChar(50) // Onaylı | Şartlı | Yetersiz
+  createdAt     DateTime @default(now())
+
+  @@unique([supplierId, period])
+  @@index([period, totalScore])
+}
+
+// Generated reports (e.g., monthly batch)
+model SupplierReport {
+  id        String   @id @default(cuid())
+  period    String   @db.VarChar(20)
+  scope     String   @db.VarChar(50) // Global | Company | Category
+  payload   Json
+  createdAt DateTime @default(now())
+}
+
+// Alerts generated on performance drops or threshold breaches
+model SupplierAlert {
+  id           String   @id @default(cuid())
+  supplier     Supplier @relation("SupplierAlerts", fields: [supplierId], references: [id])
+  supplierId   String
+  period       String   @db.VarChar(20)
+  type         String   @db.VarChar(50) // Drop | Threshold | MissingData
+  message      String   @db.VarChar(500)
+  severity     String   @db.VarChar(20) // info | warning | critical
+  createdAt    DateTime @default(now())
+  acknowledged Boolean  @default(false)
+
+  @@index([supplierId, period])
+}
+
+// Login attempts logging for security auditing
+// LoginAttempt modeli kaldırıldı (rollback)
+
+model WithholdingJobType {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  label     String
+  ratio     String
+  active    Boolean  @default(true)
+  sort      Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  type      String   @db.VarChar(50)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  meta      Json?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model NotificationPreference {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  emailEnabled  Boolean  @default(true)
+  inAppEnabled  Boolean  @default(true)
+  digestEnabled Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SmtpSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String?
+  host      String
+  port      Int
+  secure    Boolean  @default(false)
+  user      String
+  pass      String
+  from      String
+  active    Boolean  @default(true)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailLog {
+  id          String    @id @default(cuid())
+  to          String
+  subject     String
+  category    String?   @db.VarChar(50)
+  status      String    @db.VarChar(20) // deferred | sent | failed
+  attempts    Int       @default(0)
+  lastError   String?   @db.VarChar(500)
+  messageId   String?   @db.VarChar(200)
+  previewUrl  String?
+  payloadHtml String?   @db.VarChar(20000)
+  createdAt   DateTime  @default(now())
+  sentAt      DateTime?
+
+  @@index([status, createdAt])
+}
+
+model Meeting {
+  id                    String              @id @default(cuid())
+  title                 String
+  description           String?             @db.VarChar(500)
+  startAt               DateTime
+  endAt                 DateTime?
+  durationMinutes       Int?
+  status                String              @db.VarChar(20)
+  organizerId           String
+  recurrenceRule        String?             @db.VarChar(200)
+  calendarProvider      String?             @db.VarChar(20)
+  externalEventId       String?
+  location              String?             @db.VarChar(200)
+  reminderMinutesBefore Int?
+  lastReminderSentAt    DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  organizer             User                @relation(fields: [organizerId], references: [id])
+  attendees             MeetingAttendee[]
+  notes                 MeetingNote[]
+  actionItems           MeetingActionItem[]
+  attachments           MeetingAttachment[]
+  surveys               MeetingSurvey[]
+  reports               MeetingReport[]
+
+  @@index([startAt])
+  @@index([organizerId])
+  @@index([status])
+}
+
+model MeetingAttendee {
+  id             String    @id @default(cuid())
+  meetingId      String
+  userId         String?
+  email          String?
+  role           String?   @db.VarChar(20)
+  responseStatus String?   @db.VarChar(20)
+  checkedInAt    DateTime?
+  meeting        Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([meetingId])
+}
+
+model MeetingNote {
+  id                String   @id @default(cuid())
+  meetingId         String
+  authorId          String?
+  content           String   @db.VarChar(20000)
+  isEncrypted       Boolean  @default(false)
+  encryptionVersion Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  meeting           Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  author            User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([meetingId, createdAt])
+}
+
+model MeetingActionItem {
+  id          String    @id @default(cuid())
+  meetingId   String
+  title       String    @db.VarChar(200)
+  description String?   @db.VarChar(500)
+  ownerId     String?
+  dueDate     DateTime?
+  status      String    @db.VarChar(20)
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+  meeting     Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  owner       User?     @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@index([meetingId])
+  @@index([status])
+}
+
+model MeetingAttachment {
+  id         String   @id @default(cuid())
+  meetingId  String
+  title      String?  @db.VarChar(200)
+  url        String   @db.VarChar(500)
+  mimeType   String?  @db.VarChar(100)
+  uploadedAt DateTime @default(now())
+  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+}
+
+model MeetingSurvey {
+  id        String                  @id @default(cuid())
+  meetingId String
+  title     String
+  questions Json
+  active    Boolean                 @default(true)
+  createdAt DateTime                @default(now())
+  meeting   Meeting                 @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  responses MeetingSurveyResponse[]
+
+  @@index([meetingId])
+}
+
+model MeetingSurveyResponse {
+  id           String        @id @default(cuid())
+  surveyId     String
+  respondentId String?
+  answers      Json
+  submittedAt  DateTime      @default(now())
+  survey       MeetingSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  respondent   User?         @relation(fields: [respondentId], references: [id], onDelete: SetNull)
+}
+
+model MeetingReport {
+  id          String   @id @default(cuid())
+  meetingId   String
+  generatedAt DateTime @default(now())
+  format      String   @db.VarChar(20)
+  url         String?  @db.VarChar(500)
+  payload     Json?
+  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+}
+
+// ==========================================
+// APPROVAL WORKFLOW SYSTEM
+// ==========================================
+
+// Onay akış tanımları (Talep, Sipariş, vb. için)
+model ApprovalWorkflow {
+  id          String         @id @default(cuid())
+  name        String         @unique // "request_approval", "order_approval"
+  displayName String         @db.VarChar(100) // "Talep Onay Akışı"
+  entityType  String         @db.VarChar(50) // "Request", "Order"
+  active      Boolean        @default(true)
+  steps       ApprovalStep[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+// Onay adımları (her workflow için sıralı adımlar)
+model ApprovalStep {
+  id           String           @id @default(cuid())
+  workflowId   String
+  workflow     ApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  stepOrder    Int              // 1, 2, 3...
+  name         String           @db.VarChar(100) // "Birim Yöneticisi Onayı"
+  description  String?          @db.VarChar(500)
+  approverRole String?          @db.VarChar(50) // "unit_manager", "purchasing", "finance"
+  approverUnit String?          // Specific unit ID (optional)
+  required     Boolean          @default(true)
+  autoApprove  Boolean          @default(false) // Bütçe limiti altındaysa otomatik onayla
+  budgetLimit  Decimal?         @db.Decimal(18, 2) // Otomatik onay için limit
+  createdAt    DateTime         @default(now())
+
+  @@unique([workflowId, stepOrder])
+  @@index([workflowId])
+}
+
+// Onay işlemleri geçmişi (her talep/sipariş için)
+model ApprovalRecord {
+  id           String    @id @default(cuid())
+  entityType   String    @db.VarChar(50) // "Request", "Order"
+  entityId     String    // Talep veya Sipariş ID
+  stepOrder    Int       // Hangi adım (1, 2, 3...)
+  stepName     String    @db.VarChar(100)
+  status       String    @db.VarChar(20) // "pending", "approved", "rejected", "skipped"
+  approverId   String?
+  approver     User?     @relation("ApprovalRecordApprover", fields: [approverId], references: [id], onDelete: SetNull)
+  comment      String?   @db.VarChar(1000)
+  createdAt    DateTime  @default(now())
+  processedAt  DateTime?
+
+  @@index([entityType, entityId])
+  @@index([status])
+  @@index([approverId])
+}
+
+// Role model removed
+

@@ -1,0 +1,55 @@
+{
+  "name": "satinalmaproweb",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run --dir tests/security",
+    "test:watch": "vitest --dir tests/security",
+    "test:ui": "vitest run --dir tests/ui",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init",
+    "prisma:seed": "prisma db seed",
+    "ingest": "node scripts/ingestDataset.mjs"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.18.0",
+    "@react-pdf/renderer": "^4.3.1",
+    "bcryptjs": "^3.0.2",
+    "core-js": "^3.47.0",
+    "html2canvas": "^1.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
+    "next": "16.0.1",
+    "next-auth": "^4.24.13",
+    "nodemailer": "^7.0.11",
+    "pdf-lib": "^1.17.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "recharts": "^3.3.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/nodemailer": "^7.0.4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "babel-plugin-react-compiler": "1.0.0",
+    "baseline-browser-mapping": "^2.9.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.1",
+    "eslint-formatter-unix": "^9.0.1",
+    "prisma": "^6.18.0",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.0.10"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.mjs"
+  }
+}

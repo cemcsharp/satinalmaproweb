@@ -1,0 +1,383 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  email         String?  @unique
+  passwordHash  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  // Relations
+  requestsOwned       Request[] @relation("RequestOwner")
+  requestsResponsible Request[] @relation("RequestResponsible")
+  comments            Comment[] @relation("UserComments")
+}
+
+model OptionCategory {
+  id     String      @id @default(cuid())
+  key    String      @unique
+  name   String
+  items  OptionItem[]
+}
+
+model OptionItem {
+  id         String         @id @default(cuid())
+  label      String
+  active     Boolean        @default(true)
+  sort       Int            @default(1)
+  categoryId String
+  category   OptionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  // Back-relations for named relations
+  requestsAsRelatedPerson Request[]    @relation("RequestRelatedPerson")
+  requestsAsUnit          Request[]    @relation("RequestUnit")
+  requestsAsStatus        Request[]    @relation("RequestStatus")
+  requestsAsCurrency      Request[]    @relation("RequestCurrency")
+  requestItemsAsUnit      RequestItem[] @relation("RequestItemUnit")
+  ordersAsStatus          Order[]      @relation("OrderStatus")
+  ordersAsMethod          Order[]      @relation("OrderMethod")
+  ordersAsRegulation      Order[]      @relation("OrderRegulation")
+  ordersAsCurrency        Order[]      @relation("OrderCurrency")
+}
+
+model Supplier {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  active       Boolean  @default(true)
+  // Essentials
+  taxId        String?  @unique
+  contactName  String?
+  email        String?  @unique
+  phone        String?
+  address      String?  @db.VarChar(500)
+  website      String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  // Relations
+  orders       Order[]
+  // Supplier-related relations
+  evaluations  SupplierEvaluation[]
+  capas        CAPA[]
+
+  @@index([active])
+}
+
+model Company {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  active Boolean @default(true)
+  orders Order[]
+}
+
+model Request {
+  id              String     @id @default(cuid())
+  barcode         String     @unique
+  createdAt       DateTime   @default(now())
+  subject         String     @db.VarChar(500)
+  budget          Decimal    @db.Decimal(18, 2)
+  relatedPersonId String
+  unitId          String
+  statusId        String
+  currencyId      String
+  relatedPerson   OptionItem @relation("RequestRelatedPerson", fields: [relatedPersonId], references: [id])
+  unit            OptionItem @relation("RequestUnit", fields: [unitId], references: [id])
+  status          OptionItem @relation("RequestStatus", fields: [statusId], references: [id])
+  currency        OptionItem @relation("RequestCurrency", fields: [currencyId], references: [id])
+  items           RequestItem[]
+  orders          Order[]
+  // New: Owner and Responsible relations to User
+  ownerUserId       String?
+  responsibleUserId String?
+  owner             User?     @relation("RequestOwner", fields: [ownerUserId], references: [id])
+  responsible       User?     @relation("RequestResponsible", fields: [responsibleUserId], references: [id])
+  // New: Attachments & Comments
+  attachments       Attachment[]
+  comments          Comment[]
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  requestId String
+  fileName  String
+  url       String
+  type      String?
+  createdAt DateTime @default(now())
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  requestId String
+  text      String
+  authorId  String
+  createdAt DateTime @default(now())
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  author    User     @relation("UserComments", fields: [authorId], references: [id])
+}
+
+model RequestItem {
+  id        String     @id @default(cuid())
+  requestId String
+  name      String
+  quantity  Decimal    @db.Decimal(18, 2)
+  unitId    String
+  unit      OptionItem @relation("RequestItemUnit", fields: [unitId], references: [id])
+  request   Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id            String     @id @default(cuid())
+  barcode       String     @unique
+  createdAt     DateTime   @default(now())
+  requestId     String?
+  statusId      String
+  methodId      String
+  regulationId  String
+  currencyId    String
+  supplierId    String
+  companyId     String
+  realizedTotal Decimal    @db.Decimal(18, 2)
+  request       Request?   @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  status        OptionItem @relation("OrderStatus", fields: [statusId], references: [id])
+  method        OptionItem @relation("OrderMethod", fields: [methodId], references: [id])
+  regulation    OptionItem @relation("OrderRegulation", fields: [regulationId], references: [id])
+  currency      OptionItem @relation("OrderCurrency", fields: [currencyId], references: [id])
+  supplier      Supplier   @relation(fields: [supplierId], references: [id])
+  company       Company    @relation(fields: [companyId], references: [id])
+  items         OrderItem[]
+  contracts     Contract[]
+  invoices      Invoice[]
+  // Supplier-related relations
+  evaluations   SupplierEvaluation[]
+  capas         CAPA[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  name      String
+  quantity  Decimal @db.Decimal(18, 2)
+  unitPrice Decimal @db.Decimal(18, 2)
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Contract {
+  id         String   @id @default(cuid())
+  number     String   @unique
+  title      String
+  parties    String   @db.VarChar(500)
+  startDate  DateTime
+  endDate    DateTime
+  status     String   @db.VarChar(50) // Taslak, Onaylanmış, Aktif, Sonlanmış
+  version    Int      @default(1)
+  createdAt  DateTime @default(now())
+  orderId    String?
+  order      Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  histories  ContractHistory[]
+}
+
+model ContractHistory {
+  id         String   @id @default(cuid())
+  contractId String
+  date       DateTime @default(now())
+  fromStatus String   @db.VarChar(50)
+  toStatus   String   @db.VarChar(50)
+  version    Int
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id         String   @id @default(cuid())
+  number     String   @unique
+  orderNo    String   @db.VarChar(100)
+  amount     Decimal  @db.Decimal(18, 2)
+  dueDate    DateTime
+  status     String   @db.VarChar(50) // Beklemede, Ödenmiş, Gecikmiş
+  bank       String?  @db.VarChar(100)
+  createdAt  DateTime @default(now())
+  orderId    String?
+  order      Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+}
+
+// Evaluation question and options (manageable dropdowns)
+model EvaluationQuestion {
+  id        String  @id @default(cuid())
+  text      String
+  type      String  // e.g., "dropdown" | "text" | "rating"
+  active    Boolean @default(true)
+  required  Boolean @default(false)
+  section   String? @db.VarChar(10) // A, B, C gibi
+  sort      Int     @default(0)
+  // Yeni: puanlama tipi ilişkisi
+  scoringType   ScoringType? @relation(fields: [scoringTypeId], references: [id], onDelete: SetNull)
+  scoringTypeId String?
+  options   EvaluationOption[]
+  answers   SupplierEvaluationAnswer[]
+}
+
+model EvaluationOption {
+  id         String  @id @default(cuid())
+  label      String
+  question   EvaluationQuestion @relation(fields: [questionId], references: [id])
+  questionId String
+}
+
+// Skor ölçekleri (ör: 1-5, yıldız, yüzdelik)
+model ScoringType {
+  id        String  @id @default(cuid())
+  code      String  @unique // kısa anahtar, ör: rating_1_5
+  name      String
+  kind      String  @db.VarChar(50) // rating | stars | percentage | custom
+  scaleMin  Int     @default(1)
+  scaleMax  Int     @default(5)
+  step      Int     @default(1)
+  active    Boolean @default(true)
+  createdAt DateTime @default(now())
+  description String?
+  // İlişkiler
+  questions EvaluationQuestion[]
+}
+
+// Per-order supplier evaluation (ISO 9001)
+model SupplierEvaluation {
+  id          String   @id @default(cuid())
+  order       Order    @relation(fields: [orderId], references: [id])
+  orderId     String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  supplierId  String
+  submittedAt DateTime?
+  totalScore  Decimal? @db.Decimal(18, 2)
+  answers     SupplierEvaluationAnswer[]
+  capas       CAPA[]
+}
+
+model SupplierEvaluationAnswer {
+  id           String             @id @default(cuid())
+  evaluation   SupplierEvaluation @relation(fields: [evaluationId], references: [id])
+  evaluationId String
+  question     EvaluationQuestion @relation(fields: [questionId], references: [id])
+  questionId   String
+  value        String // stores selected option id or free text
+}
+
+// Corrective and Preventive Actions (CAPA)
+model CAPA {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  corrective   String?
+  preventive   String?
+  status       String   // e.g., "open" | "in_progress" | "closed"
+  openedAt     DateTime @default(now())
+  closedAt     DateTime?
+  // Relations
+  supplier     Supplier @relation(fields: [supplierId], references: [id])
+  supplierId   String
+  order        Order?   @relation(fields: [orderId], references: [id])
+  orderId      String?
+  evaluation   SupplierEvaluation? @relation(fields: [evaluationId], references: [id])
+  evaluationId String?
+}
+
+// User-defined reporting templates
+model ReportTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  config    Json
+  ownerId   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- Supplier Performance Automation Models ---
+
+// Raw performance metrics collected per supplier and period
+model SupplierPerformanceMetric {
+  id            String   @id @default(cuid())
+  supplier      Supplier @relation(fields: [supplierId], references: [id])
+  supplierId    String
+  period        String   @db.VarChar(20) // e.g., "2025-11" (YYYY-MM)
+  source        String   @db.VarChar(50) // ERP | QA | Purchasing | Manual | API
+  // Common KPIs
+  onTimeRate    Float?   // 0..1
+  defectRate    Float?   // 0..1 (lower is better)
+  avgLeadTime   Float?   // days
+  priceIndex    Float?   // relative cost index, 1.0 baseline; lower is better
+  serviceScore  Float?   // 0..1
+  // Additional metadata
+  createdAt     DateTime @default(now())
+
+  @@unique([supplierId, period, source])
+  @@index([supplierId, period])
+}
+
+// Periodic evaluation summary per supplier
+model SupplierEvaluationSummary {
+  id             String   @id @default(cuid())
+  supplier       Supplier @relation(fields: [supplierId], references: [id])
+  supplierId     String
+  period         String   @db.VarChar(20)
+  qualityScore   Float
+  deliveryScore  Float
+  costScore      Float
+  serviceScore   Float
+  totalScore     Float
+  decision       String   @db.VarChar(50) // Onaylı | Şartlı | Yetersiz
+  createdAt      DateTime @default(now())
+
+  @@unique([supplierId, period])
+  @@index([period, totalScore])
+}
+
+// Generated reports (e.g., monthly batch)
+model SupplierReport {
+  id         String   @id @default(cuid())
+  period     String   @db.VarChar(20)
+  scope      String   @db.VarChar(50) // Global | Company | Category
+  payload    Json
+  createdAt  DateTime @default(now())
+}
+
+// Alerts generated on performance drops or threshold breaches
+model SupplierAlert {
+  id            String   @id @default(cuid())
+  supplier      Supplier @relation(fields: [supplierId], references: [id])
+  supplierId    String
+  period        String   @db.VarChar(20)
+  type          String   @db.VarChar(50) // Drop | Threshold | MissingData
+  message       String   @db.VarChar(500)
+  severity      String   @db.VarChar(20) // info | warning | critical
+  createdAt     DateTime @default(now())
+  acknowledged  Boolean  @default(false)
+
+  @@index([supplierId, period])
+}
+
+// Login attempts logging for security auditing
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  username   String?
+  userId     String?
+  ip         String?
+  userAgent  String?
+  success    Boolean
+  reason     String?  @db.VarChar(200)
+  createdAt  DateTime @default(now())
+
+  @@index([username])
+  @@index([userId])
+  @@index([createdAt])
+}

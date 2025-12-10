@@ -1,0 +1,98 @@
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { verifyPassword } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { rateLimiter } from "@/lib/rateLimiter";
+import { headers } from "next/headers";
+
+export const authOptions: NextAuthOptions = {
+  session: { strategy: "jwt" },
+  providers: [
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        username: { label: "Username", type: "text" },
+        userId: { label: "User ID", type: "text" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        const username = String(credentials?.username || "").trim();
+        const userId = String(credentials?.userId || "").trim();
+        const password = String(credentials?.password || "").trim();
+
+        // Require password and at least one identifier
+        if (!password || (!username && !userId)) {
+          return null;
+        }
+
+        // Prefer username if both were provided
+        const identifier = username || userId;
+
+        // Brute-force protection: block if identifier is currently blocked
+        if (rateLimiter.isBlocked(identifier)) {
+          return null;
+        }
+
+        // Strict: only DB-backed users are allowed
+        let user: any = null;
+        if (username) {
+          user = await prisma.user.findUnique({ where: { username } });
+        } else if (userId) {
+          user = await prisma.user.findUnique({ where: { id: userId } });
+        }
+
+        const hdrs = headers();
+        const ip = (hdrs.get("x-forwarded-for") || hdrs.get("x-real-ip") || "").split(",")[0] || null;
+        const userAgent = hdrs.get("user-agent") || null;
+
+        if (!user) {
+          // Record failed attempt
+          rateLimiter.recordAttempt(identifier, false);
+          try {
+            await (prisma as any).loginAttempt?.create?.({
+              data: { username: username || null, userId: userId || null, ip, userAgent, success: false, reason: "not_found" }
+            });
+          } catch {}
+          return null;
+        }
+        const ok = await verifyPassword(password, user.passwordHash);
+        if (!ok) {
+          // Record failed attempt
+          rateLimiter.recordAttempt(identifier, false);
+          try {
+            await (prisma as any).loginAttempt?.create?.({
+              data: { username: username || null, userId: userId || null, ip, userAgent, success: false, reason: "invalid_password" }
+            });
+          } catch {}
+          return null;
+        }
+
+        // Successful login: reset limiter and log
+        rateLimiter.recordAttempt(identifier, true);
+        try {
+          await (prisma as any).loginAttempt?.create?.({
+            data: { username: username || null, userId: userId || null, ip, userAgent, success: true }
+          });
+        } catch {}
+        return { id: user.id, email: user.email ?? null };
+      }
+    })
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.userId = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token.userId) {
+        session.user.id = token.userId as string;
+      }
+      return session;
+    }
+  },
+  pages: {
+    signIn: "/login"
+  }
+};
