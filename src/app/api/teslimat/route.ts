@@ -10,6 +10,10 @@ export async function POST(req: NextRequest) {
         const auth = await requireAuthApi(req);
         if (!auth) return jsonError(401, "unauthorized");
 
+        // Verify user exists (prevent FK error if DB was reset)
+        const userExists = await prisma.user.findUnique({ where: { id: auth.userId } });
+        if (!userExists) return jsonError(401, "user_not_found_relogin");
+
         const body = await req.json();
         const { orderId, code, date, items, action } = body;
 
@@ -175,7 +179,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, id: delivery.id });
 
     } catch (e: any) {
-        console.error("Delivery POST Error (Stack):", e.stack); // Print full stack
+        console.error("Delivery POST Error (Stack):", e.stack);
+
+        // Handle Unique Constraint Violation (P2002)
+        if (e.code === 'P2002' && e.meta?.target?.includes('code')) {
+            return jsonError(400, "duplicate_code", { message: "Bu İrsaliye Numarası/Belge Kodu ile daha önce bir kayıt oluşturulmuş. Lütfen kontrol edip farklı bir numara giriniz." });
+        }
+
         return jsonError(500, "server_error", { message: e.message, stack: e.stack });
     }
 }

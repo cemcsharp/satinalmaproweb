@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
                         receiverName,
                         receiverEmail: body.receiverEmail || null,
                         receiverUnitId: body.receiverUnitId || null,
-                        status: "pending", // Default status
+                        status: "pending_verification", // Requires admin approval
                         code: code || `IRS-${order.barcode}-${Date.now()}`,
                         date: date ? new Date(date) : new Date(),
                         notes,
@@ -163,13 +163,18 @@ export async function GET(req: NextRequest) {
             };
         });
 
+        const totalDeliveriesCount = await prisma.deliveryReceipt.count({
+            where: { orderId: validToken.order.id }
+        });
+
         const orderData = {
             id: validToken.order.id,
             barcode: validToken.order.barcode,
             supplierName: validToken.order.supplier?.name,
             companyName: validToken.order.companyName,
             items,
-            units
+            units,
+            deliveryCount: totalDeliveriesCount
         };
 
         return NextResponse.json(orderData);

@@ -107,6 +107,27 @@ export default function SiparisDetayPage() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push("/siparis/liste")}>Listeye Dön</Button>
             <Button variant="gradient" onClick={() => router.push(`/siparis/duzenle/${data.id}`)} className="shadow-lg shadow-blue-500/20">Düzenle</Button>
+            <Button
+              variant="secondary"
+              onClick={() => router.push(`/fatura/olustur?orderNo=${encodeURIComponent(data.barcode)}`)}
+              title="Siparişe istinaden fatura oluştur"
+            >
+              Fatura Oluştur
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => router.push(`/teslimat/olustur?orderId=${data.id}`)}
+              title="Yeni teslimat/irsaliye girişi yap"
+            >
+              Teslimat Ekle
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => router.push(`/sozlesme/olustur?orderBarcode=${encodeURIComponent(data.barcode)}`)}
+              title="Sözleşme taslağı oluştur"
+            >
+              Sözleşme Oluştur
+            </Button>
           </div>
         }
       />

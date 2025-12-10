@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import useLocalStorageState from "@/lib/useLocalStorageState";
 import Button from "@/components/ui/Button";
@@ -17,29 +17,18 @@ const emptyOptions: OptionsPayload = { siparisDurumu: [], alimYontemi: [], yonet
 
 export default function SiparisOlusturPage() {
   const { show } = useToast();
-  const router = useRouter();
 
-  // Permission check
-  useEffect(() => {
-    fetch("/api/profile")
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) {
-          const permissions = data.permissions || [];
-          const isAdmin = data.role === "admin" || data.roleRef?.key === "admin";
-          if (!isAdmin && !permissions.includes("siparis:create")) {
-            show({ title: "Erişim Reddedildi", description: "Bu sayfayı görüntülemek için yetkiniz yok.", variant: "error" });
-            router.push("/");
-          }
-        }
-      })
-      .catch(() => { });
-  }, [router, show]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialRequestBarcode = searchParams.get("requestBarcode") || "";
+
+  // Permission check removed as requested
+  // users can access this page without restrictions
 
   const [orderBarcode, setOrderBarcode] = useState("");
   const [uniqueState, setUniqueState] = useState<"unknown" | "checking" | "unique" | "duplicate">("unknown");
   const [redirectTo, setRedirectTo] = useState<string | null>(null);
-  const [linkedRequestBarcode, setLinkedRequestBarcode] = useState("");
+  const [linkedRequestBarcode, setLinkedRequestBarcode] = useState(initialRequestBarcode);
   const [linkedRequestBudget, setLinkedRequestBudget] = useState<number | "">("");
   const [budgetInput, setBudgetInput] = useState<string>("");
   const [linkedRequestId, setLinkedRequestId] = useState<string | null>(null);
@@ -165,6 +154,28 @@ export default function SiparisOlusturPage() {
       }
     })();
   }, []);
+
+
+
+  // Auto-search if initial barcode exists
+  useEffect(() => {
+    if (initialRequestBarcode && linkedRequestBarcode === initialRequestBarcode) {
+      // Trigger validation and fetch
+      validateRequestBarcode(initialRequestBarcode).then(ok => {
+        if (ok) {
+          fetch(`/api/talep?q=${encodeURIComponent(initialRequestBarcode)}&pageSize=1`)
+            .then(res => res.json())
+            .then(data => {
+              const first = (data?.items || [])[0];
+              if (first) {
+                setLinkedRequestId(first.id);
+                fetchRequestDetailById(first.id);
+              }
+            });
+        }
+      });
+    }
+  }, [initialRequestBarcode]);
 
   useEffect(() => {
     const label = (linkedRequestDetail?.unit || "").trim();

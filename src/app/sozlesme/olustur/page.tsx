@@ -15,22 +15,8 @@ function SozlesmeOlusturForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Permission check
-  useEffect(() => {
-    fetch("/api/profile")
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) {
-          const permissions = data.permissions || [];
-          const isAdmin = data.role === "admin" || data.roleRef?.key === "admin";
-          if (!isAdmin && !permissions.includes("sozlesme:create")) {
-            show({ title: "Erişim Reddedildi", description: "Bu sayfayı görüntülemek için yetkiniz yok.", variant: "error" });
-            router.push("/");
-          }
-        }
-      })
-      .catch(() => { });
-  }, [router, show]);
+  // Permission check removed as requested
+  // users can access this page without restrictions
 
   const [title, setTitle] = useState(searchParams.get("title") ?? "");
   const [parties, setParties] = useState(searchParams.get("parties") ?? "");

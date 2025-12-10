@@ -58,22 +58,8 @@ export default function SiparisDuzenlePage() {
     { name: "Ofis Sandalyesi", unitPrice: 2500, unitId: "u1" },
   ], []);
 
-  // Permission check
-  useEffect(() => {
-    fetch("/api/profile")
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) {
-          setPermissions(data.permissions || []);
-          const isAdmin = data.role === "admin" || data.roleRef?.key === "admin";
-          if (!isAdmin && !data.permissions?.includes("siparis:edit")) {
-            show({ title: "Erişim Reddedildi", description: "Bu sayfayı görüntülemek için yetkiniz yok.", variant: "error" });
-            router.push("/siparis/liste");
-          }
-        }
-      })
-      .catch(() => { });
-  }, [router, show]);
+  // Permission check removed as requested
+  // users can access this page without restrictions
 
   // Load Options
   useEffect(() => {

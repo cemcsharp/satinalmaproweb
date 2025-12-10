@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Modal from "@/components/ui/Modal";
@@ -16,6 +17,9 @@ type DeliverySectionProps = {
 
 export default function DeliverySection({ orderId, orderBarcode, orderItems, onUpdate }: DeliverySectionProps) {
     const { show } = useToast();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
     const [deliveries, setDeliveries] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
@@ -114,6 +118,17 @@ export default function DeliverySection({ orderId, orderBarcode, orderItems, onU
         loadDeliveries();
     }, [orderId]);
 
+    // Auto-open modal if action=new-delivery
+    useEffect(() => {
+        if (searchParams.get("action") === "new-delivery") {
+            setModalOpen(true);
+            // Optional: Clean up URL
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("action");
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+        }
+    }, [searchParams]);
+
     const handleSubmit = async () => {
         setSubmitting(true);
         try {
@@ -184,12 +199,12 @@ export default function DeliverySection({ orderId, orderBarcode, orderItems, onU
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-slate-800">Teslimat Geçmişi</h3>
                 <div className="flex gap-2">
-                    <Button size="sm" variant="outline" tone="info" onClick={generateToken}>
-                        Link Paylaş
+                    <Button variant="outline" onClick={() => router.push(`/teslimat/olustur?orderId=${orderId}`)}>
+                        Manuel Giriş
                     </Button>
-                    <Button onClick={() => setModalOpen(true)} variant="primary">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                        Yeni Teslimat Girişi
+                    <Button variant="primary" onClick={generateToken}>
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        Teslim Alana Gönder
                     </Button>
                 </div>
             </div>
@@ -238,111 +253,64 @@ export default function DeliverySection({ orderId, orderBarcode, orderItems, onU
 
 
             {/* Share Modal */}
-            {
-                showShareModal && token && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                        <Card className="w-full max-w-md p-6 relative bg-white">
-                            <button
-                                onClick={() => setShowShareModal(false)}
-                                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
-                            >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
+            {showShareModal && token && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <Card className="w-full max-w-md p-6 relative bg-white">
+                        <button
+                            onClick={() => setShowShareModal(false)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
 
-                            <h3 className="text-lg font-bold mb-4">Dijital Teslimat Linki</h3>
-                            <p className="text-sm text-slate-600 mb-4">
-                                Bu linki depo görevlisine veya teslim alacak kişiye gönderin. Giriş yapmasına gerek kalmadan teslimat kaydı oluşturabilir.
-                            </p>
-
-                            <div className="flex gap-2 mb-4">
-                                <input
-                                    readOnly
-                                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/teslimat/${token}`}
-                                    className="flex-1 px-3 py-2 bg-slate-50 border rounded text-xs text-slate-600 font-mono"
-                                />
-                                <Button size="sm" onClick={copyLink}>Kopyala</Button>
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                             </div>
-
-                            <div className="bg-yellow-50 text-yellow-800 text-xs p-3 rounded mb-4">
-                                Bu link 7 gün boyunca geçerlidir.
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800">Teslimat Linki Hazır</h3>
+                                <p className="text-xs text-slate-500">Link 7 gün geçerlidir</p>
                             </div>
+                        </div>
 
-                            <div className="border-t pt-4">
-                                <h4 className="text-sm font-semibold mb-2 text-slate-700">E-posta ile Gönder (Sistem)</h4>
-                                <div className="flex gap-2">
-                                    <Input
-                                        placeholder="alici@sirket.com"
-                                        className="flex-1 text-sm h-9"
-                                        value={shareEmail}
-                                        onChange={(e) => setShareEmail(e.target.value)}
-                                    />
-                                    <Button size="sm" onClick={sendShareLink} disabled={sendingEmail}>
-                                        {sendingEmail ? "Gönderiliyor..." : "Gönder"}
-                                    </Button>
-                                </div>
+                        {/* Link Preview */}
+                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4">
+                            <p className="text-xs text-slate-500 mb-1">Paylaşım Linki:</p>
+                            <p className="text-sm font-mono text-blue-600 break-all">{typeof window !== 'undefined' ? `${window.location.origin}/teslimat/${token}` : `/teslimat/${token}`}</p>
+                        </div>
+
+                        {/* Copy Button */}
+                        <Button variant="outline" className="w-full mb-4" onClick={copyLink}>
+                            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            Linki Kopyala
+                        </Button>
+
+                        <div className="relative mb-4">
+                            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
+                            <div className="relative flex justify-center text-xs"><span className="px-2 bg-white text-slate-400">veya e-posta ile gönder</span></div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <Input
+                                placeholder="ornek@sirket.com"
+                                className="w-full text-sm"
+                                value={shareEmail}
+                                onChange={(e) => setShareEmail(e.target.value)}
+                                type="email"
+                            />
+                            <div className="flex gap-2">
+                                <Button variant="outline" className="flex-1" onClick={() => setShowShareModal(false)}>İptal</Button>
+                                <Button variant="primary" className="flex-1" onClick={sendShareLink} disabled={sendingEmail || !shareEmail} loading={sendingEmail}>
+                                    E-posta Gönder
+                                </Button>
                             </div>
-                        </Card>
-                    </div>
-                )
-            }
+                        </div>
+                    </Card>
+                </div>
+            )}
 
             {/* New Delivery Modal */}
-            <Modal
-                isOpen={modalOpen}
-                onClose={() => setModalOpen(false)}
-                title="Yeni Teslimat / İrsaliye Girişi"
-                size="lg"
-            >
-                <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                        <Input label="İrsaliye No / Belge Kodu" value={formCode} onChange={(e) => setFormCode(e.target.value)} placeholder="Örn: IRS-2024-001" />
-                        <Input type="date" label="İrsaliye Tarihi" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
-                    </div>
 
-                    <div className="border rounded-lg overflow-hidden">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-50 text-slate-500 font-semibold border-b">
-                                <tr>
-                                    <th className="p-3">Ürün</th>
-                                    <th className="p-3 text-right">Sipariş</th>
-                                    <th className="p-3 text-right">Önceki T.</th>
-                                    <th className="p-3 text-right">Kalan</th>
-                                    <th className="p-3 w-32 text-right">Gelen Miktar</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {orderItems.map((item) => {
-                                    const total = Number(item.quantity);
-                                    const rem = getRemaining(item.id, total);
-                                    return (
-                                        <tr key={item.id} className="bg-white">
-                                            <td className="p-3 font-medium text-slate-700">{item.name}</td>
-                                            <td className="p-3 text-right text-slate-500">{total}</td>
-                                            <td className="p-3 text-right text-slate-500">{deliveredTotals[item.id] || 0}</td>
-                                            <td className="p-3 text-right font-bold text-blue-600">{rem}</td>
-                                            <td className="p-3">
-                                                <Input
-                                                    type="number"
-                                                    className="text-right h-9"
-                                                    min={0}
-                                                    placeholder="0"
-                                                    value={inputs[item.id] || ""}
-                                                    onChange={(e) => setInputs(p => ({ ...p, [item.id]: e.target.value }))}
-                                                />
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4 border-t">
-                        <Button variant="outline" onClick={() => setModalOpen(false)}>İptal</Button>
-                        <Button variant="primary" onClick={handleSubmit} loading={submitting}>Kaydet ve Onayla</Button>
-                    </div>
-                </div>
-            </Modal>
         </div >
     );
 }

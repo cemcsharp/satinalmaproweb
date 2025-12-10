@@ -108,7 +108,7 @@ export default function Icon({ name, className = "" }: IconProps) {
         truck: (
             <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 02-1-1h-2.586a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 4H4c-.98 0-2 1.22-2 2.5V14a1 1 0 001 1h1m5 1h2a1 1 0 001-1v-4a1 1 0 00-1-1h-2m0 0l-2-2" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 01-1-1h-2.586a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 4H4c-.98 0-2 1.22-2 2.5V14a1 1 0 001 1h1m5 1h2a1 1 0 001-1v-4a1 1 0 00-1-1h-2m0 0l-2-2" />
             </svg>
         ), // Fixed truck below
         "clipboard-check": (

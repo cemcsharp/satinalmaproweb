@@ -37,7 +37,8 @@ export default function PublicDeliveryForm({ params }: { params: Promise<{ token
             if (res.ok) {
                 const data = await res.json();
                 setOrder(data);
-                setFormCode(`IRS-${data.barcode}`);
+                const suffix = data.deliveryCount > 0 ? `-${data.deliveryCount + 1}` : "";
+                setFormCode(`IRS-${data.barcode}${suffix}`);
             } else { setError("Geçersiz link."); }
         } catch { setError("Sunucu hatası."); } finally { setLoading(false); }
     };

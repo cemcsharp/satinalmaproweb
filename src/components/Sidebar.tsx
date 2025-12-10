@@ -38,9 +38,9 @@ const menuItems: MenuItem[] = [
     { label: "Değerlendirmeler", href: "/tedarikci/degerlendirmeler", icon: "bar-chart", category: "Tedarikçi", requiredPermission: "tedarikci:read" },
     { label: "Raporlar", href: "/raporlama/raporlar", icon: "clipboard", category: "Raporlama", requiredPermission: "rapor:read" },
     { label: "Dashboard", href: "/raporlama/dashboard", icon: "pie-chart", category: "Raporlama", requiredPermission: "rapor:read" },
-    { label: "Genel Ayarlar", href: "/ayarlar", icon: "settings", category: "Ayarlar", requiredPermission: "ayarlar:read" },
-    { label: "Kullanıcılar", href: "/ayarlar/kullanicilar", icon: "users", category: "Ayarlar", requiredPermission: "user:manage" },
-    { label: "Takvim", href: "/ozel/takvim", icon: "calendar", category: "Ana" },
+    { label: "Genel Ayarlar", href: "/ayarlar", icon: "settings", category: "Ayarlar" },
+    // Meeting module removed
+    // Calendar module removed
 ];
 
 // Restricted menu for birim_evaluator role
@@ -111,13 +111,8 @@ export default function Sidebar() {
     const isAdmin = userRole === "admin";
 
     // Filter menu items based on permissions for ALL roles (including birim_evaluator)
-    const filteredMenuItems = menuItems.filter(item => {
-        if (!item.requiredPermission) return true; // No permission required (Dashboard, Takvim, etc.)
-        if (isAdmin) return true; // Admin sees everything
-        // If permissions not yet loaded, show all menus
-        if (!permissionsLoaded) return true;
-        return hasPermission(userPermissions, item.requiredPermission, userRole);
-    });
+    // Show all items as requested
+    const filteredMenuItems = menuItems;
 
     // Add evaluator-specific menu items if user has evaluation:submit permission
     const evaluatorExtraItems: MenuItem[] = [];

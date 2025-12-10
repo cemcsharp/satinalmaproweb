@@ -23,12 +23,12 @@ export async function POST(req: NextRequest) {
     const auth = await requireAuthApi(req);
     if (!auth) return jsonError(401, "unauthorized");
 
-    // Import permission helpers and check create permission
-    const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-    const user = await getUserWithPermissions(req);
-    if (!user || !userHasPermission(user, "talep:create")) {
-      return jsonError(403, "forbidden");
-    }
+    // Permission check removed as requested
+    // const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
+    // const user = await getUserWithPermissions(req);
+    // if (!user || !userHasPermission(user, "talep:create")) {
+    //   return jsonError(403, "forbidden");
+    // }
 
     const body = (await req.json()) as CreateRequestBody;
     if (!body?.barcode || !body.subject || !body.budget || !body.relatedPersonId || !body.unitId || !body.statusId || !body.currencyId) {
@@ -162,11 +162,16 @@ export async function GET(req: NextRequest) {
       if (dateToValid) where.createdAt.lte = dateTo as Date;
     }
 
-    // Unit-based data isolation: non-admin users only see their unit's data
+    // Unit-based data isolation REMOVED as requested. Everyone sees all data.
+    /*
     if (!user.isAdmin && user.unitId) {
       where.unitId = user.unitId;
     } else if (unit) {
-      // If admin or no unitId, use the filter from query params
+      where.unit = { is: { label: unit } };
+    }
+    */
+    // If specific filter requested via query param, still apply it
+    if (unit) {
       where.unit = { is: { label: unit } };
     }
 

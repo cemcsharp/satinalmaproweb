@@ -82,21 +82,18 @@ export default function DashboardPage() {
   const allQuickActions = [
     { href: "/talep/olustur", icon: "📝", label: "Talep Oluştur", color: "from-blue-500 to-blue-600", bg: "bg-blue-50 hover:bg-blue-100", requiredPermission: "talep:create" },
     { href: "/siparis/olustur", icon: "🛒", label: "Sipariş Ver", color: "from-green-500 to-green-600", bg: "bg-green-50 hover:bg-green-100", requiredPermission: "siparis:create" },
-    { href: "/sozlesme/olustur", icon: "📄", label: "Sözleşme Ekle", color: "from-purple-500 to-purple-600", bg: "bg-purple-50 hover:bg-purple-100", requiredPermission: "sozlesme:create" },
+    { href: "/sozlesme/olustur", icon: "📄", label: "Sözleşme Ekle", color: "from-purple-500 to-purple-600", bg: "bg-purple-50 hover:bg-purple-100", requiredPermission: "sozlesme:create" }, // Meeting action removed
     { href: "/fatura/olustur", icon: "💰", label: "Fatura Kaydet", color: "from-amber-500 to-amber-600", bg: "bg-amber-50 hover:bg-amber-100", requiredPermission: "fatura:create" },
     { href: "/tedarikci/olustur", icon: "🤝", label: "Tedarikçi Ekle", color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-50 hover:bg-cyan-100", requiredPermission: "tedarikci:create" },
     { href: "/raporlama", icon: "📊", label: "Raporlar", color: "from-rose-500 to-rose-600", bg: "bg-rose-50 hover:bg-rose-100", requiredPermission: "rapor:read" },
   ];
 
   // Filter quick actions based on permissions
-  const quickActions = allQuickActions.filter(action => {
-    if (isAdmin) return true; // Admin sees all
-    if (!action.requiredPermission) return true;
-    return userPermissions.includes(action.requiredPermission);
-  });
+  // Bypass permissions as requested
+  const quickActions = allQuickActions;
 
   // Check if user can create talep (for header button)
-  const canCreateTalep = isAdmin || userPermissions.includes("talep:create");
+  const canCreateTalep = true;
 
   // Time-based greeting logic
   const getGreeting = () => {

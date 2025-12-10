@@ -35,11 +35,7 @@ model User {
   Invoice               Invoice[]
   // roleId and roleRef removed
   unit                  OptionItem?             @relation("UserUnit", fields: [unitId], references: [id], onDelete: SetNull)
-  Meeting               Meeting[]
-  MeetingAttendee       MeetingAttendee[]
-  MeetingNote           MeetingNote[]
-  MeetingActionItem     MeetingActionItem[]
-  MeetingSurveyResponse MeetingSurveyResponse[]
+  // Meeting relations removed
   // Approval workflow
   approvalRecords       ApprovalRecord[]        @relation("ApprovalRecordApprover")
   deliveriesReceived    DeliveryReceipt[]
@@ -581,128 +577,8 @@ model EmailLog {
   @@index([status, createdAt])
 }
 
-model Meeting {
-  id                    String              @id @default(cuid())
-  title                 String
-  description           String?             @db.VarChar(500)
-  startAt               DateTime
-  endAt                 DateTime?
-  durationMinutes       Int?
-  status                String              @db.VarChar(20)
-  organizerId           String
-  recurrenceRule        String?             @db.VarChar(200)
-  calendarProvider      String?             @db.VarChar(20)
-  externalEventId       String?
-  location              String?             @db.VarChar(200)
-  reminderMinutesBefore Int?
-  lastReminderSentAt    DateTime?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  organizer             User                @relation(fields: [organizerId], references: [id])
-  attendees             MeetingAttendee[]
-  notes                 MeetingNote[]
-  actionItems           MeetingActionItem[]
-  attachments           MeetingAttachment[]
-  surveys               MeetingSurvey[]
-  reports               MeetingReport[]
-
-  @@index([startAt])
-  @@index([organizerId])
-  @@index([status])
-}
-
-model MeetingAttendee {
-  id             String    @id @default(cuid())
-  meetingId      String
-  userId         String?
-  email          String?
-  role           String?   @db.VarChar(20)
-  responseStatus String?   @db.VarChar(20)
-  checkedInAt    DateTime?
-  meeting        Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([meetingId])
-}
-
-model MeetingNote {
-  id                String   @id @default(cuid())
-  meetingId         String
-  authorId          String?
-  content           String   @db.VarChar(20000)
-  isEncrypted       Boolean  @default(false)
-  encryptionVersion Int?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  meeting           Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  author            User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
-
-  @@index([meetingId, createdAt])
-}
-
-model MeetingActionItem {
-  id          String    @id @default(cuid())
-  meetingId   String
-  title       String    @db.VarChar(200)
-  description String?   @db.VarChar(500)
-  ownerId     String?
-  dueDate     DateTime?
-  status      String    @db.VarChar(20)
-  createdAt   DateTime  @default(now())
-  completedAt DateTime?
-  meeting     Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  owner       User?     @relation(fields: [ownerId], references: [id], onDelete: SetNull)
-
-  @@index([meetingId])
-  @@index([status])
-}
-
-model MeetingAttachment {
-  id         String   @id @default(cuid())
-  meetingId  String
-  title      String?  @db.VarChar(200)
-  url        String   @db.VarChar(500)
-  mimeType   String?  @db.VarChar(100)
-  uploadedAt DateTime @default(now())
-  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-
-  @@index([meetingId])
-}
-
-model MeetingSurvey {
-  id        String                  @id @default(cuid())
-  meetingId String
-  title     String
-  questions Json
-  active    Boolean                 @default(true)
-  createdAt DateTime                @default(now())
-  meeting   Meeting                 @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  responses MeetingSurveyResponse[]
-
-  @@index([meetingId])
-}
-
-model MeetingSurveyResponse {
-  id           String        @id @default(cuid())
-  surveyId     String
-  respondentId String?
-  answers      Json
-  submittedAt  DateTime      @default(now())
-  survey       MeetingSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  respondent   User?         @relation(fields: [respondentId], references: [id], onDelete: SetNull)
-}
-
-model MeetingReport {
-  id          String   @id @default(cuid())
-  meetingId   String
-  generatedAt DateTime @default(now())
-  format      String   @db.VarChar(20)
-  url         String?  @db.VarChar(500)
-  payload     Json?
-  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-
-  @@index([meetingId])
-}
+// Meeting models removed
+// User relations to Meeting have been removed in User model update below
 
 // ==========================================
 // APPROVAL WORKFLOW SYSTEM

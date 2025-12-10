@@ -81,6 +81,14 @@ export default function TalepDetayPage() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push("/talep/liste")}>Listeye Dön</Button>
             <Button variant="gradient" onClick={() => router.push(`/talep/duzenle/${data.id}`)}>Düzenle</Button>
+            {/* New: Create Order Button */}
+            <Button
+              variant="secondary"
+              onClick={() => router.push(`/siparis/olustur?requestBarcode=${encodeURIComponent(data.barcode)}`)}
+              title="Bu talebi siparişe dönüştür"
+            >
+              Sipariş Oluştur
+            </Button>
           </div>
         }
       />
