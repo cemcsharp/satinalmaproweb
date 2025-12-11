@@ -97,7 +97,9 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    // Simplified PUT
+    const admin = await ensureAdminApi(req);
+    if (!admin) return jsonError(403, "forbidden");
+
     const body = await req.json();
     if (!body.id) return jsonError(400, "missing_id");
 
@@ -119,14 +121,35 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  // Implement delete if needed or keep existing signature
   try {
+    const admin = await ensureAdminApi(req);
+    if (!admin) return jsonError(403, "forbidden");
+
     const url = new URL(req.url);
     const id = url.searchParams.get("id");
     if (!id) return jsonError(400, "missing_id");
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return jsonError(404, "user_not_found");
+
+    // Check for related records that would prevent deletion
+    const [requestCount, orderCount, invoiceCount] = await Promise.all([
+      prisma.request.count({ where: { OR: [{ ownerId: id }, { responsibleId: id }] } }),
+      prisma.order.count({ where: { userId: id } }),
+      prisma.invoice.count({ where: { userId: id } }),
+    ]);
+
+    if (requestCount > 0 || orderCount > 0 || invoiceCount > 0) {
+      return jsonError(409, "user_has_records", {
+        message: `Bu kullanıcının ${requestCount} talep, ${orderCount} sipariş, ${invoiceCount} fatura kaydı var. Önce bu kayıtları başka kullanıcıya atayın.`
+      });
+    }
+
     await prisma.user.delete({ where: { id } });
     return NextResponse.json({ ok: true });
-  } catch (e) {
-    return jsonError(500, "delete_failed");
+  } catch (e: any) {
+    console.error("[DELETE User Error]", e);
+    return jsonError(500, "delete_failed", { message: e?.message || String(e) });
   }
 }

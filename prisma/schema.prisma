@@ -13,33 +13,62 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  key         String   @unique
+  description String?
+  permissions Json     @default("{}")
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+}
+
 model User {
   id                    String                  @id @default(cuid())
   username              String                  @unique
   email                 String?                 @unique
   passwordHash          String
   role                  String                  @default("user")
-  // legacy roleId removed
-  unitId                String?                 // Bağlı olduğu birim
+  roleId                String?
+  roleRef               Role?                   @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  unitId                String?
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
   // Relations
   requestsOwned         Request[]               @relation("RequestOwner")
   requestsResponsible   Request[]               @relation("RequestResponsible")
   comments              Comment[]               @relation("UserComments")
-  // CAPA relations removed
   notifications         Notification[]
   notificationPref      NotificationPreference?
   Order                 Order[]
   Contract              Contract[]
   Invoice               Invoice[]
-  // roleId and roleRef removed
   unit                  OptionItem?             @relation("UserUnit", fields: [unitId], references: [id], onDelete: SetNull)
-  // Meeting relations removed
-  // Approval workflow
   approvalRecords       ApprovalRecord[]        @relation("ApprovalRecordApprover")
   deliveriesReceived    DeliveryReceipt[]
+  auditLogs             AuditLog[]
 }
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, etc.
+  entityType  String   // User, Request, Order, etc.
+  entityId    String?
+  oldData     Json?
+  newData     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
 
 model OptionCategory {
   id    String       @id @default(cuid())

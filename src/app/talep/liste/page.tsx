@@ -188,7 +188,6 @@ export default function TalepListePage() {
     // Bulk create logic would go here. For now, we'll just log or show a message.
     // Ideally, iterate data and call POST /api/talep for each, or a bulk endpoint.
     show({ title: "Bilgi", description: "Toplu ekleme özelliği henüz backend tarafında aktif değil.", variant: "info" });
-    console.log("Imported Data:", data);
   };
 
   const exportColumns: ExportColumn[] = [

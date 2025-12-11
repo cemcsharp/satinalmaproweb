@@ -199,7 +199,6 @@ function SiparisListeContent() {
 
   const handleImport = async (data: any[]) => {
     show({ title: "Bilgi", description: "Toplu ekleme henüz aktif değil", variant: "info" });
-    console.log("Imported:", data);
   };
 
   const exportColumns: ExportColumn[] = [

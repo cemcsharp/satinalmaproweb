@@ -116,8 +116,8 @@ export default function SiparisDetayPage() {
             </Button>
             <Button
               variant="secondary"
-              onClick={() => router.push(`/teslimat/olustur?orderId=${data.id}`)}
-              title="Yeni teslimat/irsaliye girişi yap"
+              onClick={() => setActiveTab("teslimat")}
+              title="Teslimat işlemleri"
             >
               Teslimat Ekle
             </Button>

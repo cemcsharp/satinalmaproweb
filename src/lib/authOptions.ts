@@ -3,8 +3,9 @@ import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { verifyPassword } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-// Rolled back to email-based credentials; rate limiting handled via separate API
+import { checkRateLimit } from "@/lib/rateLimit";
 
+// Rate limited credentials provider
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   providers: [
@@ -14,10 +15,18 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials) {
-        const email = String(credentials?.email || "").trim();
+      async authorize(credentials, req) {
+        const email = String(credentials?.email || "").trim().toLowerCase();
         const password = String(credentials?.password || "").trim();
         if (!email || !password) return null;
+
+        // Rate limiting check by email
+        const rateCheck = checkRateLimit(email, "login");
+        if (rateCheck.limited) {
+          console.warn(`[Auth] Rate limited: ${email}, retry in ${rateCheck.resetIn}ms`);
+          throw new Error("Çok fazla giriş denemesi. Lütfen 15 dakika bekleyin.");
+        }
+
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) return null;
         const ok = await verifyPassword(password, user.passwordHash);

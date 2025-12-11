@@ -19,13 +19,25 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "SatınalmaPRO",
-  description: "Talep ve sipariş yönetim sistemi",
+  description: "Kurumsal Satın Alma ve Tedarik Yönetim Sistemi",
+  manifest: "/manifest.json",
+  themeColor: "#2563eb",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "SatınAlma Pro",
+  },
+  icons: {
+    icon: "/icons/icon.svg",
+    apple: "/icons/icon.svg",
+  },
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

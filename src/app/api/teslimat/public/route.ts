@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
             // Validate Token
             const deliveryToken = await prisma.deliveryToken.findUnique({
                 where: { token: body.token },
-                include: { order: { include: { items: true } } }
+                include: { order: { include: { items: true, deliveries: { include: { items: true } } } } }
             });
 
             if (!deliveryToken || deliveryToken.expiresAt < new Date()) {
@@ -28,6 +28,41 @@ export async function POST(req: NextRequest) {
             }
 
             const order = deliveryToken.order;
+
+            // Calculate already delivered quantities (all statuses count toward limit)
+            const deliveredMap = new Map<string, number>();
+            for (const d of order.deliveries) {
+                for (const di of d.items) {
+                    const current = deliveredMap.get(di.orderItemId) || 0;
+                    deliveredMap.set(di.orderItemId, current + Number(di.quantity));
+                }
+            }
+
+            // Validate that new delivery doesn't exceed remaining
+            const validatedItems: { orderItemId: string; quantity: number }[] = [];
+            for (const item of items) {
+                const orderItem = order.items.find(oi => oi.id === item.orderItemId);
+                if (!orderItem) continue;
+
+                const qty = Number(item.quantity);
+                if (qty <= 0) continue;
+
+                const ordered = Number(orderItem.quantity);
+                const alreadyDelivered = deliveredMap.get(item.orderItemId) || 0;
+                const remaining = ordered - alreadyDelivered;
+
+                if (qty > remaining) {
+                    return jsonError(400, "over_delivery", {
+                        message: `"${orderItem.name}" için maksimum ${remaining} adet teslim alabilirsiniz. (Sipariş: ${ordered}, Önceki Teslim: ${alreadyDelivered})`
+                    });
+                }
+
+                validatedItems.push({ orderItemId: item.orderItemId, quantity: qty });
+            }
+
+            if (validatedItems.length === 0) {
+                return jsonError(400, "no_valid_items", { message: "En az bir geçerli ürün girmelisiniz." });
+            }
 
             const delivery = await prisma.$transaction(async (tx) => {
                 const receipt = await tx.deliveryReceipt.create({
@@ -41,8 +76,8 @@ export async function POST(req: NextRequest) {
                         date: date ? new Date(date) : new Date(),
                         notes,
                         items: {
-                            create: items.map((i: any) => ({
-                                quantity: Number(i.quantity),
+                            create: validatedItems.map((i) => ({
+                                quantity: i.quantity,
                                 orderItem: { connect: { id: i.orderItemId } }
                             }))
                         }
@@ -121,9 +156,6 @@ export async function GET(req: NextRequest) {
                 }
             }
         });
-
-        console.log("Token Lookup:", token, validToken ? "Found" : "Not Found");
-        if (validToken) console.log("Expires:", validToken.expiresAt, "Now:", new Date());
 
         if (!validToken) return jsonError(404, "invalid_token");
         if (new Date() > validToken.expiresAt) return jsonError(400, "token_expired");

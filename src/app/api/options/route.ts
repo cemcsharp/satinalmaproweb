@@ -258,20 +258,17 @@ export async function PATCH(req: NextRequest) {
 
 // Delete an option item
 export async function DELETE(req: NextRequest) {
-  console.log("[API/Options] DELETE Request started");
   try {
     const auth = await requireAuthApi(req);
     if (!auth) return jsonError(401, "unauthorized");
     const body = await req.json();
     const id = String(body?.id || "").trim();
-    console.log("[API/Options] DELETE id:", id);
 
     if (!id) return jsonError(400, "invalid_payload");
 
     // Check if it's a company
     const company = await prisma.company.findUnique({ where: { id } });
     if (company) {
-      console.log("[API/Options] Deleting company:", company.name);
       const inUseCount = await prisma.order.count({ where: { companyId: id } });
       if (inUseCount > 0) return jsonError(409, "in_use", { message: "Firma bağlı kayıtlar nedeniyle silinemiyor" });
       await prisma.company.delete({ where: { id } });
@@ -282,11 +279,9 @@ export async function DELETE(req: NextRequest) {
     // Check if it's an option item
     const item = await prisma.optionItem.findUnique({ where: { id }, include: { category: true } });
     if (!item || !item.category) {
-      console.log("[API/Options] Item not found:", id);
       return jsonError(404, "not_found");
     }
 
-    console.log("[API/Options] Deleting item:", item.label, "Category:", item.category.key);
     const key = item.category.key;
     if (["tedarikci", "firma"].includes(key)) return jsonError(400, "unsupported_category", { message: "Bu kategori Ayarlar'dan düzenlenemez" });
 

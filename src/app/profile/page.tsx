@@ -33,12 +33,6 @@ export default function ProfilePage() {
     role: string;
   } | null>(null);
 
-  // Debug: Log session
-  React.useEffect(() => {
-    console.log("Session data:", session);
-    console.log("Session user:", session?.user);
-    console.log("User ID:", (session?.user as any)?.id);
-  }, [session]);
 
   // Fetch fresh profile data from API
   React.useEffect(() => {
@@ -113,7 +107,6 @@ export default function ProfilePage() {
       });
 
       const data = await res.json();
-      console.log("Profile update response:", data);
 
       if (!res.ok) {
         if (data.error === "username_taken") {

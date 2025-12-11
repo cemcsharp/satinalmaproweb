@@ -157,7 +157,6 @@ export default function SupplierEvaluationsPage() {
   const handleImport = async (data: any[]) => {
     // Bulk create logic would go here.
     alert("Toplu ekleme özelliği backend entegrasyonu bekliyor.");
-    console.log("Imported Data:", data);
   };
 
   const exportColumns: ExportColumn[] = [

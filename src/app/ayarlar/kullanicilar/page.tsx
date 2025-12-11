@@ -37,6 +37,7 @@ export default function UsersPage() {
   const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState("user");
   const [formUnitId, setFormUnitId] = useState("");
+  const [roles, setRoles] = useState<{ id: string; key: string; name: string }[]>([]);
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
@@ -57,13 +58,20 @@ export default function UsersPage() {
 
   const loadUnits = useCallback(async () => {
     try {
-      // Correct endpoint is /api/options which returns flattened lists or categories
-      // But let's try /api/options?include=units logic if supported, or just /api/options
       const res = await fetch("/api/options");
       if (res.ok) {
         const json = await res.json();
-        // Assuming api/options returns { birim: [...] }
         if (json.birim) setUnits(json.birim.map((u: any) => ({ id: u.id, label: u.label })));
+      }
+    } catch { }
+  }, []);
+
+  const loadRoles = useCallback(async () => {
+    try {
+      const res = await fetch("/api/roller");
+      if (res.ok) {
+        const json = await res.json();
+        setRoles((json.items || []).map((r: any) => ({ id: r.id, key: r.key, name: r.name })));
       }
     } catch { }
   }, []);
@@ -71,7 +79,8 @@ export default function UsersPage() {
   useEffect(() => {
     load();
     loadUnits();
-  }, [load, loadUnits]);
+    loadRoles();
+  }, [load, loadUnits, loadRoles]);
 
   const handleOpenCreate = () => {
     setEditTarget(null);
@@ -211,9 +220,17 @@ export default function UsersPage() {
           <Input label="Şifre" type="password" placeholder={editTarget ? "(Değiştirmek için girin)" : ""} value={formPassword} onChange={e => setFormPassword(e.target.value)} />
 
           <Select label="Yetki Seviyesi" value={formRole} onChange={e => setFormRole(e.target.value)}>
-            <option value="user">Standart Kullanıcı</option>
-            <option value="manager">Yönetici / Birim Müdürü</option>
-            <option value="admin">Sistem Yöneticisi (Admin)</option>
+            {roles.length > 0 ? (
+              roles.map(r => (
+                <option key={r.id} value={r.key}>{r.name}</option>
+              ))
+            ) : (
+              <>
+                <option value="user">Standart Kullanıcı</option>
+                <option value="manager">Yönetici / Birim Müdürü</option>
+                <option value="admin">Sistem Yöneticisi (Admin)</option>
+              </>
+            )}
           </Select>
 
           <Select label="Bağlı Birim" value={formUnitId} onChange={e => setFormUnitId(e.target.value)}>

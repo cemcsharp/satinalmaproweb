@@ -1,0 +1,49 @@
+{
+    "name": "SatınAlma Pro",
+    "short_name": "SatınAlma",
+    "description": "Kurumsal Satın Alma ve Tedarik Yönetim Sistemi",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#2563eb",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icons/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "business",
+        "productivity"
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Yeni Talep",
+            "short_name": "Talep",
+            "description": "Yeni satın alma talebi oluştur",
+            "url": "/talep/yeni",
+            "icons": [
+                {
+                    "src": "/icons/icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Siparişler",
+            "short_name": "Sipariş",
+            "description": "Sipariş listesini görüntüle",
+            "url": "/siparis/liste",
+            "icons": [
+                {
+                    "src": "/icons/icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,75 @@
+{
+    "common": {
+        "save": "Kaydet",
+        "cancel": "İptal",
+        "delete": "Sil",
+        "edit": "Düzenle",
+        "add": "Ekle",
+        "search": "Ara",
+        "loading": "Yükleniyor...",
+        "noData": "Veri bulunamadı",
+        "confirm": "Onayla",
+        "back": "Geri",
+        "next": "İleri",
+        "yes": "Evet",
+        "no": "Hayır",
+        "all": "Tümü",
+        "selected": "Seçili",
+        "actions": "İşlemler",
+        "export": "Dışa Aktar",
+        "import": "İçe Aktar",
+        "filter": "Filtrele",
+        "reset": "Sıfırla",
+        "close": "Kapat",
+        "success": "Başarılı",
+        "error": "Hata",
+        "warning": "Uyarı"
+    },
+    "auth": {
+        "login": "Giriş Yap",
+        "logout": "Çıkış Yap",
+        "email": "E-posta",
+        "password": "Şifre",
+        "forgotPassword": "Şifremi Unuttum",
+        "rememberMe": "Beni Hatırla"
+    },
+    "nav": {
+        "dashboard": "Panel",
+        "requests": "Talepler",
+        "orders": "Siparişler",
+        "deliveries": "Teslimatlar",
+        "invoices": "Faturalar",
+        "contracts": "Sözleşmeler",
+        "suppliers": "Tedarikçiler",
+        "reports": "Raporlar",
+        "settings": "Ayarlar"
+    },
+    "request": {
+        "title": "Talep Başlığı",
+        "description": "Açıklama",
+        "status": "Durum",
+        "priority": "Öncelik",
+        "createdAt": "Oluşturulma Tarihi",
+        "owner": "Talep Sahibi",
+        "responsible": "Sorumlu",
+        "newRequest": "Yeni Talep",
+        "requestList": "Talep Listesi"
+    },
+    "order": {
+        "poNumber": "Sipariş No",
+        "supplier": "Tedarikçi",
+        "total": "Toplam",
+        "status": "Durum",
+        "date": "Sipariş Tarihi",
+        "newOrder": "Yeni Sipariş",
+        "orderList": "Sipariş Listesi"
+    },
+    "status": {
+        "pending": "Beklemede",
+        "approved": "Onaylandı",
+        "rejected": "Reddedildi",
+        "completed": "Tamamlandı",
+        "cancelled": "İptal Edildi",
+        "inProgress": "Devam Ediyor"
+    }
+}

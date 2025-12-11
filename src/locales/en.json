@@ -1,0 +1,75 @@
+{
+    "common": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "add": "Add",
+        "search": "Search",
+        "loading": "Loading...",
+        "noData": "No data found",
+        "confirm": "Confirm",
+        "back": "Back",
+        "next": "Next",
+        "yes": "Yes",
+        "no": "No",
+        "all": "All",
+        "selected": "Selected",
+        "actions": "Actions",
+        "export": "Export",
+        "import": "Import",
+        "filter": "Filter",
+        "reset": "Reset",
+        "close": "Close",
+        "success": "Success",
+        "error": "Error",
+        "warning": "Warning"
+    },
+    "auth": {
+        "login": "Login",
+        "logout": "Logout",
+        "email": "Email",
+        "password": "Password",
+        "forgotPassword": "Forgot Password",
+        "rememberMe": "Remember Me"
+    },
+    "nav": {
+        "dashboard": "Dashboard",
+        "requests": "Requests",
+        "orders": "Orders",
+        "deliveries": "Deliveries",
+        "invoices": "Invoices",
+        "contracts": "Contracts",
+        "suppliers": "Suppliers",
+        "reports": "Reports",
+        "settings": "Settings"
+    },
+    "request": {
+        "title": "Request Title",
+        "description": "Description",
+        "status": "Status",
+        "priority": "Priority",
+        "createdAt": "Created At",
+        "owner": "Request Owner",
+        "responsible": "Responsible",
+        "newRequest": "New Request",
+        "requestList": "Request List"
+    },
+    "order": {
+        "poNumber": "PO Number",
+        "supplier": "Supplier",
+        "total": "Total",
+        "status": "Status",
+        "date": "Order Date",
+        "newOrder": "New Order",
+        "orderList": "Order List"
+    },
+    "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "inProgress": "In Progress"
+    }
+}

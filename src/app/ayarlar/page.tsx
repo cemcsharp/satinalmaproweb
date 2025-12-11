@@ -676,6 +676,25 @@ export default function SettingsPage() {
             {tab.label}
           </button>
         ))}
+        {/* Yönetim sayfalarına linkler */}
+        <a
+          href="/ayarlar/kullanicilar"
+          className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900 hover:bg-white/50"
+        >
+          Kullanıcılar
+        </a>
+        <a
+          href="/ayarlar/roller"
+          className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900 hover:bg-white/50"
+        >
+          Roller
+        </a>
+        <a
+          href="/ayarlar/loglar"
+          className="px-6 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900 hover:bg-white/50"
+        >
+          Sistem Logları
+        </a>
       </div>
 
       <div className="min-h-[400px]">

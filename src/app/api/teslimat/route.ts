@@ -36,13 +36,11 @@ export async function POST(req: NextRequest) {
         // Email Sharing Action
         if (action === "send-email") {
             const { token, email } = body;
-            console.log(`[API/Teslimat] Send Email Request for token: ${token}, to: ${email}`);
 
             if (!token || !email) return jsonError(400, "missing_token_or_email");
 
             const origin = process.env.NEXTAUTH_URL || req.headers.get("origin");
             const link = `${origin}/teslimat/${token}`;
-            console.log(`[API/Teslimat] Generated Link: ${link}`);
 
             try {
                 // Send email
@@ -64,7 +62,6 @@ export async function POST(req: NextRequest) {
                     </div>
                     `
                 );
-                console.log(`[API/Teslimat] Email Sent! Info:`, info);
                 return NextResponse.json({ ok: true });
             } catch (err: any) {
                 console.error(`[API/Teslimat] Email Send Failed:`, err);
@@ -92,7 +89,7 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Process new delivery items
+        // Process new delivery items with strict quantity validation
         const deliveryItemsData = [];
         let totalNewDelivery = 0;
 
@@ -106,16 +103,19 @@ export async function POST(req: NextRequest) {
 
             const prev = deliveredMap.get(orderItemId) || 0;
             const max = Number(orderItem.quantity);
+            const remaining = max - prev;
 
-            // Strict check? Or Warning? 
-            // User asked for logic. We accept it but maybe return warning in UI if (prev + q) > max.
-            // For now, we allow over-delivery (in case of bonus items) but usually systems block it.
-            // Let's allow it but maybe flag it? For now simple create.
+            // Strict validation: reject over-delivery
+            if (q > remaining) {
+                return jsonError(400, "over_delivery", {
+                    message: `"${orderItem.name}" için maksimum ${remaining} adet teslim alabilirsiniz. (Sipariş: ${max}, Önceki Teslim: ${prev})`
+                });
+            }
 
             deliveryItemsData.push({
                 orderItemId,
                 quantity: q,
-                approvedQuantity: q, // Auto-approve for now, or use null if approval step needed
+                approvedQuantity: q,
                 notes
             });
             totalNewDelivery += q;
