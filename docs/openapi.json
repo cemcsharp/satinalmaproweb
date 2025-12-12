@@ -1,0 +1,827 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "SatınalmaPRO API",
+        "description": "Kurumsal Satın Alma ve Tedarik Yönetim Sistemi API Dokümantasyonu",
+        "version": "1.0.0",
+        "contact": {
+            "name": "API Support"
+        }
+    },
+    "servers": [
+        {
+            "url": "http://localhost:3000/api",
+            "description": "Development server"
+        }
+    ],
+    "tags": [
+        {
+            "name": "Auth",
+            "description": "Authentication endpoints"
+        },
+        {
+            "name": "Users",
+            "description": "User management"
+        },
+        {
+            "name": "Roles",
+            "description": "Role and permission management"
+        },
+        {
+            "name": "Requests",
+            "description": "Purchase request management"
+        },
+        {
+            "name": "Orders",
+            "description": "Order management"
+        },
+        {
+            "name": "Deliveries",
+            "description": "Delivery management"
+        },
+        {
+            "name": "Invoices",
+            "description": "Invoice management"
+        },
+        {
+            "name": "Contracts",
+            "description": "Contract management"
+        },
+        {
+            "name": "Suppliers",
+            "description": "Supplier management"
+        },
+        {
+            "name": "Reports",
+            "description": "Reporting and analytics"
+        },
+        {
+            "name": "Settings",
+            "description": "System settings"
+        },
+        {
+            "name": "Notifications",
+            "description": "Notification system"
+        }
+    ],
+    "paths": {
+        "/auth/{...nextauth}": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "NextAuth.js authentication endpoints",
+                "description": "Handles all NextAuth.js authentication flows"
+            }
+        },
+        "/auth/forgot": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Request password reset",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/reset": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Reset password with token",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "token": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/profile": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get current user profile",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User profile data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserProfile"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update current user profile",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/kullanicilar": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "List all users",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Create new user",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/kullanicilar/{id}": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get user by ID",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update user",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Delete user",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/roller": {
+            "get": {
+                "tags": [
+                    "Roles"
+                ],
+                "summary": "List all roles",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Roles"
+                ],
+                "summary": "Create new role",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/talep": {
+            "get": {
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "List all purchase requests",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Create new purchase request",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/talep/{id}": {
+            "get": {
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Get request by ID",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Update request",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Delete request",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/siparis": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "List all orders",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Create new order",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/siparis/{id}": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get order by ID",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Update order",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Delete order",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/teslimat": {
+            "get": {
+                "tags": [
+                    "Deliveries"
+                ],
+                "summary": "List all deliveries",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/teslimat/{id}": {
+            "get": {
+                "tags": [
+                    "Deliveries"
+                ],
+                "summary": "Get delivery by ID",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/teslimat/public": {
+            "get": {
+                "tags": [
+                    "Deliveries"
+                ],
+                "summary": "Public delivery form (for suppliers)",
+                "description": "Allows suppliers to submit delivery without login using token"
+            },
+            "post": {
+                "tags": [
+                    "Deliveries"
+                ],
+                "summary": "Submit delivery (public)",
+                "description": "Supplier submits delivery information"
+            }
+        },
+        "/fatura": {
+            "get": {
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "List all invoices",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Create new invoice",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/fatura/{id}": {
+            "get": {
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Get invoice by ID",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Update invoice",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/sozlesme": {
+            "get": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "List all contracts",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "Create new contract",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/sozlesme/{id}": {
+            "get": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "Get contract by ID",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "Update contract",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/tedarikci": {
+            "get": {
+                "tags": [
+                    "Suppliers"
+                ],
+                "summary": "List all suppliers",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Suppliers"
+                ],
+                "summary": "Create new supplier",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/tedarikci/{id}": {
+            "get": {
+                "tags": [
+                    "Suppliers"
+                ],
+                "summary": "Get supplier by ID",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Suppliers"
+                ],
+                "summary": "Update supplier",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/audit": {
+            "get": {
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "List audit logs",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "action",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "entityType",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ]
+            }
+        },
+        "/options": {
+            "get": {
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Get dropdown options",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Create option item",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/notifications": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Get user notifications",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/notifications/{id}/read": {
+            "post": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Mark notification as read",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/raporlama/dashboard": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get dashboard statistics",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/dashboard/stats": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Get detailed dashboard stats with trends",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        },
+        "/approval/{entityType}/{entityId}": {
+            "get": {
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Get approval status for entity",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Requests"
+                ],
+                "summary": "Submit approval decision",
+                "security": [
+                    {
+                        "session": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "UserProfile": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "permissions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "Request": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "barcode": {
+                        "type": "string"
+                    },
+                    "subject": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "Order": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "barcode": {
+                        "type": "string"
+                    },
+                    "poNumber": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "supplierId": {
+                        "type": "string"
+                    }
+                }
+            },
+            "Supplier": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": "string"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "Error": {
+                "type": "object",
+                "properties": {
+                    "error": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "securitySchemes": {
+            "session": {
+                "type": "apiKey",
+                "in": "cookie",
+                "name": "next-auth.session-token",
+                "description": "NextAuth.js session cookie"
+            }
+        }
+    }
+}

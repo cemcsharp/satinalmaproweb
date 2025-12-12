@@ -5,7 +5,6 @@ import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import { hasPermission } from "@/lib/permissions";
-import { LanguageSwitcher } from "@/lib/i18n";
 
 type MenuItem = {
     label: string;
@@ -292,13 +291,7 @@ export default function Sidebar() {
                 </nav>
 
                 {/* Bottom Profile Section */}
-                <div className="p-3 border-t border-slate-700/50 shrink-0 space-y-2">
-                    {/* Language Switcher */}
-                    {expanded && (
-                        <div className="px-2">
-                            <LanguageSwitcher />
-                        </div>
-                    )}
+                <div className="p-3 border-t border-slate-700/50 shrink-0">
                     <ProfileMenu expanded={expanded} />
                 </div>
             </div>
