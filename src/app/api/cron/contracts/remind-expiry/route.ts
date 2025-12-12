@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { ensureRoleApi } from "@/lib/apiAuth";
-import { notify } from "@/lib/notificationService";
+import { notify } from "@/lib/notification-service";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 
 export const runtime = "nodejs";
@@ -20,9 +20,9 @@ export async function POST(req: NextRequest) {
     });
     for (const c of items) {
       const title = `Sözleşme Sonu Yaklaşıyor: ${c.title}`;
-      const body = `Sözleşme No: ${c.number}<br/>Bitiş: ${c.endDate?.toISOString?.().slice(0,10) || ""}<br/>Kalan gün: ${d}`;
+      const body = `Sözleşme No: ${c.number}<br/>Bitiş: ${c.endDate?.toISOString?.().slice(0, 10) || ""}<br/>Kalan gün: ${d}`;
       const req = (c as any)?.order?.request || null;
-      const targets = [ (c as any)?.responsible?.id, req?.responsible?.id, req?.owner?.id ].filter(Boolean) as string[];
+      const targets = [(c as any)?.responsible?.id, req?.responsible?.id, req?.owner?.id].filter(Boolean) as string[];
       for (const uid of targets) {
         await notify({ userId: uid, title, body: `Bitiyor: ${c.endDate?.toISOString?.() || ""}`, type: "warning" });
       }

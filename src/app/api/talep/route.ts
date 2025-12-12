@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
 import { requireAuthApi } from "@/lib/apiAuth";
-import { notify } from "@/lib/notificationService";
+import { notify } from "@/lib/notification-service";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 
 type CreateRequestBody = {

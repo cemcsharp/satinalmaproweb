@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { notify, listNotifications } from "@/lib/notificationService";
+import { notify, listNotifications } from "@/lib/notification-service";
 import { requireAuthApi } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
@@ -20,6 +20,6 @@ export async function POST(req: NextRequest) {
   const bodyText = String(body?.body || "").trim();
   const type = String(body?.type || "info");
   if (!title || !bodyText) return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
-  const created = await notify({ userId: String(auth.userId), title, body: bodyText, type });
+  const created = await notify({ userId: String(auth.userId), title, body: bodyText, type: type as any });
   return NextResponse.json(created, { status: 201 });
 }

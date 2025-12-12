@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { notify } from "@/lib/notificationService";
+import { notify } from "@/lib/notification-service";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 import { jsonError } from "@/lib/apiError";
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { markRead } from "@/lib/notificationService";
+import { markAsRead } from "@/lib/notification-service";
 import { requireAuthApi } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
@@ -15,7 +15,7 @@ export async function PATCH(
     const { id } = await params;
 
     try {
-        await markRead(String(auth.userId), id);
+        await markAsRead(String(auth.userId), id);
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("Error marking notification as read:", error);
