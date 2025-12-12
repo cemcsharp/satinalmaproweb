@@ -9,9 +9,7 @@ Kurumsal satınalma süreçlerini yönetmek için geliştirilmiş modern web uyg
 - **Sözleşme Yönetimi** - Tedarikçi sözleşmelerinin yönetimi
 - **Fatura Yönetimi** - Fatura girişi, tevkifat hesaplamaları, PDF export
 - **Tedarikçi Yönetimi** - Tedarikçi kayıtları ve değerlendirme sistemi
-- **Toplantı Yönetimi** - Toplantı planlama ve takip
 - **Raporlama** - Dashboard ve detaylı raporlar
-- **Dark Mode** - Açık/koyu tema desteği
 - **Bildirim Sistemi** - Gerçek zamanlı bildirimler
 
 ---
