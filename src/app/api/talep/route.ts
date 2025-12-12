@@ -162,17 +162,19 @@ export async function GET(req: NextRequest) {
       if (dateToValid) where.createdAt.lte = dateTo as Date;
     }
 
-    // Unit-based data isolation REMOVED as requested. Everyone sees all data.
-    /*
-    if (!user.isAdmin && user.unitId) {
+    // Unit-based data isolation - Users only see their unit's data
+    // Admin users see all data
+    if (user.isAdmin || user.roleRef?.key === "admin") {
+      // Admin sees all - apply manual filter if requested
+      if (unit) {
+        where.unit = { is: { label: unit } };
+      }
+    } else if (user.unitId) {
+      // Non-admin users only see their unit's requests
       where.unitId = user.unitId;
-    } else if (unit) {
-      where.unit = { is: { label: unit } };
-    }
-    */
-    // If specific filter requested via query param, still apply it
-    if (unit) {
-      where.unit = { is: { label: unit } };
+    } else {
+      // User has no unit assigned - show nothing
+      where.unitId = "___NO_ACCESS___";
     }
 
     if (status) {
