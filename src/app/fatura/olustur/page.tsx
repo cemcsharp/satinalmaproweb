@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Input from "@/components/ui/Input";
@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/Toast";
 import ItemsSection, { ProductRow, Option as UnitOption } from "@/components/ItemsSection";
 import { calculateWithholding, type InvoiceItemInput, type WithholdingRule } from "@/lib/withholding";
 
-export default function FaturaOlusturPage() {
+function FaturaOlusturContent() {
   const { show } = useToast();
   const router = useRouter();
 
@@ -447,7 +447,7 @@ export default function FaturaOlusturPage() {
                     if (!payload.number) errs.push("Fatura numarası");
                     if (!payload.orderNo) errs.push("Sipariş numarası");
                     if (!Number.isFinite(payload.amount)) errs.push("Tutar");
-                    if (!payload.dueDate || isNaN(new Date(payload.dueDate as any).getTime())) errs.push("Vade tarihi");
+                    if (!payload.dueDate || isNaN(new Date(payload.dueDate).getTime())) errs.push("Vade tarihi");
                     if (errs.length) {
                       show({ title: "Eksik Bilgi", description: `Lütfen şu alanları kontrol edin: ${errs.join(", ")}`, variant: "warning" });
                       setCreating(false);
@@ -490,7 +490,7 @@ export default function FaturaOlusturPage() {
       </div>
 
       <Modal
-        open={orderSearchOpen}
+        isOpen={orderSearchOpen}
         title="Sipariş Ara"
         onClose={() => setOrderSearchOpen(false)}
         footer={
@@ -528,5 +528,14 @@ export default function FaturaOlusturPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function FaturaOlusturPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Yükleniyor...</div>}>
+      <FaturaOlusturContent />
+    </Suspense>
   );
 }

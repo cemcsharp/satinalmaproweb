@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
 import IconButton from "@/components/ui/IconButton";
@@ -30,6 +31,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export default function RolesPage() {
+    const router = useRouter();
     const { show } = useToast();
     const [roles, setRoles] = useState<Role[]>([]);
     const [modules, setModules] = useState<Module[]>([]);
@@ -112,7 +114,7 @@ export default function RolesPage() {
             setModalOpen(false);
             load();
         } catch (e: any) {
-            show({ title: "Hata", description: e.message || "Kayıt başarısız", variant: "error" });
+            show({ title: "Hata", description: e.message || "Kaydetme başarısız", variant: "error" });
         }
     };
 
@@ -137,7 +139,12 @@ export default function RolesPage() {
             <PageHeader
                 title="Rol Yönetimi"
                 description="Kullanıcı rollerini ve izinlerini yönetin"
-                actions={<Button onClick={openCreate} className="bg-blue-600 text-white hover:bg-blue-700">Yeni Rol</Button>}
+                actions={
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => router.push("/ayarlar")}>← Geri</Button>
+                        <Button onClick={openCreate} className="bg-blue-600 text-white hover:bg-blue-700">Yeni Rol</Button>
+                    </div>
+                }
             />
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -239,8 +246,8 @@ export default function RolesPage() {
                                                             type="button"
                                                             onClick={() => togglePermission(mod.key, action)}
                                                             className={`w-6 h-6 rounded border-2 transition-all ${checked
-                                                                    ? "bg-blue-600 border-blue-600 text-white"
-                                                                    : "border-slate-300 hover:border-blue-400"
+                                                                ? "bg-blue-600 border-blue-600 text-white"
+                                                                : "border-slate-300 hover:border-blue-400"
                                                                 }`}
                                                         >
                                                             {checked && (

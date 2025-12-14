@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -22,6 +23,7 @@ type UserRow = {
 };
 
 export default function UsersPage() {
+  const router = useRouter();
   const { show } = useToast();
   const [items, setItems] = useState<UserRow[]>([]);
   const [units, setUnits] = useState<{ id: string; label: string }[]>([]);
@@ -161,8 +163,13 @@ export default function UsersPage() {
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
       <PageHeader
         title="Kullanıcı Yönetimi"
-        description="Sistem kullanıcılarını ve birim atamalarını yönetin (Rol sistemi kaldırılmıştır)"
-        actions={<Button variant="primary" onClick={handleOpenCreate}>Yeni Kullanıcı</Button>}
+        description="Sistem kullanıcılarını ve birim atamalarını yönetin"
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push("/ayarlar")}>← Geri</Button>
+            <Button variant="primary" onClick={handleOpenCreate}>Yeni Kullanıcı</Button>
+          </div>
+        }
       />
 
       <Card className="p-0 overflow-hidden">

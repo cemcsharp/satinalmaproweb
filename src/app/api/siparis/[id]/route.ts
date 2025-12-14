@@ -3,9 +3,13 @@ import { prisma } from "@/lib/db";
 import { notify } from "@/lib/notification-service";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 import { jsonError } from "@/lib/apiError";
+import { getUserWithPermissions } from "@/lib/apiAuth"; // Import auth helper
 
 // Get single order detail by id, including supplier info for autofill
-export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const user = await getUserWithPermissions(req);
+  if (!user) return jsonError(401, "unauthorized");
+
   const { id } = await context.params;
   try {
     const order = await prisma.order.findUnique({
@@ -24,6 +28,16 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     });
     if (!order) return jsonError(404, "not_found");
 
+    // Security Check
+    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+    const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+    // Check if user has access: Full Access OR Order belongs to user's unit (via request)
+    const isSameUnit = order.request?.unitId === user.unitId;
+
+    if (!hasFullAccess && !isSameUnit) {
+      return jsonError(403, "forbidden_access", { message: "Bu siparişi görüntüleme yetkiniz yok." });
+    }
+
     const totalNumber =
       typeof (order as any).realizedTotal?.toNumber === "function"
         ? (order as any).realizedTotal.toNumber()
@@ -32,6 +46,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     const payload = {
       id: order.id,
       barcode: order.barcode,
+      refNumber: order.refNumber, // Include manual ref no
       date: order.createdAt?.toISOString?.() || null,
       estimatedDelivery: (order as any).estimatedDelivery?.toISOString?.() || null,
       total: totalNumber,
@@ -77,9 +92,20 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
 
 // Update order: supports basic fields and replacing items list
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const user = await getUserWithPermissions(req);
+  if (!user) return jsonError(401, "unauthorized");
+
   const { id } = await context.params;
   const orderId = String(id || "").trim();
   if (!orderId) return jsonError(404, "not_found");
+
+  // Security Check: Only Admin or Satinalma can update orders
+  const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+  const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+
+  if (!hasFullAccess) {
+    return jsonError(403, "forbidden_edit", { message: "Sipariş güncelleme yetkiniz yok. Sadece Satınalma birimi yapabilir." });
+  }
   try {
     const before = await prisma.order.findUnique({ where: { id: orderId }, include: { status: true, request: { include: { owner: true, responsible: true } } } });
     const body = await req.json().catch(() => ({}));
@@ -238,10 +264,21 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 }
 
 // Delete order safely: detach nullable relations, remove items, then delete order
-export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const user = await getUserWithPermissions(req);
+  if (!user) return jsonError(401, "unauthorized");
+
   const { id } = await context.params;
   const orderId = String(id || "").trim();
   if (!orderId) return jsonError(404, "not_found");
+
+  // Security Check: Only Admin or Satinalma can delete orders
+  const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+  const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+
+  if (!hasFullAccess) {
+    return jsonError(403, "forbidden_delete", { message: "Sipariş silme yetkiniz yok." });
+  }
   try {
     await prisma.$transaction(async (tx) => {
       // 1) Remove items (cascades also handle this, but explicit for clarity)
@@ -249,13 +286,12 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
       // 2) Null-out nullable relations
       await tx.contract.updateMany({ where: { orderId }, data: { orderId: null } });
       await tx.invoice.updateMany({ where: { orderId }, data: { orderId: null } });
-      await tx.cAPA.updateMany({ where: { orderId }, data: { orderId: null } });
-      // 3) Supplier evaluations linked to order: delete answers and CAPAs by evaluation, then evaluations
+
+      // 3) Supplier evaluations linked to order: delete answers by evaluation, then evaluations
       const evals = await tx.supplierEvaluation.findMany({ where: { orderId }, select: { id: true } });
       if (evals.length > 0) {
         const evalIds = evals.map((e) => e.id);
         await tx.supplierEvaluationAnswer.deleteMany({ where: { evaluationId: { in: evalIds } } });
-        await tx.cAPA.updateMany({ where: { evaluationId: { in: evalIds } }, data: { evaluationId: null } });
         await tx.supplierEvaluation.deleteMany({ where: { id: { in: evalIds } } });
       }
       // 4) Finally delete order

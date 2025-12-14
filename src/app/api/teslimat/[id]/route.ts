@@ -17,12 +17,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                 items: { include: { orderItem: true } },
                 receiver: { select: { id: true, username: true, email: true } },
                 receiverUnit: { select: { id: true, label: true } },
-                order: { include: { supplier: true, items: true } },
+                order: { include: { supplier: true, items: true, request: true } },
                 attachments: true
             }
         });
 
         if (!delivery) return jsonError(404, "delivery_not_found");
+
+        // Security Check: Isolation
+        const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+        const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+        const isReceiverUnit = delivery.receiverUnitId === user.unitId;
+        const isCreator = delivery.receiverId === user.id;
+
+        if (!hasFullAccess && !isReceiverUnit && !isCreator) {
+            return jsonError(403, "forbidden_access", { message: "Bu teslimat fişini görüntüleme yetkiniz yok." });
+        }
 
         return NextResponse.json(delivery);
     } catch (e: any) {
@@ -36,11 +46,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
         const user = await getUserWithPermissions(req);
         if (!user) return jsonError(401, "unauthorized");
-        // Permission check can be added here (e.g. teslimat:approve)
 
         const { id } = await params;
+
+        // Fetch to verify ownership/permission
+        const delivery = await prisma.deliveryReceipt.findUnique({ where: { id } });
+        if (!delivery) return jsonError(404, "not_found");
+
+        const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+        const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+        const isReceiverUnit = delivery.receiverUnitId === user.unitId;
+
+        // Only Receiver Unit or Admin/Satinalma can approve/reject
+        if (!hasFullAccess && !isReceiverUnit) {
+            return jsonError(403, "forbidden_approve", { message: "Bu teslimatı onaylama/reddetme yetkiniz yok." });
+        }
         const body = await req.json();
-        const { status } = body;
+        const { status, updatedItems } = body;
 
         if (!["approved", "rejected"].includes(status)) {
             return jsonError(400, "invalid_status");
@@ -48,6 +70,33 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
         // Transaction to ensure data consistency
         const result = await prisma.$transaction(async (tx) => {
+            // 0. Update items if provided (only when approving)
+            if (status === "approved" && Array.isArray(updatedItems)) {
+                for (const item of updatedItems) {
+                    if (item.id && (item.approvedQuantity !== undefined)) {
+                        await tx.deliveryItem.update({
+                            where: { id: item.id, deliveryId: id }, // Ensure item belongs to this delivery
+                            data: { approvedQuantity: Number(item.approvedQuantity) }
+                        });
+                    }
+                }
+            } else if (status === "approved") {
+                // If checking approved but no specific items sent, set approvedQuantity = quantity for all
+                // This might be redundant if we did it on creation, but good for safety
+                // Actually we set approvedQuantity = 0 on creation now. So we must set it to quantity if not specified? 
+                // Let's assume frontend sends items always or we auto-approve current quantities.
+                // For now, if updatedItems is missing, we assume FULL APPROVAL of original quantities
+                const currentItems = await tx.deliveryItem.findMany({ where: { deliveryId: id } });
+                for (const ci of currentItems) {
+                    if (!ci.approvedQuantity || Number(ci.approvedQuantity) === 0) {
+                        await tx.deliveryItem.update({
+                            where: { id: ci.id },
+                            data: { approvedQuantity: ci.quantity }
+                        });
+                    }
+                }
+            }
+
             // 1. Update Delivery Receipt
             const delivery = await tx.deliveryReceipt.update({
                 where: { id },
@@ -75,7 +124,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                     for (const d of allDeliveries) {
                         const dItem = d.items.find(di => di.orderItemId === orderItem.id);
                         if (dItem) {
-                            totalDelivered += Number(dItem.quantity);
+                            // Use approvedQuantity if available, otherwise quantity
+                            // But since we enforced approvedQuantity logic, we should use it.
+                            const qty = dItem.approvedQuantity ? Number(dItem.approvedQuantity) : Number(dItem.quantity);
+                            totalDelivered += qty;
                         }
                     }
 

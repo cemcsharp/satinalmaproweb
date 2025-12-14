@@ -15,8 +15,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     setSidebarOpen(false);
   }, [pathname]);
 
-  const isAuthPage = ["/login", "/register"].includes(pathname);
-  const isPublicDetail = pathname.startsWith("/contract/") || pathname.startsWith("/tedarikci/degerlendirme");
+  const isAuthPage = ["/login", "/register"].includes(pathname) || pathname.startsWith("/portal");
+  // Public detail logic removed per request
   const userName = session?.user?.name || "Kullanıcı";
 
   return (
@@ -25,7 +25,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         <a href="#main-content" className="skip-link">İçeriğe geç</a>
 
         {/* Sidebar - Full Height */}
-        {!isAuthPage && !isPublicDetail && (
+        {!isAuthPage && (
           <>
             <div className="hidden md:block">
               <Sidebar />
@@ -48,7 +48,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Top Navbar */}
-          {!isAuthPage && !isPublicDetail && (
+          {!isAuthPage && (
             <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-slate-200/50">
               <nav aria-label="Ana gezinme" className="flex items-center justify-between h-16 px-4 md:px-6">
                 {/* Left side - Mobile hamburger */}
@@ -84,8 +84,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             </header>
           )}
 
-          {/* Mobile Logo Header for Auth Pages */}
-          {(isAuthPage || isPublicDetail) && (
+          {/* Mobile Logo Header for Auth Pages Only */}
+          {isAuthPage && (
             <header className="md:hidden sticky top-0 z-20 backdrop-blur-xl bg-white/80 border-b border-slate-200/50">
               <nav aria-label="Ana gezinme" className="flex items-center justify-center h-16 px-4">
                 <div className="flex items-center gap-3">

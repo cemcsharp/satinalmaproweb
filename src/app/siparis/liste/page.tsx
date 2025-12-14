@@ -21,6 +21,7 @@ import ImportExcel from "@/components/ui/ImportExcel";
 type Order = {
   id: string;
   barcode: string;
+  refNumber?: string;
   date: string;
   status: string;
   method: string;
@@ -203,6 +204,7 @@ function SiparisListeContent() {
 
   const exportColumns: ExportColumn[] = [
     { header: "Sipariş No", accessor: "barcode" },
+    { header: "Sipariş Barkodu", accessor: (row) => row.refNumber || "-" },
     { header: "Tarih", accessor: (row) => row.date ? new Date(row.date).toLocaleDateString("tr-TR") : "-" },
     { header: "Yöntem", accessor: (row) => row.method || "-" },
     { header: "Durum", accessor: "status" },
@@ -343,12 +345,14 @@ function SiparisListeContent() {
             <option>Doğrudan Temin</option>
             <option>İhale</option>
           </Select>
-          <Select size="sm" value={unit} onChange={(e) => { setUnit(e.target.value); setPage(1); }}>
-            <option value="">Birim (tümü)</option>
-            {options.birim.map((b) => (
-              <option key={b.id} value={b.label}>{b.label}</option>
-            ))}
-          </Select>
+          {(isAdmin || permissions.includes("siparis:create")) && (
+            <Select size="sm" value={unit} onChange={(e) => { setUnit(e.target.value); setPage(1); }}>
+              <option value="">Birim (tümü)</option>
+              {options.birim.map((b) => (
+                <option key={b.id} value={b.label}>{b.label}</option>
+              ))}
+            </Select>
+          )}
           <FilterInput aria-label="Başlangıç tarihi" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} placeholder="Başlangıç" />
           <FilterInput aria-label="Bitiş tarihi" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} placeholder="Bitiş" />
         </div>
@@ -368,7 +372,8 @@ function SiparisListeContent() {
           <caption className="sr-only">Sipariş listesi tablo</caption>
           <THead>
             <TR>
-              <TH>Barkod</TH>
+              <TH>Sipariş No</TH>
+              <TH>Sipariş Barkodu</TH>
               <TH>Tarih</TH>
               <TH>Durum</TH>
               <TH>Yöntem</TH>
@@ -401,6 +406,15 @@ function SiparisListeContent() {
                       </div>
                       <span className="font-semibold text-slate-700">{r.barcode}</span>
                     </div>
+                  </TD>
+                  <TD>
+                    {r.refNumber ? (
+                      <span className="font-mono text-sm text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                        {r.refNumber}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">-</span>
+                    )}
                   </TD>
                   <TD>
                     <div className="flex items-center gap-2">

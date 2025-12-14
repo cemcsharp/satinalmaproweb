@@ -23,7 +23,7 @@ import ImportExcel from "@/components/ui/ImportExcel";
 // Removed TalepView dynamic import as it is no longer used
 
 
-export default function TalepListePage() {
+function TalepListeContent() {
   const { show } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,8 +84,8 @@ export default function TalepListePage() {
     const s = searchParams.get("status") ?? "";
     const df = searchParams.get("dateFrom") ?? "";
     const dt = searchParams.get("dateTo") ?? "";
-    const sb = (searchParams.get("sortBy") as any) ?? "date";
-    const sd = (searchParams.get("sortDir") as any) ?? "desc";
+    const sb = (searchParams.get("sortBy") as string) ?? "date";
+    const sd = (searchParams.get("sortDir") as string) ?? "desc";
     const pg = Number(searchParams.get("page") ?? 1);
     const psz = Number(searchParams.get("pageSize") ?? 20);
     setQuery(q);
@@ -446,5 +446,14 @@ export default function TalepListePage() {
         )}
       </Modal>
     </section>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function TalepListePage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Yükleniyor...</div>}>
+      <TalepListeContent />
+    </Suspense>
   );
 }

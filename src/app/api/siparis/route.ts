@@ -31,6 +31,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = (await req.json()) as CreateOrderBody;
+    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+    const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+
+    // Safety check: Avoid creating orders without request linking unless Admin/Satinalma
+    // Actually, even satinalma should link to a request usually. 
+    // But if they want to create ad-hoc order (e.g. direct purchase), we allow it ONLY if they specify unit or if we can infer it.
+    // For now, let's just allow it but warn or ensure requestId is present if possible.
+    // User requested "Sipariş oluştururken birim atamasını zorunlu kılalım".
+
+    if (!body.requestBarcode && !hasFullAccess) {
+      return jsonError(400, "request_required", { message: "Normal kullanıcılar sadece bir talebe istinaden sipariş oluşturabilir." });
+    }
     if (!body?.barcode || !body.statusId || !body.methodId || !body.regulationId || !body.currencyId || !body.supplierId) {
       return jsonError(400, "missing_fields");
     }
@@ -92,12 +104,20 @@ export async function POST(req: NextRequest) {
       const after = await prisma.order.findUnique({ where: { id: created.id }, include: { status: true, method: true, responsible: true, company: true, request: { include: { owner: true, unit: true } }, items: true } });
       const total = (after?.items || []).reduce((sum: number, it: any) => sum + Number(it.quantity) * Number(it.unitPrice), 0);
       const unitLabel = String((after as any)?.request?.unit?.label || "");
+
+      // Budget difference calculation
+      const requestBudget = (after as any)?.request?.budget ? Number((after as any).request.budget) : null;
+      const budgetDiff = requestBudget !== null ? requestBudget - total : 0;
+      const budgetStatus = budgetDiff > 0 ? "Bütçe Altında" : budgetDiff < 0 ? "Bütçe Aşımı" : "Tam Uyumlu";
+
       const fields = [
         { label: "Sipariş No", value: String(created.barcode) },
         ...(unitLabel ? [{ label: "Birim", value: unitLabel }] : []),
         { label: "Durum", value: String((after as any)?.status?.label || "") },
         { label: "Yöntem", value: String((after as any)?.method?.label || "") },
-        { label: "Toplam", value: `${total} TL` },
+        ...(requestBudget !== null ? [{ label: "Talep Bütçesi", value: `${requestBudget.toFixed(2)} TL` }] : []),
+        { label: "Sipariş Toplamı", value: `${total.toFixed(2)} TL` },
+        ...(requestBudget !== null ? [{ label: "Bütçe Farkı", value: `${Math.abs(budgetDiff).toFixed(2)} TL (${budgetStatus})` }] : []),
         ...((after as any)?.estimatedDelivery ? [{ label: "Tahmini Teslim", value: new Date((after as any).estimatedDelivery).toLocaleDateString("tr-TR") }] : []),
       ];
       const items = (after?.items || []).map((it: any) => ({ name: String(it.name), quantity: Number(it.quantity), unitPrice: Number(it.unitPrice) }));
@@ -182,7 +202,10 @@ export async function GET(req: NextRequest) {
     };
 
     if (q) {
-      where.barcode = { contains: q, mode: "insensitive" };
+      where.OR = [
+        { barcode: { contains: q, mode: "insensitive" } },
+        { refNumber: { contains: q, mode: "insensitive" } }
+      ];
     }
     if (dateFrom || dateTo) {
       where.createdAt = {};
@@ -197,10 +220,19 @@ export async function GET(req: NextRequest) {
     }
 
     // Unit-based data isolation: non-admin users only see their unit's data
-    if (!user.isAdmin && user.unitId) {
-      where.request = { is: { unitId: user.unitId } };
+    // Unit-based data isolation
+    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+    const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+
+    if (!hasFullAccess) {
+      if (user.unitId) {
+        where.request = { is: { unitId: user.unitId } };
+      } else {
+        // No unit, no access (unless specifically granted somehow, but safe default is block)
+        where.request = { is: { unitId: "___NO_ACCESS___" } };
+      }
     } else if (unit) {
-      // If admin or no unitId, use the filter from query params
+      // Admin/Satinalma can filter by unit
       where.request = { is: { unit: { is: { label: unit } } } };
     }
 
@@ -233,6 +265,7 @@ export async function GET(req: NextRequest) {
     const mapped = rows.map((o) => ({
       id: o.id,
       barcode: o.barcode,
+      refNumber: o.refNumber || "", // Include user ref no
       date: o.createdAt.toISOString(),
       status: o.status?.label || "",
       method: o.method?.label || "",

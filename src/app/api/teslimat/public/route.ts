@@ -203,7 +203,7 @@ export async function GET(req: NextRequest) {
             id: validToken.order.id,
             barcode: validToken.order.barcode,
             supplierName: validToken.order.supplier?.name,
-            companyName: validToken.order.companyName,
+            companyName: validToken.order.company?.name,
             items,
             units,
             deliveryCount: totalDeliveriesCount

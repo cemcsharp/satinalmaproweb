@@ -73,16 +73,17 @@ export default function FaturaDetayPage() {
     const rule = applyWithholding ? {
         id: String(detail.withholdingCode),
         code: String(detail.withholdingCode),
+        label: String(detail.withholdingCode), // Added label to satisfy type
         vatRate: Number(typeof detail.vatRate === "number" ? detail.vatRate : 0),
         percent: parseRatio(detail.withholdingCode)
     } : null;
-    const calc = calculateWithholding(lineItems, rule as any);
+    const calc = calculateWithholding(lineItems, rule);
 
     // Prepare PDF data
     const pdfData = {
         invoiceNo: detail.number || "",
         date: new Date(detail.createdAt).toLocaleDateString("tr-TR"),
-        dueDate: detail.dueDate ? new Date(detail.dueDate as any).toLocaleDateString("tr-TR") : undefined,
+        dueDate: detail.dueDate ? new Date(detail.dueDate).toLocaleDateString("tr-TR") : undefined,
         supplier: detail.order?.supplier?.name || "-",
         supplierAddress: detail.order?.supplier?.address || undefined,
         items: lineItems.map(it => ({

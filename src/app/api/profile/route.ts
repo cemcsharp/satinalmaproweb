@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import type { Role } from "@/lib/apiAuth";
+import { getPermissionsForRole } from "@/lib/permissions";
 
 // Admin emails
 const ADMIN_EMAILS = ["admin@sirket.com", "admin@satinalmapro.com"];
@@ -16,9 +17,12 @@ export async function GET() {
             return NextResponse.json({ error: "unauthorized", debug: { session } }, { status: 401 });
         }
 
+        // Removed roleRef include, permissions will be static
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            include: { roleRef: true },
+            include: {
+                unit: true
+            },
         });
 
         if (!user) {
@@ -26,47 +30,24 @@ export async function GET() {
         }
 
         // Determine actual role
-        let roleKey: Role = (user.role as Role) || "user";
-        let permissions: string[] = [];
-        let roleName = roleKey;
+        let roleKey: string = user.role || "user";
 
         // Admin override by email
         if (user.email && ADMIN_EMAILS.includes(String(user.email).toLowerCase())) {
             roleKey = "admin";
         }
 
-        // Get permissions from roleRef or fallback to role key lookup
-        if (user.roleRef && user.roleRef.permissions) {
-            const rolePerms = user.roleRef.permissions as Record<string, string[]>;
-            Object.entries(rolePerms).forEach(([module, actions]) => {
-                (actions || []).forEach((action) => {
-                    permissions.push(`${module}:${action}`);
-                });
-            });
-            roleKey = user.roleRef.key as Role;
-            roleName = user.roleRef.name;
-        } else {
-            // Fallback: lookup by role key
-            const roleFromDb = await prisma.role.findUnique({ where: { key: roleKey } });
-            if (roleFromDb && roleFromDb.permissions) {
-                const rolePerms = roleFromDb.permissions as Record<string, string[]>;
-                Object.entries(rolePerms).forEach(([module, actions]) => {
-                    (actions || []).forEach((action) => {
-                        permissions.push(`${module}:${action}`);
-                    });
-                });
-                roleName = roleFromDb.name;
-            }
-        }
+        const permissions = getPermissionsForRole(roleKey);
 
         return NextResponse.json({
             id: user.id,
             username: user.username,
             email: user.email,
             role: roleKey,
-            roleName,
+            roleName: roleKey, // Simplified, can be mapped to label if needed
             createdAt: user.createdAt,
             unitId: user.unitId,
+            unitLabel: user.unit?.label || null,
             permissions,
             isAdmin: roleKey === "admin",
         });

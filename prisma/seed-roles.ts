@@ -99,7 +99,7 @@ async function seedRoles() {
             await prisma.role.update({
                 where: { key: role.key },
                 data: {
-                    displayName: role.displayName,
+                    name: role.displayName,
                     permissions: role.permissions,
                     isSystem: role.isSystem
                 }
@@ -110,8 +110,7 @@ async function seedRoles() {
             await prisma.role.create({
                 data: {
                     key: role.key,
-                    name: role.name,
-                    displayName: role.displayName,
+                    name: role.displayName,
                     isSystem: role.isSystem,
                     permissions: role.permissions
                 }

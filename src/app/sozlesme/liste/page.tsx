@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 // dynamic import removed
 import PageHeader from "@/components/ui/PageHeader";
@@ -20,7 +20,7 @@ import ImportExcel from "@/components/ui/ImportExcel";
 
 // removed dynamic imports
 
-export default function ContractListPage() {
+function ContractListContent() {
   const router = useRouter();
   const { show } = useToast();
   const searchParams = useSearchParams();
@@ -369,5 +369,14 @@ export default function ContractListPage() {
         )}
       </Modal>
     </section>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function ContractListPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Yükleniyor...</div>}>
+      <ContractListContent />
+    </Suspense>
   );
 }

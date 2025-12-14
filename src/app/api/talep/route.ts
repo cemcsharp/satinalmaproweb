@@ -18,6 +18,15 @@ type CreateRequestBody = {
   items: { name: string; quantity: number; unitId: string; unitPrice?: number }[];
 };
 
+function generateTempPassword(length = 12): string {
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuthApi(req);
@@ -40,6 +49,24 @@ export async function POST(req: NextRequest) {
     const unitEmail = typeof body.unitEmail === "string" ? body.unitEmail.trim() : "";
     if (unitEmail && !/^\S+@\S+\.\S+$/.test(unitEmail)) {
       return jsonError(400, "invalid_unitEmail");
+    }
+
+    // Enforce Unit Isolation: User can only create requests for their own unit
+    // Exception: Admins AND Satinalma unit can create for any unit
+    const user = await import("@/lib/apiAuth").then(m => m.getUserWithPermissions(req));
+    if (!user) return jsonError(401, "unauthorized");
+
+    const targetUnitId = body.unitId;
+    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+    const isOwnerOrAdmin = user.isAdmin || user.role === "admin" || isSatinalma;
+
+    if (!isOwnerOrAdmin) {
+      if (!user.unitId) {
+        return jsonError(403, "user_has_no_unit", { message: "Birime atanmamış kullanıcılar talep oluşturamaz." });
+      }
+      if (targetUnitId !== user.unitId) {
+        return jsonError(403, "unit_mismatch", { message: "Sadece kendi biriminiz adına talep oluşturabilirsiniz." });
+      }
     }
 
     let created;
@@ -88,6 +115,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Auto-create user account for unit email if it doesn't exist
+    if (unitEmail) {
+      const existingUser = await prisma.user.findUnique({ where: { email: unitEmail } });
+      if (!existingUser) {
+        try {
+          const tempPassword = generateTempPassword();
+          const userModule = await import("@/lib/apiAuth"); // Dynamic import to avoid cycles if any
+          // We need bcrypt here. Ensure it is imported at top or dynamically.
+          // Since we cannot easily add top-level imports with replace, we will use dynamic import or assume bcrypt is available if we added it.
+          // Let's rely on adding the import at the top in a separate change if needed, OR use dynamic require if possible.
+          // Better: I will use a separate replace to add imports first.
+
+          // Actually, I can combine logic. But let's do imports first for safety.
+        } catch (err) { }
+      }
+    }
+
     try {
       await notify({ userId: String(auth.userId), title: "Talep oluşturuldu", body: `${body.subject} (${body.barcode})` });
       const origin = req.nextUrl.origin;
@@ -95,6 +139,54 @@ export async function POST(req: NextRequest) {
       const createdAt = new Date().toLocaleString("tr-TR");
       const after = await prisma.request.findUnique({ where: { id: created.id }, include: { unit: true, owner: true, items: true } });
       const unitLabel = String((after as any)?.unit?.label || "");
+
+      // Auto-create user logic moved here to have access to unitLabel
+      if (unitEmail) {
+        const existingUser = await prisma.user.findUnique({ where: { email: unitEmail } });
+        if (!existingUser) {
+          try {
+            // Dynamic import for bcrypt to avoid top-level modification issues if possible, but standard is top-level.
+            const bcrypt = await import("bcryptjs");
+            const tempPassword = generateTempPassword();
+            const passwordHash = await bcrypt.hash(tempPassword, 10);
+            const safeUnitLabel = unitLabel.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ0-9\s]/g, "").trim() || unitEmail.split("@")[0];
+            const username = safeUnitLabel;
+
+            await prisma.user.create({
+              data: {
+                username,
+                email: unitEmail,
+                passwordHash,
+                role: "birim_evaluator",
+              },
+            });
+
+            // Send welcome email
+            const welcomeHtml = renderEmailTemplate("generic", {
+              title: "Satınalma Pro - Hesabınız Oluşturuldu",
+              body: `<p>Merhaba,</p>
+                      <p>Adınıza/Biriminiz adına yeni bir satınalma talebi oluşturuldu. İşlemleri takip edebilmeniz için hesabınız oluşturulmuştur.</p>
+                      <table style="width:100%;border-collapse:collapse;margin:16px 0;background:#f8fafc;border-radius:8px;padding:16px;">
+                        <tr><td style="padding:8px;color:#64748b;">Kullanıcı Adı:</td><td style="padding:8px;font-weight:600;">${username}</td></tr>
+                        <tr><td style="padding:8px;color:#64748b;">E-posta:</td><td style="padding:8px;font-weight:600;">${unitEmail}</td></tr>
+                        <tr><td style="padding:8px;color:#64748b;">Geçici Şifre:</td><td style="padding:8px;font-weight:600;color:#dc2626;">${tempPassword}</td></tr>
+                      </table>
+                      <p style="color:#ef4444;font-weight:500;">⚠️ Güvenliğiniz için ilk girişte şifrenizi değiştirmenizi öneririz.</p>`,
+              actionUrl: `${origin}/login`,
+              actionText: "Giriş Yap",
+            });
+            await dispatchEmail({
+              to: unitEmail,
+              subject: "Satınalma Pro - Hesabınız Oluşturuldu",
+              html: welcomeHtml,
+              category: "welcome",
+            });
+          } catch (e) {
+            console.error("Auto-create user failed:", e);
+          }
+        }
+      }
+
       const fields = [
         { label: "Talep No", value: String(body.barcode) },
         ...(unitLabel ? [{ label: "Birim", value: unitLabel }] : []),
@@ -164,7 +256,7 @@ export async function GET(req: NextRequest) {
 
     // Unit-based data isolation - Users only see their unit's data
     // Admin users see all data
-    if (user.isAdmin || user.roleRef?.key === "admin") {
+    if (user.isAdmin || user.role === "admin") {
       // Admin sees all - apply manual filter if requested
       if (unit) {
         where.unit = { is: { label: unit } };

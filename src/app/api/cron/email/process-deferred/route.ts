@@ -8,12 +8,9 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const admin = await ensureRoleApi(req, "admin");
   if (!admin) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const now = new Date();
-  const startHour = 9, endHour = 18;
-  const h = now.getHours();
-  if (h < startHour || h >= endHour) {
-    return NextResponse.json({ ok: false, reason: "outside_business_hours" }, { status: 200 });
-  }
+
+  // Hours check removed
+
   const batch = await prisma.emailLog.findMany({ where: { status: "deferred" }, orderBy: { createdAt: "asc" }, take: 100 });
   let sent = 0, failed = 0;
   for (const row of batch) {

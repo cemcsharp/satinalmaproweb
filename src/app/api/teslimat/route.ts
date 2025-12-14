@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
-import { requireAuthApi } from "@/lib/apiAuth";
+import { requireAuthApi, getUserWithPermissions } from "@/lib/apiAuth";
 import * as crypto from "crypto";
 
 // Create Delivery Receipt
 export async function POST(req: NextRequest) {
     try {
-        const auth = await requireAuthApi(req);
-        if (!auth) return jsonError(401, "unauthorized");
+        const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
+        const user = await getUserWithPermissions(req);
+        if (!user) return jsonError(401, "unauthorized");
+
+        // Auth object for create (receiverId)
+        const auth = { userId: user.id };
 
         // Verify user exists (prevent FK error if DB was reset)
-        const userExists = await prisma.user.findUnique({ where: { id: auth.userId } });
-        if (!userExists) return jsonError(401, "user_not_found_relogin");
+        // const userExists = await prisma.user.findUnique({ where: { id: auth.userId } });
+        // if (!userExists) return jsonError(401, "user_not_found_relogin");
 
         const body = await req.json();
         const { orderId, code, date, items, action } = body;
@@ -73,16 +77,33 @@ export async function POST(req: NextRequest) {
             return jsonError(400, "invalid_payload", { message: "orderId and items required" });
         }
 
+        // Permission Check for Internal Creation
+        const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+        const canCreate = user.isAdmin || isSatinalma || userHasPermission(user, "teslimat:create");
+
+        if (!canCreate) {
+            return jsonError(403, "forbidden_create", { message: "Teslimat fişi oluşturma yetkiniz yok." });
+        }
+
         // Verify Order
         const order = await prisma.order.findUnique({
             where: { id: orderId },
-            include: { items: true, deliveries: { include: { items: true } } }
+            include: {
+                items: true,
+                deliveries: { include: { items: true } },
+                request: { include: { unit: true, owner: true } } // Include unit info
+            }
         });
         if (!order) return jsonError(404, "order_not_found");
 
         // Calculate previously delivered quantities
         const deliveredMap = new Map<string, number>();
         for (const d of order.deliveries) {
+            // Only count approved deliveries? Or all? 
+            // If we count pending too, we prevent over-delivery creation.
+            // Let's count all non-rejected ones.
+            if (d.status === "rejected") continue;
+
             for (const di of d.items) {
                 const current = deliveredMap.get(di.orderItemId) || 0;
                 deliveredMap.set(di.orderItemId, current + Number(di.quantity));
@@ -115,7 +136,7 @@ export async function POST(req: NextRequest) {
             deliveryItemsData.push({
                 orderItemId,
                 quantity: q,
-                approvedQuantity: q,
+                approvedQuantity: 0, // Initially 0 until approved by unit
                 notes
             });
             totalNewDelivery += q;
@@ -126,18 +147,52 @@ export async function POST(req: NextRequest) {
         }
 
         // Create Receipt
+        // Assign to the Requesting Unit (so they can approve it)
+        const targetUnitId = order.request?.unitId;
+
         const delivery = await prisma.deliveryReceipt.create({
             data: {
                 code: code || `IRS-${Date.now()}`, // Auto-generate if missing
                 date: date ? new Date(date) : new Date(),
                 orderId,
                 receiverId: auth.userId,
-                status: "approved", // Auto-approve for simplified MVP
+                receiverUnitId: targetUnitId, // Assigned to Request Unit
+                status: "pending", // Wait for Unit Approval
                 items: {
                     create: deliveryItemsData
                 }
             }
         });
+
+        // Send Email to Request Owner / Unit
+        try {
+            // ... email logic (will implement below in separate block if needed, but here is cleaner)
+            const origin = process.env.NEXTAUTH_URL || req.headers.get("origin");
+            const link = `${origin}/teslimat/onay`; // Page to approve deliveries
+
+            const targets = [];
+            if (order.request?.owner?.email) targets.push(order.request.owner.email);
+            if (order.request?.unitEmail) targets.push(order.request.unitEmail);
+
+            if (targets.length > 0) {
+                const { dispatchEmail } = await import("@/lib/mailer");
+                for (const to of new Set(targets)) {
+                    await dispatchEmail({
+                        to,
+                        subject: "Teslimat Onayı Bekleniyor",
+                        html: `
+                            <p>Merhaba,</p>
+                            <p>Siparişiniz (<strong>${order.barcode}</strong>) için Satınalma birimi tarafından teslimat girişi yapılmıştır.</p>
+                            <p>Lütfen teslim aldığınız ürünleri kontrol edip sistemi onaylayınız.</p>
+                            <p><a href="${link}">Onay Ekranına Git</a></p>
+                        `,
+                        category: "delivery_pending"
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Email send error", e);
+        }
 
         // Update Order Status
         // Re-calculate total delivered vs total ordered
@@ -186,7 +241,7 @@ export async function POST(req: NextRequest) {
             return jsonError(400, "duplicate_code", { message: "Bu İrsaliye Numarası/Belge Kodu ile daha önce bir kayıt oluşturulmuş. Lütfen kontrol edip farklı bir numara giriniz." });
         }
 
-        return jsonError(500, "server_error", { message: e.message, stack: e.stack });
+        return jsonError(500, "server_error", { message: e.message });
     }
 }
 
@@ -199,13 +254,39 @@ export async function GET(req: NextRequest) {
     const dateTo = searchParams.get("dateTo");
 
     try {
+        // Get user with permissions
+        const user = await getUserWithPermissions(req);
+        if (!user) return jsonError(401, "unauthorized");
+
         const where: any = {};
         if (orderId) where.orderId = orderId;
-        if (status) where.status = status;
+        if (status) {
+            if (status.includes(",")) {
+                where.status = { in: status.split(",") };
+            } else {
+                where.status = status;
+            }
+        }
         if (dateFrom || dateTo) {
             where.date = {};
             if (dateFrom) where.date.gte = new Date(dateFrom);
             if (dateTo) where.date.lte = new Date(dateTo);
+        }
+
+        // Birim bazlı filtreleme:
+        // - Admin → tümünü görsün
+        // - Satınalma Müdürlüğü (unitLabel içinde "Satınalma" geçiyorsa) → tümünü görsün
+        // - Diğer birimler → sadece kendi birimlerine ait teslimatları görsün
+        const isSatinalma = user.unitLabel?.includes("Satınalma") || user.unitLabel?.includes("Satinlama");
+
+        if (!user.isAdmin && !isSatinalma) {
+            if (user.unitId) {
+                // Kendi biriminin teslimatlarını gör
+                where.receiverUnitId = user.unitId;
+            } else {
+                // Birimi yoksa sadece kendi kayıtlarını gör
+                where.receiverId = user.id;
+            }
         }
 
         const deliveries = await prisma.deliveryReceipt.findMany({

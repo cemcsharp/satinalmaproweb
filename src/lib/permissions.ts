@@ -85,7 +85,21 @@ export function hasPermission(
     requiredPermission: string | string[],
     userRole?: string
 ): boolean {
-    return true;
+    // Admin bypass - admin her şeyi yapabilir
+    if (userRole === "admin") return true;
+
+    // Permission yok ise erişim yok
+    if (!userPermissions || userPermissions.length === 0) {
+        return false;
+    }
+
+    // Array ise herhangi birini içeriyorsa yeterli (OR logic)
+    if (Array.isArray(requiredPermission)) {
+        return requiredPermission.some(p => userPermissions.includes(p));
+    }
+
+    // Single permission check
+    return userPermissions.includes(requiredPermission);
 }
 
 /**
@@ -96,7 +110,16 @@ export function hasAllPermissions(
     requiredPermissions: string[],
     userRole?: string
 ): boolean {
-    return true;
+    // Admin bypass
+    if (userRole === "admin") return true;
+
+    // Permission yok ise erişim yok
+    if (!userPermissions || userPermissions.length === 0) {
+        return false;
+    }
+
+    // Tüm izinlere sahip olmalı (AND logic)
+    return requiredPermissions.every(p => userPermissions.includes(p));
 }
 
 /**
@@ -110,4 +133,46 @@ export function getPermissionInfo(permissionKey: string): { category: string; la
         }
     }
     return null;
+}
+// Rol bazlı varsayılan izinler
+export const ROLE_PERMISSIONS: Record<string, string[]> = {
+    admin: ALL_PERMISSIONS, // Admin her yetkiye sahip
+    satinalma_muduru: [
+        "talep:read", "talep:edit", "talep:delete",
+        "siparis:create", "siparis:read", "siparis:edit", "siparis:delete",
+        "fatura:create", "fatura:read", "fatura:edit",
+        "sozlesme:create", "sozlesme:read", "sozlesme:edit",
+        "tedarikci:create", "tedarikci:read", "tedarikci:edit", "tedarikci:delete",
+        "tedarikci:evaluation", // old key support if needed
+        "evaluation:submit",
+        "rapor:read",
+        "ayarlar:read", "ayarlar:edit", "user:manage"
+    ],
+    birim_yetkilisi: [
+        "talep:create", "talep:read",
+        "siparis:read",
+        "teslimat:read",
+        "rapor:read"
+    ],
+    birim_evaluator: [
+        "talep:read",
+        "siparis:read",
+        "teslimat:read",
+        "evaluation:submit"
+    ],
+    depo_gorevlisi: [
+        "teslimat:read", "teslimat:create", "teslimat:edit"
+    ],
+    user: [
+        "talep:create", "talep:read"
+    ]
+};
+
+/**
+ * Rol için varsayılan izinleri döndürür
+ */
+export function getPermissionsForRole(role: string): string[] {
+    // Admin check logic is handled in hasPermission but explicitly returning all here helps frontend
+    if (role === "admin") return ALL_PERMISSIONS;
+    return ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS["user"];
 }

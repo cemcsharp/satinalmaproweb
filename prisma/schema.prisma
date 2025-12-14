@@ -49,6 +49,7 @@ model User {
   approvalRecords       ApprovalRecord[]        @relation("ApprovalRecordApprover")
   deliveriesReceived    DeliveryReceipt[]
   auditLogs             AuditLog[]
+  createdRfqs           Rfq[]
 }
 
 model AuditLog {
@@ -122,8 +123,28 @@ model Supplier {
   performanceMetrics  SupplierPerformanceMetric[] @relation("SupplierPerformanceMetrics")
   evaluationSummaries SupplierEvaluationSummary[] @relation("SupplierEvaluationSummaries")
   alerts              SupplierAlert[]             @relation("SupplierAlerts")
+  rfqParticipations   RfqSupplier[]
+  
+  // Ürün Kataloğu: Tercih edilen tedarikçi olarak bağlı ürünler
+  productsPreferred   Product[]                   @relation("PreferredSupplier")
 
   @@index([active])
+  
+  // Category Relation
+  categoryId          String?
+  category            SupplierCategory?           @relation(fields: [categoryId], references: [id])
+}
+
+model SupplierCategory {
+  id        String             @id @default(cuid())
+  name      String
+  parentId  String?
+  parent    SupplierCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  SupplierCategory[] @relation("CategoryHierarchy")
+  suppliers Supplier[]
+  
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 }
 
 model Company {
@@ -164,6 +185,9 @@ model Request {
   // New: Attachments & Comments
   attachments       Attachment[]
   comments          Comment[]
+  // RFQ Relation
+  rfqId             String?
+  rfq               Rfq?          @relation(fields: [rfqId], references: [id], onDelete: SetNull)
 }
 
 model Attachment {
@@ -192,16 +216,22 @@ model RequestItem {
   id        String     @id @default(cuid())
   requestId String
   name      String
+  sku       String?    // Ürün kodu (katalogdan seçildi ise)
   quantity  Decimal    @db.Decimal(18, 2)
   unitPrice Decimal    @default(0) @db.Decimal(18, 2)
   unitId    String
   unit      OptionItem @relation("RequestItemUnit", fields: [unitId], references: [id])
   request   Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  
+  // Ürün Kataloğu Bağlantısı (Opsiyonel)
+  productId String?
+  product   Product?   @relation(fields: [productId], references: [id], onDelete: SetNull)
 }
 
 model Order {
   id                String               @id @default(cuid())
   barcode           String               @unique
+  refNumber         String?              // Manuel/Dış Kaynaklı Sipariş No
   createdAt         DateTime             @default(now())
   estimatedDelivery DateTime?
   requestId         String?
@@ -286,6 +316,7 @@ model OrderItem {
   id          String   @id @default(cuid())
   orderId     String
   name        String
+  sku         String?  // Ürün Kodu
   quantity    Decimal  @db.Decimal(18, 2)
   unitPrice   Decimal  @default(0) @db.Decimal(18, 2)
   unitId      String?
@@ -534,7 +565,24 @@ model SupplierAlert {
 }
 
 // Login attempts logging for security auditing
-// LoginAttempt modeli kaldırıldı (rollback)
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  username  String?
+  email     String?
+  userId    String?
+  ip        String?
+  userAgent String?
+  success   Boolean
+  reason    String?  @db.VarChar(200)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([username])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([success])
+}
+
 
 model WithholdingJobType {
   id        String   @id @default(cuid())
@@ -664,4 +712,222 @@ model ApprovalRecord {
 }
 
 // Role model removed
+
+
+// ==========================================
+// RFQ (OFFER) MODULE
+// ==========================================
+
+// Teklif İsteme (RFQ) Ana Kaydı
+model Rfq {
+  id          String    @id @default(cuid())
+  rfxCode     String    @unique // Örn: RFQ-2025-001
+  title       String
+  status      String    @default("ACTIVE") // DRAFT, ACTIVE, COMPLETED, CANCELLED
+  deadline    DateTime? // Son teklif verme tarihi
+  
+  // İlişkiler
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  
+  // Hangi talepler için açıldı? (Birden fazla talep birleştirilebilir)
+  requests    Request[]
+  
+  // Hangi tedarikçilere gidildi?
+  suppliers   RfqSupplier[]
+  
+  items       RfqItem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// RFQ Kalemleri (RequestItem'dan türetilir)
+model RfqItem {
+  id          String   @id @default(cuid())
+  rfqId       String
+  rfq         Rfq      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  
+  name        String
+  quantity    Decimal  @db.Decimal(18, 2)
+  unit        String
+  description String?
+  
+  // Hangi talep kalemine denk geliyor? (Opsiyonel link)
+  requestItemId String?
+
+  // Kategori (Tedarikçi Eşleşmesi İçin)
+  categoryId    String?
+  category      SupplierCategory? @relation(fields: [categoryId], references: [id])
+  
+  // Tedarikçi cevapları (OfferItem)
+  offers      OfferItem[]
+}
+
+// RFQ - Tedarikçi Eşleşmesi ve Erişim Token'ı
+model RfqSupplier {
+  id          String    @id @default(cuid())
+  rfqId       String
+  rfq         Rfq       @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  
+  supplierId  String?  // Sistemdeki tedarikçi (varsa)
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+  
+  // Sistemde kayıtlı olmayan tedarikçiler için manuel giriş
+  contactName String?
+  companyName String?  // Add company name for manual suppliers
+  email       String
+  
+  // GÜVENLİK: Magic Link Token
+  token       String    @unique // URL-safe random string
+  tokenExpiry DateTime
+  
+  // Durum
+  stage       String    @default("PENDING") // SENT, VIEWED, OFFERED, DECLINED
+  
+  // Verilen Teklif (Header)
+  offer       Offer? 
+  
+  createdAt   DateTime  @default(now())
+  
+  @@unique([rfqId, email]) // Bir RFQ için aynı maile tek davet
+}
+
+// Tedarikçinin Verdiği Teklif (Cevap)
+model Offer {
+  id            String      @id @default(cuid())
+  rfqSupplierId String      @unique
+  rfqSupplier   RfqSupplier @relation(fields: [rfqSupplierId], references: [id])
+  
+  // Teklif Detayları
+  totalAmount   Decimal     @db.Decimal(18, 2)
+  currency      String      @default("TRY") // TRY, USD, EUR
+  validUntil    DateTime?   // Teklif geçerlilik tarihi
+  notes         String?
+  attachments   String?     // Dosya URL (virgülle ayrılmış)
+  
+  items         OfferItem[]
+  
+  submittedAt   DateTime    @default(now())
+  isWinner      Boolean     @default(false) // Seçilen teklif mi?
+}
+
+// Teklif Kalem Detayları
+model OfferItem {
+  id          String    @id @default(cuid())
+  offerId     String
+  offer       Offer     @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  
+  rfqItemId   String
+  rfqItem     RfqItem   @relation(fields: [rfqItemId], references: [id])
+  
+  quantity    Decimal   @db.Decimal(18, 2)
+  unitPrice   Decimal   @db.Decimal(18, 2)
+  vatRate     Int       @default(20)
+  totalPrice  Decimal   @db.Decimal(18, 2) // quantity * unitPrice
+  
+  deliveryDate DateTime? // Termin tarihi
+  brand       String?   // Marka/Model önerisi
+  notes       String?
+}
+
+// =====================================================
+// ÜRÜN KATALOG MODÜLÜ
+// =====================================================
+
+// Ürün Kategorisi (Hiyerarşik - Kullanıcı Tanımlı)
+model ProductCategory {
+  id          String    @id @default(cuid())
+  name        String
+  code        String    @unique // Kategori kodu (kullanıcı tanımlı)
+  description String?
+  
+  // Hiyerarşi
+  parentId    String?
+  parent      ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    ProductCategory[] @relation("CategoryHierarchy")
+  
+  // Meta
+  active      Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // İlişkiler
+  products    Product[]
+  
+  @@index([parentId])
+  @@index([active])
+}
+
+// Ürün Master Verisi
+model Product {
+  id            String    @id @default(cuid())
+  sku           String    @unique // Ürün Kodu (kullanıcı tanımlı)
+  name          String    // Standart ürün adı
+  description   String?
+  
+  // Kategori
+  categoryId    String?
+  category      ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  
+  // Birim ve Fiyat
+  defaultUnit   String?   // Varsayılan birim (Adet, Kg, vb.)
+  estimatedPrice Decimal?  @db.Decimal(18, 2) // Tahmini birim fiyat
+  currency      String    @default("TRY")
+  
+  // Tercih Edilen Tedarikçi
+  preferredSupplierId String?
+  preferredSupplier   Supplier? @relation("PreferredSupplier", fields: [preferredSupplierId], references: [id], onDelete: SetNull)
+  
+  // Stok Bilgileri (Opsiyonel)
+  minStock      Decimal?  @db.Decimal(18, 2)
+  leadTimeDays  Int?      // Tedarik süresi (gün)
+  
+  // Meta
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Talep İlişkileri
+  requestItems  RequestItem[]
+  
+  // Arama optimizasyonu için indeksler
+  @@index([categoryId])
+  @@index([sku])
+  @@index([name])
+  @@index([active])
+  @@index([createdAt])
+}
+
+// =====================================================
+// SİSTEM AYARLARI (Feature Flags, Modül Yönetimi)
+// =====================================================
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique // Örn: "rfq_module_enabled", "product_catalog_enabled"
+  value     String   // "true" veya "false" veya JSON
+  type      String   @default("boolean") // boolean, string, json
+  label     String?  // UI'da görünen ad
+  group     String?  // Gruplandırma: "modules", "features", "general"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([key])
+  @@index([group])
+}
+
+// Modül-Rol Erişim Kontrolü
+model ModuleAccess {
+  id        String   @id @default(cuid())
+  moduleKey String   // rfq, talep, siparis, fatura, tedarikci, vb.
+  roleKey   String   // admin, satinalma_muduru, birim_muduru, vb.
+  enabled   Boolean  @default(true) // Bu rol bu modüle erişebilir mi?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([moduleKey, roleKey])
+  @@index([moduleKey])
+  @@index([roleKey])
+}
 

@@ -2,12 +2,14 @@
 import React from "react";
 import Button from "@/components/ui/Button";
 
-type IconName = "edit" | "check" | "eye" | "trash" | "clipboard";
+type IconName = "edit" | "check" | "eye" | "trash" | "clipboard" | "power";
 
-type IconButtonProps = Omit<React.ComponentProps<typeof Button>, "children"> & {
+type IconButtonProps = Omit<React.ComponentProps<typeof Button>, "children" | "size"> & {
   icon: IconName;
-  label: string; // used for aria-label and title
+  label?: string; // optional - used for aria-label and title
   tone?: "default" | "info" | "success" | "warning" | "danger";
+  size?: "sm" | "md" | "lg";
+  variant?: "ghost" | "outline" | "glass";
 };
 
 const SvgIcon = ({ name, size = 18, className = "" }: { name: IconName; size?: number; className?: string }) => {
@@ -44,6 +46,12 @@ const SvgIcon = ({ name, size = 18, className = "" }: { name: IconName; size?: n
       return (
         <svg style={style} className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path fillRule="evenodd" d="M7.502 6h7.128A3.375 3.375 0 0118 9.375v9.375a3 3 0 003-3V6.108c0-1.135-.845-2.091-1.976-2.192a48.424 48.424 0 00-3.498 0 2.25 2.25 0 00-2.176 2.654M12.75 2.25a2.25 2.25 0 00-2.176 2.654M12.75 2.25c0 1.105-.846 2.046-1.916 2.193a48.424 48.424 0 00-3.498 0 2.25 2.25 0 00-1.976 2.192V19.5a3 3 0 01-3 3h-2.25a3 3 0 01-3-3V6.108c0-1.135.845-2.091 1.976-2.192a48.424 48.424 0 013.498 0 2.25 2.25 0 012.176 2.654z" clipRule="evenodd" />
+        </svg>
+      );
+    case "power":
+      return (
+        <svg style={style} className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path fillRule="evenodd" d="M12 2.25a.75.75 0 01.75.75v9a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM6.166 5.106a.75.75 0 010 1.06 8.25 8.25 0 1011.668 0 .75.75 0 111.06-1.06c3.808 3.807 3.808 9.98 0 13.788-3.807 3.808-9.98 3.808-13.788 0-3.808-3.807-3.808-9.98 0-13.788a.75.75 0 011.06 0z" clipRule="evenodd" />
         </svg>
       );
     default:

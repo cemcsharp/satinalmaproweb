@@ -82,7 +82,7 @@ export default function InvoiceView({ item, onClose, onEdit }: InvoiceViewProps)
         date: new Date(detail.createdAt).toLocaleDateString("tr-TR"),
         dueDate: detail.dueDate ? new Date(detail.dueDate as any).toLocaleDateString("tr-TR") : undefined,
         supplier: detail.order?.supplier?.name || "-",
-        supplierAddress: detail.order?.supplier?.address || undefined,
+        supplierAddress: (detail.order?.supplier as any)?.address || undefined,
         items: lineItems.map(it => ({
             description: it.name,
             quantity: it.quantity,
@@ -93,7 +93,7 @@ export default function InvoiceView({ item, onClose, onEdit }: InvoiceViewProps)
         tax: calc.vatTotal,
         total: calc.grossTotal,
         status: detail.status,
-        notes: detail.notes || undefined
+        notes: (detail as any).notes || undefined
     };
 
     return (

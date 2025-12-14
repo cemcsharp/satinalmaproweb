@@ -19,7 +19,7 @@ export default function ProfilePage() {
 
 
   // Stats
-  const [stats, setStats] = React.useState({ requests: 0, orders: 0, meetings: 0 });
+  const [stats, setStats] = React.useState({ requests: 0, orders: 0, rfqs: 0 });
 
   // Edit mode
   const [editMode, setEditMode] = React.useState(false);
@@ -211,8 +211,8 @@ export default function ProfilePage() {
               <div className="text-[10px] text-slate-500 uppercase tracking-wide">Sipariş</div>
             </div>
             <div className="text-center p-3 bg-slate-50 rounded-xl">
-              <div className="text-2xl font-bold text-purple-600">{stats.meetings}</div>
-              <div className="text-[10px] text-slate-500 uppercase tracking-wide">Toplantı</div>
+              <div className="text-2xl font-bold text-purple-600">{stats.rfqs}</div>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wide">Teklif</div>
             </div>
           </div>
 

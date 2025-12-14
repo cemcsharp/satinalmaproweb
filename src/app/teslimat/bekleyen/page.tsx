@@ -86,7 +86,7 @@ export default function PendingDeliveriesPage() {
                                 <TD className="text-slate-500 text-sm">{new Date(order.date).toLocaleDateString("tr-TR")}</TD>
                                 <TD><Badge variant={order.status === "Kısmi Teslimat" ? "warning" : "info"}>{order.status}</Badge></TD>
                                 <TD className="text-right">
-                                    <Button size="sm" variant="outline" onClick={() => handleOpenDelivery(order.id)}>Teslim Al</Button>
+                                    <Button size="sm" variant="outline" onClick={() => handleOpenDelivery(order.id)}>Teslimat Bildir</Button>
                                 </TD>
                             </TR>
                         ))}
@@ -94,7 +94,7 @@ export default function PendingDeliveriesPage() {
                 </Table>
             </TableContainer>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={`Teslimat: ${selectedOrder?.barcode || ''}`} size="2xl">
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={`Teslimat: ${selectedOrder?.barcode || ''}`} size="xl">
                 {loadingDetails ? (
                     <div className="p-6 text-center text-slate-500">Yükleniyor...</div>
                 ) : selectedOrder ? (

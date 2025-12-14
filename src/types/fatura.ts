@@ -20,6 +20,7 @@ export type InvoiceDetail = {
     bank?: string | null;
     vatRate?: number | null;
     withholdingCode?: string | null;
+    notes?: string | null;
     items?: Array<{
         id: string;
         name: string;
@@ -31,6 +32,7 @@ export type InvoiceDetail = {
         supplier?: {
             name?: string;
             taxId?: string | null;
+            address?: string | null;
         };
         company?: {
             name?: string;

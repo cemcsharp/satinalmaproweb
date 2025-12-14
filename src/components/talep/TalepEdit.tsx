@@ -153,19 +153,19 @@ export default function TalepEdit({ item, onSave, onCancel, options, canEditAdva
                     <details className="rounded-md border p-2">
                         <summary className="cursor-pointer text-sm">Gelişmiş alanlar</summary>
                         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            <Select label="İlgili Kişi" size="sm" value={editRelatedPersonId} onChange={(e) => setEditRelatedPersonId((e.target as HTMLSelectElement).value)} aria-label="İlgili kişi" description="Talebe ilgili olan kişi">
+                            <Select label="İlgili Kişi" size="sm" value={editRelatedPersonId} onChange={(e) => setEditRelatedPersonId((e.target as HTMLSelectElement).value)} aria-label="İlgili kişi">
                                 <option value="">Seçiniz</option>
                                 {(options?.ilgiliKisi ?? []).map((o: any) => <option key={o.id} value={o.id}>{o.label}</option>)}
                             </Select>
-                            <Select label="Birim" size="sm" value={editUnitId} onChange={(e) => setEditUnitId((e.target as HTMLSelectElement).value)} aria-label="Birim" description="Sorumlu birim">
+                            <Select label="Birim" size="sm" value={editUnitId} onChange={(e) => setEditUnitId((e.target as HTMLSelectElement).value)} aria-label="Birim">
                                 <option value="">Seçiniz</option>
                                 {(options?.birim ?? []).map((o: any) => <option key={o.id} value={o.id}>{o.label}</option>)}
                             </Select>
-                            <Select label="Durum" size="sm" value={editStatusId} onChange={(e) => setEditStatusId((e.target as HTMLSelectElement).value)} aria-label="Durum" description="Talep durumu">
+                            <Select label="Durum" size="sm" value={editStatusId} onChange={(e) => setEditStatusId((e.target as HTMLSelectElement).value)} aria-label="Durum">
                                 <option value="">Seçiniz</option>
                                 {(options?.durum ?? []).map((o: any) => <option key={o.id} value={o.id}>{o.label}</option>)}
                             </Select>
-                            <Select label="Para Birimi" size="sm" value={editCurrencyId} onChange={(e) => setEditCurrencyId((e.target as HTMLSelectElement).value)} aria-label="Para birimi" description="Örn: TRY, USD">
+                            <Select label="Para Birimi" size="sm" value={editCurrencyId} onChange={(e) => setEditCurrencyId((e.target as HTMLSelectElement).value)} aria-label="Para birimi">
                                 <option value="">Seçiniz</option>
                                 {(options?.paraBirimi ?? []).map((o: any) => <option key={o.id} value={o.id}>{o.label}</option>)}
                             </Select>

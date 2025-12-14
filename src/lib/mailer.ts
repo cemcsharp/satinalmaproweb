@@ -199,10 +199,8 @@ export function renderEmailTemplate(name: string, vars: Record<string, unknown>)
 }
 
 function withinBusinessHours(date = new Date(), startHour = 9, endHour = 18) {
-  const override = String(process.env.EMAIL_ALLOW_OUT_OF_HOURS || "").trim() === "1";
-  if (override) return true;
-  const h = date.getHours();
-  return h >= startHour && h < endHour;
+  // Always allow emails immediately per user request
+  return true;
 }
 
 export async function dispatchEmail(opts: { to: string; subject: string; html: string; category?: string; smtpKey?: string; maxAttempts?: number; startHour?: number; endHour?: number }) {

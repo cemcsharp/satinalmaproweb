@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
@@ -13,6 +13,7 @@ type OrderItem = { id: string; name: string; quantity: number; unitPrice: number
 type OrderDetail = {
   id: string;
   barcode: string;
+  refNumber?: string | null;
   date: string | null;
   estimatedDelivery?: string | null;
   total: number;
@@ -26,7 +27,7 @@ type OrderDetail = {
   requestId?: string | null;
   items: OrderItem[];
 };
-export default function SiparisDetayPage() {
+function SiparisDetayContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -42,6 +43,21 @@ export default function SiparisDetayPage() {
     const t = searchParams.get("tab");
     if (t === "teslimat") setActiveTab("teslimat");
   }, [searchParams]);
+
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          setPermissions(data.permissions || []);
+          setIsAdmin(data.role === "admin" || data.roleRef?.key === "admin");
+        }
+      })
+      .catch(() => { });
+  }, []);
 
   const loadOrder = async () => {
     if (!id) return;
@@ -106,28 +122,37 @@ export default function SiparisDetayPage() {
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push("/siparis/liste")}>Listeye Dön</Button>
-            <Button variant="gradient" onClick={() => router.push(`/siparis/duzenle/${data.id}`)} className="shadow-lg shadow-blue-500/20">Düzenle</Button>
-            <Button
-              variant="secondary"
-              onClick={() => router.push(`/fatura/olustur?orderNo=${encodeURIComponent(data.barcode)}`)}
-              title="Siparişe istinaden fatura oluştur"
-            >
-              Fatura Oluştur
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => setActiveTab("teslimat")}
-              title="Teslimat işlemleri"
-            >
-              Teslimat Ekle
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => router.push(`/sozlesme/olustur?orderBarcode=${encodeURIComponent(data.barcode)}`)}
-              title="Sözleşme taslağı oluştur"
-            >
-              Sözleşme Oluştur
-            </Button>
+            {/* Permission Check for Actions */}
+            {(isAdmin || permissions.includes("siparis:update") || permissions.includes("siparis:edit")) && (
+              <Button variant="gradient" onClick={() => router.push(`/siparis/duzenle/${data.id}`)} className="shadow-lg shadow-blue-500/20">Düzenle</Button>
+            )}
+            {(isAdmin || permissions.includes("fatura:create")) && (
+              <Button
+                variant="secondary"
+                onClick={() => router.push(`/fatura/olustur?orderNo=${encodeURIComponent(data.barcode)}`)}
+                title="Siparişe istinaden fatura oluştur"
+              >
+                Fatura Oluştur
+              </Button>
+            )}
+            {(isAdmin || permissions.includes("teslimat:create")) && (
+              <Button
+                variant="secondary"
+                onClick={() => setActiveTab("teslimat")}
+                title="Teslimat işlemleri"
+              >
+                Teslimat Ekle
+              </Button>
+            )}
+            {(isAdmin || permissions.includes("sozlesme:create")) && (
+              <Button
+                variant="secondary"
+                onClick={() => router.push(`/sozlesme/olustur?orderBarcode=${encodeURIComponent(data.barcode)}`)}
+                title="Sözleşme taslağı oluştur"
+              >
+                Sözleşme Oluştur
+              </Button>
+            )}
           </div>
         }
       />
@@ -142,14 +167,32 @@ export default function SiparisDetayPage() {
           {/* Sol Kolon: Temel Bilgiler */}
           <div className="md:col-span-2 space-y-6">
             <Card title="Sipariş Detayları" className="p-5 h-full">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sipariş Numarası</label>
+                  <div className="p-3 bg-slate-50 border rounded-lg text-sm font-medium text-slate-700">{data.barcode}</div>
+                  {/* Auto generated ID info */}
+                  <p className="text-[10px] text-slate-400">Sistem tarafından otomatik üretilir</p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sipariş Barkodu</label>
+                  <div className="p-3 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700">
+                    {data.refNumber || <span className="text-slate-400 italic">Belirtilmedi</span>}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sipariş Tarihi</label>
+                  <div className="p-3 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700">
+                    {data.date ? new Date(data.date).toLocaleDateString("tr-TR") : "-"}
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6 mt-6">
                 <div>
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Durum</label>
                   <Badge variant={statusVariant(data.status)} className="px-2.5 py-0.5">{data.status || "Belirsiz"}</Badge>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Sipariş No</label>
-                  <div className="text-base font-medium text-slate-900">{data.barcode}</div>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Tedarikçi</label>
@@ -297,5 +340,14 @@ export default function SiparisDetayPage() {
         />
       )}
     </section>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function SiparisDetayPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Yükleniyor...</div>}>
+      <SiparisDetayContent />
+    </Suspense>
   );
 }

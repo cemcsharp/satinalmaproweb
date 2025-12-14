@@ -14,10 +14,9 @@ export const protectedPrefixes = [
 ];
 
 export function isProtectedPath(pathname: string): boolean {
-  if (pathname === "/" || pathname.startsWith("/login")) return false;
-  // Public exceptions
-  if (pathname.startsWith("/talep/detay/")) return false;
-  if (pathname.startsWith("/siparis/detay/")) return false;
-  if (pathname.startsWith("/sozlesme/detay/")) return false;
+  if (pathname.startsWith("/login") || pathname.startsWith("/register")) return false;
+  // Dashboard is also protected now (handled by page.tsx but good to enforce here too)
+  if (pathname === "/") return true;
+
   return protectedPrefixes.some((p) => pathname.startsWith(p));
 }

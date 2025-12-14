@@ -1,27 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { getSessionUser } from "@/lib/apiAuth";
 
 export async function GET() {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ requests: 0, orders: 0, meetings: 0 });
+        const user = await getSessionUser();
+
+        if (!user) {
+            return NextResponse.json({ requests: 0, orders: 0 });
         }
 
-        const userId = session.user.id;
+        const userId = user.id;
 
-        // Count user's requests, orders, and meetings
-        const [requests, orders, meetings] = await Promise.all([
-            prisma.request.count({ where: { ownerId: userId } }).catch(() => 0),
-            prisma.order.count({ where: { createdById: userId } }).catch(() => 0),
-            prisma.meeting.count({ where: { organizerId: userId } }).catch(() => 0),
+        // Count user's requests and orders
+        const [requests, orders] = await Promise.all([
+            prisma.request.count({ where: { ownerUserId: userId } }).catch(() => 0),
+            prisma.order.count({ where: { responsibleUserId: userId } }).catch(() => 0),
         ]);
 
-        return NextResponse.json({ requests, orders, meetings });
+        return NextResponse.json({ requests, orders });
     } catch {
         // Return default values on error
-        return NextResponse.json({ requests: 0, orders: 0, meetings: 0 });
+        return NextResponse.json({ requests: 0, orders: 0 });
     }
 }

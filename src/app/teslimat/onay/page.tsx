@@ -37,15 +37,31 @@ export default function DeliveryApprovalPage() {
     const fetchDeliveries = async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/teslimat?status=pending_verification");
+            const res = await fetch("/api/teslimat?status=pending,pending_verification");
             if (res.ok) setDeliveries(await res.json());
         } catch (error) { console.error(error); }
         finally { setLoading(false); }
     };
 
     const handleOpenReview = (delivery: DeliveryReceipt) => {
-        setSelectedDelivery(delivery);
+        // Initialize approvedQuantity with quantity for easier editing (default: full accept)
+        const d = {
+            ...delivery,
+            items: delivery.items.map(i => ({
+                ...i,
+                approvedQuantity: i.approvedQuantity ? i.approvedQuantity : i.quantity
+            }))
+        };
+        setSelectedDelivery(d);
         setIsModalOpen(true);
+    };
+
+    const handleQuantityChange = (itemId: string, val: string) => {
+        if (!selectedDelivery) return;
+        const newItems = selectedDelivery.items.map(i =>
+            i.id === itemId ? { ...i, approvedQuantity: val } : i
+        );
+        setSelectedDelivery({ ...selectedDelivery, items: newItems });
     };
 
     const handleAction = async (status: "approved" | "rejected") => {
@@ -55,7 +71,13 @@ export default function DeliveryApprovalPage() {
             const res = await fetch(`/api/teslimat/${selectedDelivery.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status })
+                body: JSON.stringify({
+                    status,
+                    updatedItems: status === "approved" ? selectedDelivery.items.map(i => ({
+                        id: i.id,
+                        approvedQuantity: i.approvedQuantity !== undefined ? i.approvedQuantity : i.quantity
+                    })) : undefined
+                })
             });
             if (res.ok) {
                 show({ title: "Başarılı", description: `Teslimat ${status === "approved" ? "onaylandı" : "reddedildi"}.`, variant: "success" });
@@ -71,7 +93,7 @@ export default function DeliveryApprovalPage() {
         <section className="space-y-4">
             <PageHeader
                 title="Onay Bekleyenler"
-                description="Dış kaynaklardan gelen onay bekleyen teslimatlar."
+                description="Birim onayı bekleyen teslimatlar."
             />
 
             <TableContainer>
@@ -81,7 +103,7 @@ export default function DeliveryApprovalPage() {
                             <TH>İrsaliye No</TH>
                             <TH>Sipariş</TH>
                             <TH>Tedarikçi</TH>
-                            <TH>Teslim Alan</TH>
+                            <TH>Teslim Alan / Bildiren</TH>
                             <TH>Tarih</TH>
                             <TH className="text-right">İşlem</TH>
                         </TR>
@@ -177,7 +199,19 @@ export default function DeliveryApprovalPage() {
                                             {selectedDelivery.items.map((item: any) => (
                                                 <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                                                     <td className="px-4 py-3 text-slate-700">{item.orderItem?.name || "-"}</td>
-                                                    <td className="px-4 py-3 text-right font-bold text-slate-900">{item.quantity}</td>
+                                                    <td className="px-4 py-3 text-right font-bold text-slate-900">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <span className="text-xs text-slate-400 mr-1">Bildirilen: {item.quantity}</span>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                step="0.01"
+                                                                className="w-24 text-right border border-slate-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                                value={item.approvedQuantity}
+                                                                onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                                                            />
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>

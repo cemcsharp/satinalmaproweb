@@ -5,10 +5,12 @@ import Button from "@/components/ui/Button";
 import IconButton from "@/components/ui/IconButton";
 import { Table, TableContainer, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 
 export default function ClientTevkifat({ initialItems = [] }: { initialItems?: { code: string; label: string; ratio: string; active?: boolean }[] }) {
+  const router = useRouter();
   const [items, setItems] = useState<{ code: string; label: string; ratio: string; active?: boolean }[]>(initialItems);
   const [code, setCode] = useState("");
   const [label, setLabel] = useState("");
@@ -58,6 +60,11 @@ export default function ClientTevkifat({ initialItems = [] }: { initialItems?: {
         title="Tevkifat İş Türleri"
         description="Tevkifat oranlarını ve iş türlerini yönetin."
         variant="gradient"
+        actions={
+          <Button variant="outline" onClick={() => router.push("/ayarlar")}>
+            ← Geri
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

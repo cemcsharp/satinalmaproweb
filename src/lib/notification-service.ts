@@ -57,3 +57,58 @@ export async function markAsRead(notificationId: string) {
     return null;
   }
 }
+
+// ========================================
+// Real-time SSE Subscription
+// ========================================
+
+type Listener = (data: any) => void;
+const listeners: Set<Listener> = new Set();
+
+/**
+ * Subscribe to notification events (for SSE streaming)
+ * @returns Unsubscribe function
+ */
+export function subscribe(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/**
+ * Publish notification to all subscribers
+ */
+export function publish(data: any): void {
+  listeners.forEach((listener) => {
+    try {
+      listener(data);
+    } catch (error) {
+      console.error("Error in notification listener:", error);
+    }
+  });
+}
+
+/**
+ * Notify user and publish to SSE stream
+ */
+export async function notifyAndPublish({
+  userId,
+  title,
+  body,
+  type = "info",
+  link,
+}: {
+  userId: string;
+  title: string;
+  body: string;
+  type?: NotificationType;
+  link?: string;
+}) {
+  const notification = await notify({ userId, title, body, type, link });
+  if (notification) {
+    publish(notification);
+  }
+  return notification;
+}
+

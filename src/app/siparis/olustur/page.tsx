@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import useLocalStorageState from "@/lib/useLocalStorageState";
@@ -15,7 +15,7 @@ type Option = { id: string; label: string; active?: boolean; email?: string | nu
 type OptionsPayload = { siparisDurumu: Option[]; alimYontemi: Option[]; yonetmelikMaddesi: Option[]; paraBirimi: Option[]; tedarikci: Option[]; firma: Option[]; birimTipi: Option[]; birim: Option[] };
 const emptyOptions: OptionsPayload = { siparisDurumu: [], alimYontemi: [], yonetmelikMaddesi: [], paraBirimi: [], tedarikci: [], firma: [], birimTipi: [], birim: [] };
 
-export default function SiparisOlusturPage() {
+function SiparisOlusturContent() {
   const { show } = useToast();
 
   const router = useRouter();
@@ -795,5 +795,14 @@ function RemoteSupplierSuggestions({ query, onSelect }: { query: string; onSelec
         </div>
       )}
     </div>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function SiparisOlusturPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Yükleniyor...</div>}>
+      <SiparisOlusturContent />
+    </Suspense>
   );
 }

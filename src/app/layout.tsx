@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   title: "SatınalmaPRO",
   description: "Kurumsal Satın Alma ve Tedarik Yönetim Sistemi",
   manifest: "/manifest.json",
-  themeColor: "#2563eb",
+
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -38,6 +38,7 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#2563eb",
 };
 
 export default function RootLayout({

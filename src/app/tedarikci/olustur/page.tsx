@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -18,7 +18,30 @@ export default function SupplierCreatePage() {
   const [website, setWebsite] = useState("");
   const [notes, setNotes] = useState("");
   const [active, setActive] = useState(true);
+  const [categoryId, setCategoryId] = useState("");
+  const [categories, setCategories] = useState<any[]>([]);
   const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string; taxId?: string }>({});
+
+  // Fetch Categories on Load
+  useEffect(() => {
+    fetch("/api/tedarikci/kategori")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setCategories(data);
+      })
+      .catch(() => { });
+  }, []);
+
+  const renderCategoryOptions = (cats: any[], depth = 0): JSX.Element[] => {
+    return cats.map(cat => (
+      <>
+        <option key={cat.id} value={cat.id}>
+          {"- ".repeat(depth)} {cat.name}
+        </option>
+        {cat.children && cat.children.length > 0 && renderCategoryOptions(cat.children, depth + 1)}
+      </>
+    ));
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +61,7 @@ export default function SupplierCreatePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
+          categoryId: categoryId || undefined,
           taxId: taxId || undefined,
           contactName: contactName || undefined,
           email: email || undefined,
@@ -91,6 +115,18 @@ export default function SupplierCreatePage() {
               Firma Bilgileri
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700">Firma Sektörü / Kategorisi</label>
+                <select
+                  className="w-full h-10 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                >
+                  <option value="">Seçiniz...</option>
+                  {renderCategoryOptions(categories)}
+                </select>
+                <p className="text-xs text-slate-500">Tedarikçi hangi sektörde faaliyet gösteriyor?</p>
+              </div>
               <Input
                 label="Firma Adı"
                 placeholder="Tedarikçi firma adı"

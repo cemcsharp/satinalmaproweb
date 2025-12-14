@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
@@ -8,7 +8,7 @@ import Button from "@/components/ui/Button";
 import { Table, TableContainer, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
 
-export default function TeslimatOlusturPage() {
+function TeslimatOlusturContent() {
     const { show } = useToast();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -53,18 +53,34 @@ export default function TeslimatOlusturPage() {
             const resDel = await fetch(`/api/teslimat?orderId=${id}`);
             if (resDel.ok) {
                 const delData = await resDel.json();
-                const totals: Record<string, number> = {};
-                for (const d of delData) {
-                    for (const item of d.items) {
-                        totals[item.orderItemId] = (totals[item.orderItemId] || 0) + Number(item.quantity);
+                const totals: Record<string, number> = {}; // Declare outside to use later
+                if (delData) {
+                    for (const d of delData) {
+                        for (const item of d.items) {
+                            totals[item.orderItemId] = (totals[item.orderItemId] || 0) + Number(item.quantity);
+                        }
+                    }
+                    setDeliveredTotals(totals);
+                    const count = delData.length;
+                    setFormCode(`IRS-${orderData.barcode}${count > 0 ? `-${count + 1}` : ""}`);
+                } else {
+                    setFormCode(`IRS-${orderData.barcode}`);
+                }
+
+                // Auto-fill inputs with remaining quantities
+                const defaultInputs: Record<string, string> = {};
+                const currentTotals = totals || {}; // Use the calculated totals
+                if (orderData.items) {
+                    for (const item of orderData.items) {
+                        const total = Number(item.quantity);
+                        const delivered = currentTotals[item.id] || 0;
+                        const rem = Math.max(0, total - delivered);
+                        if (rem > 0) defaultInputs[item.id] = rem.toString();
                     }
                 }
-                setDeliveredTotals(totals);
-                const count = delData.length;
-                setFormCode(`IRS-${orderData.barcode}${count > 0 ? `-${count + 1}` : ""}`);
-            } else {
-                setFormCode(`IRS-${orderData.barcode}`);
+                setInputs(defaultInputs);
             }
+
         } catch (e: any) { show({ title: "Hata", description: e.message, variant: "error" }); }
         finally { setLoading(false); }
     };
@@ -196,5 +212,14 @@ export default function TeslimatOlusturPage() {
                 </div>
             </div>
         </section>
+    );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function TeslimatOlusturPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center text-slate-500">Yükleniyor...</div>}>
+            <TeslimatOlusturContent />
+        </Suspense>
     );
 }

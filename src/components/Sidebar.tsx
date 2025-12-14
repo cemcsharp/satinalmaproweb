@@ -5,81 +5,10 @@ import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import Icon from "@/components/ui/Icon";
 import { hasPermission } from "@/lib/permissions";
+import { useModuleAccess } from "@/contexts/ModuleAccessContext";
 
-type MenuItem = {
-    label: string;
-    href: string;
-    icon: string;
-    category: string;
-    requiredPermission?: string | string[];
-};
-
-const menuItems: MenuItem[] = [
-    { label: "Dashboard", href: "/", icon: "home", category: "Ana" },
-    { label: "Talep Oluştur", href: "/talep/olustur", icon: "file-plus", category: "Talep", requiredPermission: "talep:create" },
-    { label: "Talep Listesi", href: "/talep/liste", icon: "file-text", category: "Talep", requiredPermission: "talep:read" },
-    { label: "Sipariş Oluştur", href: "/siparis/olustur", icon: "cart", category: "Sipariş", requiredPermission: "siparis:create" },
-    { label: "Sipariş Listesi", href: "/siparis/liste", icon: "package", category: "Sipariş", requiredPermission: "siparis:read" },
-
-    // Teslimat
-    { label: "Bekleyen Teslimatlar", href: "/teslimat/bekleyen", icon: "truck", category: "Teslimat", requiredPermission: "teslimat:read" },
-    { label: "Onay Bekleyenler", href: "/teslimat/onay", icon: "clipboard-check", category: "Teslimat", requiredPermission: "teslimat:read" },
-    { label: "Teslimat Geçmişi", href: "/teslimat/gecmis", icon: "history", category: "Teslimat", requiredPermission: "teslimat:read" },
-
-    { label: "Sözleşme Oluştur", href: "/sozlesme/olustur", icon: "document", category: "Sözleşme", requiredPermission: "sozlesme:create" },
-    { label: "Sözleşme Listesi", href: "/sozlesme/liste", icon: "clipboard", category: "Sözleşme", requiredPermission: "sozlesme:read" },
-    { label: "Fatura Oluştur", href: "/fatura/olustur", icon: "receipt", category: "Fatura", requiredPermission: "fatura:create" },
-    { label: "Fatura Listesi", href: "/fatura/liste", icon: "document", category: "Fatura", requiredPermission: "fatura:read" },
-    { label: "Toplantı Oluştur", href: "/toplanti/olustur", icon: "calendar", category: "Toplantı" },
-    { label: "Toplantı Listesi", href: "/toplanti/liste", icon: "list", category: "Toplantı" },
-    { label: "Tedarikçi Oluştur", href: "/tedarikci/olustur", icon: "user-plus", category: "Tedarikçi", requiredPermission: "tedarikci:create" },
-    { label: "Tedarikçi Listesi", href: "/tedarikci/liste", icon: "users", category: "Tedarikçi", requiredPermission: "tedarikci:read" },
-    { label: "Tedarikçi Değerlendirme", href: "/tedarikci/degerlendirme", icon: "star", category: "Tedarikçi", requiredPermission: "evaluation:submit" },
-    { label: "Değerlendirmeler", href: "/tedarikci/degerlendirmeler", icon: "bar-chart", category: "Tedarikçi", requiredPermission: "tedarikci:read" },
-    { label: "Raporlar", href: "/raporlama/raporlar", icon: "clipboard", category: "Raporlama", requiredPermission: "rapor:read" },
-    { label: "Dashboard", href: "/raporlama/dashboard", icon: "pie-chart", category: "Raporlama", requiredPermission: "rapor:read" },
-    { label: "Genel Ayarlar", href: "/ayarlar", icon: "settings", category: "Ayarlar" },
-    // Meeting module removed
-    // Calendar module removed
-];
-
-// Restricted menu for birim_evaluator role
-const evaluatorMenuItems: MenuItem[] = [
-    { label: "Dashboard", href: "/", icon: "home", category: "Ana" },
-    { label: "Değerlendirmelerim", href: "/birim/degerlendirmeler", icon: "star", category: "Değerlendirme" },
-    { label: "Değerlendirme Yap", href: "/tedarikci/degerlendirme", icon: "check-square", category: "Değerlendirme" },
-];
-
-const categories = ["Ana", "Talep", "Sipariş", "Teslimat", "Sözleşme", "Fatura", "Toplantı", "Tedarikçi", "Raporlama", "Ayarlar"];
-const evaluatorCategories = ["Ana", "Değerlendirme"];
-
-const categoryColors: Record<string, string> = {
-    "Ana": "from-blue-500 to-indigo-500",
-    "Talep": "from-emerald-500 to-teal-500",
-    "Sipariş": "from-orange-500 to-amber-500",
-    "Teslimat": "from-blue-600 to-cyan-600",
-    "Sözleşme": "from-purple-500 to-violet-500",
-    "Fatura": "from-rose-500 to-pink-500",
-    "Toplantı": "from-cyan-500 to-sky-500",
-    "Tedarikçi": "from-lime-500 to-green-500",
-    "Raporlama": "from-fuchsia-500 to-purple-500",
-    "Ayarlar": "from-slate-500 to-gray-500",
-    "Değerlendirme": "from-emerald-500 to-green-500",
-};
-
-const categoryIcons: Record<string, string> = {
-    "Ana": "home",
-    "Talep": "file-plus",
-    "Sipariş": "cart",
-    "Teslimat": "truck",
-    "Sözleşme": "document",
-    "Fatura": "receipt",
-    "Toplantı": "calendar",
-    "Tedarikçi": "users",
-    "Raporlama": "bar-chart",
-    "Ayarlar": "settings",
-    "Değerlendirme": "star",
-};
+import { menuItems, evaluatorMenuItems, categories, categoryColors, categoryIcons, type MenuItem } from "./sidebar/menuData";
+import ProfileMenu from "./sidebar/ProfileMenu";
 
 export default function Sidebar() {
     const { data: session } = useSession();
@@ -88,6 +17,9 @@ export default function Sidebar() {
     const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
     const [userPermissions, setUserPermissions] = useState<string[]>([]);
     const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+
+    // Modül erişim kontrolü için context (sadece aktif/pasif kontrolü)
+    const { isModuleEnabled, loading: moduleLoading } = useModuleAccess();
 
     // Fetch user permissions from profile API
     useEffect(() => {
@@ -110,9 +42,31 @@ export default function Sidebar() {
     const userRole = (session?.user as any)?.role;
     const isAdmin = userRole === "admin";
 
-    // Filter menu items based on permissions for ALL roles (including birim_evaluator)
-    // Show all items as requested
-    const filteredMenuItems = menuItems;
+    // Filter menu items based on permissions and module status
+    const filteredMenuItems = menuItems.filter(item => {
+        // Admin sees everything
+        if (isAdmin) return true;
+
+        // Show everything by default if permissions not loaded yet
+        if (!permissionsLoaded || moduleLoading) return true;
+
+        // Check if module is enabled (from Module Management)
+        if (item.moduleKey) {
+            if (!isModuleEnabled(item.moduleKey)) return false;
+        }
+
+        // Check role restriction (if defined on menu item)
+        if (item.requiredRole && item.requiredRole.length > 0) {
+            if (!item.requiredRole.includes(userRole)) return false;
+        }
+
+        // Check permission (from Role Management)
+        if (item.requiredPermission) {
+            return hasPermission(userPermissions, item.requiredPermission, userRole);
+        }
+
+        return true;
+    });
 
     // Add evaluator-specific menu items if user has evaluation:submit permission
     const evaluatorExtraItems: MenuItem[] = [];
@@ -299,105 +253,4 @@ export default function Sidebar() {
     );
 }
 
-function ProfileMenu({ expanded }: { expanded: boolean }) {
-    const [open, setOpen] = useState(false);
-    const { data: session } = useSession();
-    const [userName, setUserName] = useState<string>("Kullanıcı");
-    const menuRef = React.useRef<HTMLDivElement>(null);
 
-    React.useEffect(() => {
-        async function loadProfile() {
-            try {
-                const res = await fetch("/api/profile");
-                if (res.ok) {
-                    const data = await res.json();
-                    setUserName(data.username || session?.user?.name || "Kullanıcı");
-                }
-            } catch {
-                setUserName(session?.user?.name || "Kullanıcı");
-            }
-        }
-        loadProfile();
-    }, [session]);
-
-    React.useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setOpen(false);
-            }
-        }
-        if (open) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [open]);
-
-    return (
-        <div className="relative" ref={menuRef}>
-            <button
-                onClick={() => setOpen(!open)}
-                className={`
-                    w-full flex items-center gap-3 
-                    rounded-xl 
-                    bg-slate-800 hover:bg-slate-700
-                    border border-slate-700
-                    transition-all duration-200
-                    ${expanded ? "px-3 py-2.5" : "px-2 py-2.5 justify-center"}
-                `}
-            >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-lg shadow-emerald-500/20">
-                    {userName.charAt(0).toUpperCase()}
-                </div>
-                {expanded && (
-                    <div className="flex-1 min-w-0 text-left">
-                        <div className="text-sm font-semibold text-white truncate">{userName}</div>
-                        <div className="text-xs text-slate-400 truncate">Yönetici</div>
-                    </div>
-                )}
-                {expanded && (
-                    <svg className={`w-4 h-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                    </svg>
-                )}
-            </button>
-
-            {open && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-slate-700 bg-slate-800 shadow-xl overflow-hidden">
-                    <Link
-                        href="/profile"
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        Profil
-                    </Link>
-                    <Link
-                        href="/ayarlar"
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors border-t border-slate-700"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Ayarlar
-                    </Link>
-                    <button
-                        onClick={() => {
-                            setOpen(false);
-                            signOut({ callbackUrl: "/login" });
-                        }}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors border-t border-slate-700"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Çıkış Yap
-                    </button>
-                </div>
-            )}
-        </div>
-    );
-}

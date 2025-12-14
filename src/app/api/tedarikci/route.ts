@@ -21,22 +21,22 @@ export async function GET(req: NextRequest) {
       AND: [
         q
           ? {
-              OR: [
-                { name: { contains: q, mode: "insensitive" } },
-                { taxId: { contains: q, mode: "insensitive" } },
-                { email: { contains: q, mode: "insensitive" } },
-                { phone: { contains: q, mode: "insensitive" } },
-              ],
-            }
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { taxId: { contains: q, mode: "insensitive" } },
+              { email: { contains: q, mode: "insensitive" } },
+              { phone: { contains: q, mode: "insensitive" } },
+            ],
+          }
           : {},
         active !== null && active !== "" ? { active: active === "true" } : {},
         dateFrom || dateTo
           ? {
-              createdAt: {
-                gte: dateFrom ? new Date(dateFrom) : undefined,
-                lte: dateTo ? new Date(dateTo) : undefined,
-              },
-            }
+            createdAt: {
+              gte: dateFrom ? new Date(dateFrom) : undefined,
+              lte: dateTo ? new Date(dateTo) : undefined,
+            },
+          }
           : {},
       ],
     };
@@ -47,7 +47,13 @@ export async function GET(req: NextRequest) {
         : ({ name: sortDir } as any);
 
     const [items, total] = await Promise.all([
-      prisma.supplier.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize }),
+      prisma.supplier.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: { category: true }
+      }),
       prisma.supplier.count({ where }),
     ]);
 
@@ -71,6 +77,7 @@ export async function POST(req: NextRequest) {
     const address = body?.address ? String(body.address).trim() : null;
     const website = body?.website ? String(body.website).trim() : null;
     const notes = body?.notes ? String(body.notes).trim() : null;
+    const categoryId = body?.categoryId ? String(body.categoryId).trim() : null;
 
     const errors: string[] = [];
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("invalid_email");
@@ -88,6 +95,7 @@ export async function POST(req: NextRequest) {
         address,
         website,
         notes,
+        categoryId,
       },
     });
     return NextResponse.json(created, { status: 201 });

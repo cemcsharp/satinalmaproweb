@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 // dynamic import removed
 import IconButton from "@/components/ui/IconButton";
@@ -20,7 +20,7 @@ import ImportExcel from "@/components/ui/ImportExcel";
 
 // removed dynamic imports
 
-export default function InvoiceListPage() {
+function InvoiceListContent() {
   const { show } = useToast();
   const params = useSearchParams();
   const [q, setQ] = useState("");
@@ -375,10 +375,19 @@ const statusVariant = (s: string): "default" | "success" | "warning" | "error" |
 };
 const dueInfo = (inv: Invoice): { label: string; variant: "default" | "success" | "warning" | "error" | "info" } => {
   const now = new Date();
-  const dueRaw = inv.dueDate ? new Date(inv.dueDate as any) : null;
+  const dueRaw = inv.dueDate ? new Date(inv.dueDate) : null;
   if (!dueRaw || isNaN(dueRaw.getTime())) return { label: "Vade Yok", variant: "info" };
   const days = Math.ceil((dueRaw.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
   if (days < 0) return { label: "Gecikmiş", variant: "error" };
   if (days <= 7) return { label: `Yaklaşıyor (${days}g)`, variant: "warning" };
-  return { label: new Date(inv.dueDate as any).toLocaleDateString("tr-TR"), variant: "default" };
+  return { label: inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("tr-TR") : "-", variant: "default" };
 };
+
+// Wrapper with Suspense for useSearchParams
+export default function InvoiceListPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Yükleniyor...</div>}>
+      <InvoiceListContent />
+    </Suspense>
+  );
+}

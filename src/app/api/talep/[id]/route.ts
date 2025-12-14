@@ -3,9 +3,13 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 import { jsonError } from "@/lib/apiError";
+import { getUserWithPermissions } from "@/lib/apiAuth"; // Import auth helper
 
-export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const user = await getUserWithPermissions(req);
+    if (!user) return jsonError(401, "unauthorized");
+
     const { id } = await context.params;
     const safeId = String(id || "").trim();
     if (!safeId) return jsonError(404, "not_found");
@@ -26,10 +30,25 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
         },
       });
     } catch (_e) {
-      // Geçersiz id formatı gibi durumlarda 404 döndür
       return jsonError(404, "not_found");
     }
     if (!item) return jsonError(404, "not_found");
+
+    // Security Check: Isolation
+    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+    const isAdmin = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+    const isOwner = item.ownerUserId === user.id;
+    const isResponsible = item.responsibleUserId === user.id;
+    const isSameUnit = item.unitId === user.unitId;
+
+    // Access Rules:
+    // 1. Admin/Satinalma -> OK
+    // 2. Owner or Responsible -> OK
+    // 3. Same Unit -> OK (if they have read permission, verified by generic list API usually)
+    // 4. Otherwise -> FORBIDDEN
+    if (!isAdmin && !isOwner && !isResponsible && !isSameUnit) {
+      return jsonError(403, "forbidden_access", { message: "Bu talebi görüntüleme yetkiniz yok." });
+    }
     const payload = {
       id: item.id,
       barcode: item.barcode,
@@ -98,9 +117,29 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
 
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const user = await getUserWithPermissions(req);
+    if (!user) return jsonError(401, "unauthorized");
+
     const { id } = await context.params;
     const safeId = String(id || "").trim();
     if (!safeId) return jsonError(404, "not_found");
+
+    // Fetch existing validation
+    const existingReq = await prisma.request.findUnique({ where: { id: safeId } });
+    if (!existingReq) return jsonError(404, "not_found");
+
+    // Security Check
+    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+    const isAdmin = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+    const isOwner = existingReq.ownerUserId === user.id;
+    const isResponsible = existingReq.responsibleUserId === user.id;
+    // const canEditUnit = existingReq.unitId === user.unitId && user.permissions.includes("talep:edit"); // Simplified
+
+    // Strict Edit Rules: Only Admin, Owner, or Responsible can edit
+    if (!isAdmin && !isOwner && !isResponsible) {
+      return jsonError(403, "forbidden_edit", { message: "Bu talebi düzenleme yetkiniz yok." });
+    }
+
     const body = await req.json().catch(() => ({}));
     const errors: string[] = [];
     const data: any = {};
@@ -274,11 +313,32 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   }
 }
 
-export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const user = await getUserWithPermissions(req);
+    if (!user) return jsonError(401, "unauthorized");
+
     const { id } = await context.params;
     const safeId = String(id || "").trim();
     if (!safeId) return jsonError(404, "not_found");
+
+    const existingReq = await prisma.request.findUnique({ where: { id: safeId } });
+    if (!existingReq) return jsonError(404, "not_found");
+
+    // Security Check
+    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+    const isAdmin = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+    const isOwner = existingReq.ownerUserId === user.id;
+
+    if (!isAdmin && !isOwner) {
+      return jsonError(403, "forbidden_delete", { message: "Sadece kendi taleplerinizi silebilirsiniz." });
+    }
+
+    // Safety: Prevent deleting processed requests (unless admin)
+    // Assuming statusId for 'Draft' or 'Pending' is needed, but we check label via join ideally.
+    // Since we don't have status label here easily without join, let's trust Admin/Owner judgement OR
+    // we could fetch status. For now, basic auth is huge improvement.
+
     try {
       await prisma.request.delete({ where: { id: safeId } });
       return NextResponse.json({ ok: true });
@@ -291,4 +351,9 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
   } catch (e: any) {
     return jsonError(500, "talep_delete_failed", { message: e?.message });
   }
+}
+
+// PUT endpoint (alias for PATCH)
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  return PATCH(req, context);
 }

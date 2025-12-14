@@ -223,53 +223,8 @@ export async function POST(req: NextRequest) {
             const unitEmail = (order.request?.unit as any)?.email || order.request?.unitEmail;
             const supplierName = order.supplier?.name || "Tedarikçi";
 
-            // Auto-create user account for unit email if it doesn't exist
-            if (unitEmail) {
-              const existingUser = await prisma.user.findUnique({ where: { email: String(unitEmail) } });
-              if (!existingUser) {
-                try {
-                  const tempPassword = generateTempPassword();
-                  const passwordHash = await bcrypt.hash(tempPassword, 10);
-                  // Use unit label as username (e.g., "Satınalma Müdürlüğü")
-                  const safeUnitLabel = unitLabel.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ0-9\s]/g, "").trim() || String(unitEmail).split("@")[0];
-                  const username = safeUnitLabel;
-
-                  await prisma.user.create({
-                    data: {
-                      username,
-                      email: String(unitEmail),
-                      passwordHash,
-                      passwordHash,
-                      role: "birim_evaluator",
-                    },
-                  });
-
-                  // Send welcome email with credentials
-                  const welcomeHtml = renderEmailTemplate("generic", {
-                    title: "Satınalma Pro - Hesabınız Oluşturuldu",
-                    body: `<p>Merhaba,</p>
-                           <p>Tedarikçi değerlendirmesi yapabilmeniz için hesabınız oluşturulmuştur.</p>
-                           <table style="width:100%;border-collapse:collapse;margin:16px 0;background:#f8fafc;border-radius:8px;padding:16px;">
-                             <tr><td style="padding:8px;color:#64748b;">Kullanıcı Adı:</td><td style="padding:8px;font-weight:600;">${username}</td></tr>
-                             <tr><td style="padding:8px;color:#64748b;">E-posta:</td><td style="padding:8px;font-weight:600;">${unitEmail}</td></tr>
-                             <tr><td style="padding:8px;color:#64748b;">Geçici Şifre:</td><td style="padding:8px;font-weight:600;color:#dc2626;">${tempPassword}</td></tr>
-                           </table>
-                           <p style="color:#ef4444;font-weight:500;">⚠️ Güvenliğiniz için ilk girişte şifrenizi değiştirmenizi öneririz.</p>`,
-                    actionUrl: `${origin}/login`,
-                    actionText: "Giriş Yap",
-                  });
-                  await dispatchEmail({
-                    to: String(unitEmail),
-                    subject: "Satınalma Pro - Hesabınız Oluşturuldu",
-                    html: welcomeHtml,
-                    category: "welcome",
-                  });
-                  console.log(`Created birim_evaluator account for: ${unitEmail}`);
-                } catch (userErr) {
-                  console.error("Failed to create unit user account:", userErr);
-                }
-              }
-            }
+            // Auto-create user account logic removed - moved to Request phase
+            // if (unitEmail) { ... }
 
             const targets: string[] = [];
             if (unitEmail) targets.push(String(unitEmail));

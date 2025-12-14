@@ -162,6 +162,8 @@ export default function SiparisRaporu() {
                 </Card>
 
                 <Card className="p-6">
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Birim Harcamaları</h3>
+                    <p className="text-sm text-slate-500">Birim bazında harcama detayları burada görüntülenecek.</p>
                 </Card>
             </div>
         </div>

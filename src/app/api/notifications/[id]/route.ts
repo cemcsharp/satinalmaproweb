@@ -15,7 +15,7 @@ export async function PATCH(
     const { id } = await params;
 
     try {
-        await markAsRead(String(auth.userId), id);
+        await markAsRead(id);
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("Error marking notification as read:", error);

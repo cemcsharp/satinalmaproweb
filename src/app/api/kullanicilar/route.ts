@@ -135,9 +135,9 @@ export async function DELETE(req: NextRequest) {
 
     // Check for related records that would prevent deletion
     const [requestCount, orderCount, invoiceCount] = await Promise.all([
-      prisma.request.count({ where: { OR: [{ ownerId: id }, { responsibleId: id }] } }),
-      prisma.order.count({ where: { userId: id } }),
-      prisma.invoice.count({ where: { userId: id } }),
+      prisma.request.count({ where: { OR: [{ ownerUserId: id }, { responsibleUserId: id }] } }),
+      prisma.order.count({ where: { responsibleUserId: id } }),
+      prisma.invoice.count({ where: { responsibleUserId: id } }),
     ]);
 
     if (requestCount > 0 || orderCount > 0 || invoiceCount > 0) {

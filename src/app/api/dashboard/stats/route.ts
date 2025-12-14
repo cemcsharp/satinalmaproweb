@@ -31,9 +31,9 @@ export async function GET(req: NextRequest) {
             totalContracts,
         ] = await Promise.all([
             prisma.request.count(),
-            prisma.request.count({ where: { status: { in: ["Beklemede", "Pending"] } } }),
+            prisma.request.count({ where: { status: { label: { in: ["Beklemede", "Pending"] } } } }),
             prisma.order.count(),
-            prisma.order.count({ where: { status: { in: ["Beklemede", "Pending", "Hazırlanıyor"] } } }),
+            prisma.order.count({ where: { status: { label: { in: ["Beklemede", "Pending", "Hazırlanıyor"] } } } }),
             prisma.request.count({ where: { createdAt: { gte: startOfMonth } } }),
             prisma.request.count({ where: { createdAt: { gte: startOfLastMonth, lt: endOfLastMonth } } }),
             prisma.order.count({ where: { createdAt: { gte: startOfMonth } } }),
@@ -41,14 +41,14 @@ export async function GET(req: NextRequest) {
             prisma.request.findMany({
                 take: 5,
                 orderBy: { createdAt: "desc" },
-                select: { id: true, title: true, status: true, createdAt: true }
+                select: { id: true, subject: true, status: { select: { label: true } }, createdAt: true }
             }),
             prisma.order.findMany({
                 take: 5,
                 orderBy: { createdAt: "desc" },
-                select: { id: true, poNumber: true, status: true, createdAt: true }
+                select: { id: true, barcode: true, status: { select: { label: true } }, createdAt: true }
             }),
-            prisma.optionItem.count({ where: { category: { key: "tedarikci" } } }),
+            prisma.supplier.count({ where: { active: true } }),
             prisma.contract.count(),
         ]);
 

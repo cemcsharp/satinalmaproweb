@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { useApiRequest } from "@/hooks/useApiRequest";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -47,32 +49,32 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export default function AuditLogPage() {
+    const router = useRouter();
     const { show } = useToast();
     const [logs, setLogs] = useState<AuditLogEntry[]>([]);
-    const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [filterAction, setFilterAction] = useState("");
     const [filterEntity, setFilterEntity] = useState("");
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams({ page: String(page), limit: "30" });
-            if (filterAction) params.set("action", filterAction);
-            if (filterEntity) params.set("entityType", filterEntity);
+    // API request hook
+    const { execute, loading } = useApiRequest<{ items: AuditLogEntry[], pagination: { totalPages: number } }>();
 
-            const res = await fetch(`/api/audit?${params}`);
-            if (!res.ok) throw new Error("Yüklenemedi");
-            const data = await res.json();
-            setLogs(data.items || []);
-            setTotalPages(data.pagination?.totalPages || 1);
-        } catch (e) {
-            show({ title: "Hata", description: "Log verileri yüklenemedi", variant: "error" });
-        } finally {
-            setLoading(false);
-        }
-    }, [page, filterAction, filterEntity, show]);
+    const load = useCallback(() => {
+        const params = new URLSearchParams({ page: String(page), limit: "30" });
+        if (filterAction) params.set("action", filterAction);
+        if (filterEntity) params.set("entityType", filterEntity);
+
+        execute({
+            url: `/api/audit?${params}`,
+            onSuccess: (data) => {
+                setLogs(data.items || []);
+                setTotalPages(data.pagination?.totalPages || 1);
+            },
+            showErrorToast: true,
+            successMessage: undefined // Opsiyonel, sadece hata göster
+        });
+    }, [page, filterAction, filterEntity, execute]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -91,6 +93,11 @@ export default function AuditLogPage() {
             <PageHeader
                 title="Sistem Logları"
                 description="Kullanıcı işlemlerini ve sistem olaylarını görüntüleyin"
+                actions={
+                    <Button variant="outline" onClick={() => router.push("/ayarlar")}>
+                        ← Geri
+                    </Button>
+                }
             />
 
             {/* Filters */}
