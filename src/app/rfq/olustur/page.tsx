@@ -44,6 +44,12 @@ function RfqOlusturContent() {
     const [notes, setNotes] = useState("");
     const [loading, setLoading] = useState(false);
 
+    // Company & Delivery Address State
+    const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
+    const [deliveryAddresses, setDeliveryAddresses] = useState<{ id: string; name: string; address: string; isDefault: boolean }[]>([]);
+    const [selectedCompanyId, setSelectedCompanyId] = useState("");
+    const [selectedDeliveryAddressId, setSelectedDeliveryAddressId] = useState("");
+
     // Category Matching State
     const [categories, setCategories] = useState<{ id: string, name: string, parentId: string | null }[]>([]);
     const [itemCategories, setItemCategories] = useState<Record<string, string>>({}); // itemId -> categoryId
@@ -57,7 +63,8 @@ function RfqOlusturContent() {
             .then(r => r.json())
             .then(data => {
                 const items = data.items || data || [];
-                setRegisteredSuppliers(items.map((s: any) => ({
+                const supplierArray = Array.isArray(items) ? items : [];
+                setRegisteredSuppliers(supplierArray.map((s: any) => ({
                     id: s.id,
                     name: s.name,
                     email: s.email || "",
@@ -73,18 +80,42 @@ function RfqOlusturContent() {
         fetch("/api/tedarikci/kategori")
             .then(r => r.json())
             .then(data => {
-                // Flatten tree if necessary or just use the list provided by API (API returns tree? Wait API returns tree! Need flattening)
-                // Actually API GET returns tree. We need flat list for Select options or we render tree visually.
-                // Let's flatten client side for Select.
                 const flat: any[] = [];
                 const traverse = (nodes: any[]) => {
+                    if (!Array.isArray(nodes)) return;
                     nodes.forEach(n => {
                         flat.push({ id: n.id, name: n.name, parentId: n.parentId });
-                        if (n.children) traverse(n.children);
+                        if (n.children && Array.isArray(n.children)) traverse(n.children);
                     });
                 };
-                traverse(data);
+                if (Array.isArray(data)) {
+                    traverse(data);
+                }
                 setCategories(flat);
+            })
+            .catch(console.error);
+
+        // Companies (Fatura Carileri)
+        fetch("/api/options")
+            .then(r => r.json())
+            .then(data => {
+                const firmaList = data.firma || [];
+                setCompanies(firmaList.map((c: any) => ({ id: c.id, name: c.label })));
+                // Set default if only one
+                if (firmaList.length === 1) setSelectedCompanyId(firmaList[0].id);
+            })
+            .catch(console.error);
+
+        // Delivery Addresses
+        fetch("/api/delivery-addresses?active=true")
+            .then(r => r.json())
+            .then(data => {
+                const items = data.items || [];
+                setDeliveryAddresses(items);
+                // Auto-select default
+                const defaultAddr = items.find((a: any) => a.isDefault);
+                if (defaultAddr) setSelectedDeliveryAddressId(defaultAddr.id);
+                else if (items.length === 1) setSelectedDeliveryAddressId(items[0].id);
             })
             .catch(console.error);
     }, []);
@@ -249,6 +280,19 @@ function RfqOlusturContent() {
         return { suggestedSuppliers: suggested, otherSuppliers: others };
     }, [registeredSuppliers, supplierSearchQuery, itemCategories]);
 
+    // Select all suggested suppliers
+    const selectAllSuggested = () => {
+        const suggestedIds = suggestedSuppliers.map(s => s.id);
+        setSelectedSupplierIds(prev => {
+            const newSet = new Set([...prev, ...suggestedIds]);
+            return Array.from(newSet);
+        });
+    };
+
+    // Check if all suggested are already selected
+    const allSuggestedSelected = suggestedSuppliers.length > 0 &&
+        suggestedSuppliers.every(s => selectedSupplierIds.includes(s.id));
+
     const totalItems = linkedRequestDetail?.items.length || 0;
     const totalBudget = linkedRequestDetail?.budget || 0;
 
@@ -295,7 +339,9 @@ function RfqOlusturContent() {
                     notes,
                     requestIds: [linkedRequestDetail.id],
                     suppliers: allSuppliers,
-                    itemCategories // Send item categories
+                    itemCategories,
+                    companyId: selectedCompanyId || null,
+                    deliveryAddressId: selectedDeliveryAddressId || null
                 })
             });
 
@@ -492,6 +538,46 @@ function RfqOlusturContent() {
                                 className="md:col-span-2"
                             />
                         </div>
+
+                        {/* Teslimat ve Fatura Bilgileri */}
+                        <div className="border-t border-slate-200 pt-4 mt-4">
+                            <h4 className="text-sm font-semibold text-slate-700 mb-3">Teslimat ve Fatura Bilgileri</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Teslimat Adresi</label>
+                                    <select
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        value={selectedDeliveryAddressId}
+                                        onChange={e => setSelectedDeliveryAddressId(e.target.value)}
+                                    >
+                                        <option value="">Seçiniz...</option>
+                                        {deliveryAddresses.map(addr => (
+                                            <option key={addr.id} value={addr.id}>
+                                                {addr.name} {addr.isDefault ? "(★ Varsayılan)" : ""}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {selectedDeliveryAddressId && (
+                                        <p className="text-xs text-slate-500 mt-1 truncate">
+                                            {deliveryAddresses.find(a => a.id === selectedDeliveryAddressId)?.address}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Fatura Carisi</label>
+                                    <select
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        value={selectedCompanyId}
+                                        onChange={e => setSelectedCompanyId(e.target.value)}
+                                    >
+                                        <option value="">Seçiniz...</option>
+                                        {companies.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
                     </Card>
                 </div>
 
@@ -512,8 +598,17 @@ function RfqOlusturContent() {
                                     {/* Suggested Section */}
                                     {suggestedSuppliers.length > 0 && (
                                         <div className="space-y-2">
-                                            <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-2">
+                                            <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center justify-between gap-2">
                                                 <span className="bg-emerald-100 px-2 py-0.5 rounded-full">✨ Önerilenler ({suggestedSuppliers.length})</span>
+                                                {!allSuggestedSelected && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={selectAllSuggested}
+                                                        className="text-[10px] bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 transition-colors font-semibold"
+                                                    >
+                                                        Tümünü Seç
+                                                    </button>
+                                                )}
                                             </div>
                                             {suggestedSuppliers.map(sup => (
                                                 <label key={sup.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedSupplierIds.includes(sup.id)
@@ -535,6 +630,13 @@ function RfqOlusturContent() {
                                                     </div>
                                                 </label>
                                             ))}
+                                        </div>
+                                    )}
+
+                                    {/* No category selected warning */}
+                                    {linkedRequestDetail && Object.values(itemCategories).filter(Boolean).length === 0 && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+                                            <span className="font-medium">💡 İpucu:</span> Kalemler için kategori seçerseniz uygun tedarikçiler otomatik önerilir.
                                         </div>
                                     )}
 

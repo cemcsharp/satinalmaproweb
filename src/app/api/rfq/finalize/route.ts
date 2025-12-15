@@ -74,13 +74,14 @@ export async function POST(req: NextRequest) {
         // Status: Pending Approval? Or directly Approved?
         // Let's say "Taslak" or "Onay Bekliyor" (Pending).
         // Start with pending status (ID needed). Fetch or assume known seed.
-        const status = await prisma.optionItem.findFirst({ where: { category: { key: "ORDER_STATUS" }, label: "Taslak" } });
-        const method = await prisma.optionItem.findFirst({ where: { category: { key: "PURCHASE_METHOD" }, label: "Teklif Alımı" } }); // or similar
+        const status = await prisma.optionItem.findFirst({ where: { category: { key: "siparisDurumu" }, active: true }, orderBy: { sort: "asc" } });
+        const method = await prisma.optionItem.findFirst({ where: { category: { key: "alimYontemi" }, active: true }, orderBy: { sort: "asc" } });
         // Fallbacks
-        const statusId = status?.id || (await prisma.optionItem.findFirst({ where: { category: { key: "ORDER_STATUS" } } }))?.id;
-        const methodId = method?.id || (await prisma.optionItem.findFirst({ where: { category: { key: "PURCHASE_METHOD" } } }))?.id;
-        const regulationId = (await prisma.optionItem.findFirst({ where: { category: { key: "PURCHASE_REGULATION" } } }))?.id; // default
-        const currencyId = (await prisma.optionItem.findFirst({ where: { category: { key: "CURRENCY" }, label: offer.currency } }))?.id || (await prisma.optionItem.findFirst({ where: { category: { key: "CURRENCY" } } }))?.id;
+        const statusId = status?.id;
+        const methodId = method?.id;
+        const regulationId = (await prisma.optionItem.findFirst({ where: { category: { key: "yonetmelikMaddesi" }, active: true }, orderBy: { sort: "asc" } }))?.id;
+        const currencyOpt = await prisma.optionItem.findFirst({ where: { category: { key: "paraBirimi" }, active: true, label: offer.currency } });
+        const currencyId = currencyOpt?.id || (await prisma.optionItem.findFirst({ where: { category: { key: "paraBirimi" }, active: true }, orderBy: { sort: "asc" } }))?.id;
 
         if (!statusId || !methodId || !regulationId || !currencyId) return jsonError(500, "missing_config_options");
 
@@ -95,20 +96,28 @@ export async function POST(req: NextRequest) {
 
         const rfqItems = await prisma.rfqItem.findMany({ where: { rfqId } });
 
+        // Get default unit for fallback
+        const defaultUnit = await prisma.optionItem.findFirst({
+            where: { category: { key: "birimTipi" }, active: true },
+            orderBy: { sort: "asc" }
+        });
+
         const orderItemsData = [];
         for (const oi of offer.items) {
             const rfqI = rfqItems.find(r => r.id === oi.rfqItemId);
             const rfqUnit = rfqI?.unit; // string
-            // find unit option
-            const unitOpt = await prisma.optionItem.findFirst({
-                where: { category: { key: "UNIT" }, label: rfqUnit }
-            });
+            // find unit option by label
+            const unitOpt = rfqUnit
+                ? await prisma.optionItem.findFirst({
+                    where: { category: { key: "birimTipi" }, label: rfqUnit }
+                })
+                : null;
 
             orderItemsData.push({
                 name: rfqI?.name || "Ürün",
                 quantity: oi.quantity,
                 unitPrice: oi.unitPrice,
-                unitId: unitOpt?.id, // if not found, it will be null, acceptable? Schema: unitId String?
+                unitId: unitOpt?.id || defaultUnit?.id, // Use default if not found
                 // extraCosts?
             });
         }

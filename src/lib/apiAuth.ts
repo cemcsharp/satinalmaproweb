@@ -122,11 +122,12 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
   const userId = (token as any)?.userId || (token as any)?.sub || null;
   if (!userId) return null;
 
-  // Fetch user unit, removing roleRef
+  // Fetch user with unit and roleRef
   const user = await prisma.user.findUnique({
     where: { id: String(userId) },
     include: {
-      unit: true
+      unit: true,
+      roleRef: true // Include role relation
     }
   });
   if (!user) return null;
@@ -138,8 +139,34 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
     roleKey = "admin";
   }
 
-  // Use centralized permission logic
-  const permissions = getPermissionsForRole(roleKey);
+  // Try to get permissions from Role table first
+  let permissions: string[] = [];
+
+  if (user.roleRef && user.roleRef.permissions) {
+    // Database-driven permissions from Role table
+    const rolePerms = user.roleRef.permissions;
+    if (Array.isArray(rolePerms)) {
+      permissions = rolePerms as string[];
+    } else if (typeof rolePerms === 'object') {
+      // Legacy JSON object format - extract keys
+      permissions = Object.keys(rolePerms).filter(k => (rolePerms as any)[k]);
+    }
+    // Use role key from Role table if available
+    if (user.roleRef.key) {
+      roleKey = user.roleRef.key as Role;
+    }
+  }
+
+  // Fallback to legacy hardcoded permissions if empty
+  if (permissions.length === 0) {
+    permissions = getPermissionsForRole(roleKey);
+  }
+
+  // Admin always gets all permissions
+  if (roleKey === "admin") {
+    const { ALL_PERMISSIONS } = await import("@/lib/permissions");
+    permissions = [...ALL_PERMISSIONS];
+  }
 
   return {
     id: user.id,

@@ -63,6 +63,10 @@ export async function GET(req: NextRequest) {
     const users = await prisma.user.findMany({ orderBy: { username: 'asc' }, select: { id: true, username: true, email: true } });
     results.kullanici = users.map(x => ({ id: x.id, label: x.username || x.email, active: true }));
 
+    // Teslimat Adresleri
+    const deliveryAddresses = await prisma.deliveryAddress.findMany({ orderBy: [{ isDefault: 'desc' }, { name: 'asc' }], select: { id: true, name: true, active: true, address: true, isDefault: true } });
+    results.teslimatAdresi = deliveryAddresses.map(x => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault }));
+
     return NextResponse.json(results);
 
   } catch (e: any) {
@@ -98,7 +102,7 @@ export async function POST(req: NextRequest) {
     const auth = await requireAuthApi(req);
     if (!auth) return jsonError(401, "unauthorized");
     const body = await req.json();
-    const action = String(body?.action || "");
+    const action = String(body?.action || "add"); // Default to "add" if not specified
     if (action === "sync_users") {
       const cat = await getCategoryByKey("ilgiliKisi");
       const users = await prisma.user.findMany();
@@ -123,7 +127,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (action !== "add") return jsonError(400, "invalid_action");
-    const key = String(body?.key || "").trim();
+    // Accept both 'key' and 'category' for backwards compatibility
+    const key = String(body?.key || body?.category || "").trim();
     const label = String(body?.label || "").trim();
     if (!key) return jsonError(400, "invalid_payload");
     if (key === "firma") {
@@ -147,6 +152,27 @@ export async function POST(req: NextRequest) {
       }
       const payload = await listCompanies();
       return NextResponse.json(payload, { status: 201 });
+    }
+    // Teslimat Adresi ekleme
+    if (key === "teslimatAdresi") {
+      const name = String((body?.name ?? label) || "").trim();
+      if (!name) return jsonError(400, "invalid_payload", { message: "name_required" });
+      const address = String(body?.address || "").trim();
+      const city = body?.city || null;
+      const district = body?.district || null;
+      const phone = body?.phone || null;
+      const contactPerson = body?.contactPerson || null;
+      const isDefault = Boolean(body?.isDefault);
+      try {
+        if (isDefault) {
+          await prisma.deliveryAddress.updateMany({ where: { isDefault: true }, data: { isDefault: false } });
+        }
+        await prisma.deliveryAddress.create({ data: { name, address, city, district, phone, contactPerson, isDefault, active: true } });
+      } catch (e: any) {
+        return jsonError(500, "server_error", { message: e.message });
+      }
+      const items = await prisma.deliveryAddress.findMany({ orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] });
+      return NextResponse.json({ key: "teslimatAdresi", items: items.map(x => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault })) }, { status: 201 });
     }
     if (!label) return jsonError(400, "invalid_payload");
     if (key === "tedarikci") return jsonError(400, "unsupported_category", { message: "Bu kategori Ayarlar'dan düzenlenemez" });
@@ -215,6 +241,39 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    // Teslimat Adresi güncelleme
+    const deliveryAddress = await prisma.deliveryAddress.findUnique({ where: { id } });
+    if (deliveryAddress) {
+      if (action === "toggle") {
+        const active = Boolean(body?.active);
+        await prisma.deliveryAddress.update({ where: { id }, data: { active } });
+      } else if (action === "rename") {
+        const label = String(body?.label || "").trim();
+        if (!label) return jsonError(400, "invalid_payload");
+        await prisma.deliveryAddress.update({ where: { id }, data: { name: label } });
+      } else if (action === "update") {
+        const data: any = {};
+        if (body?.name !== undefined) data.name = body.name;
+        if (body?.address !== undefined) data.address = body.address;
+        if (body?.city !== undefined) data.city = body.city;
+        if (body?.district !== undefined) data.district = body.district;
+        if (body?.phone !== undefined) data.phone = body.phone;
+        if (body?.contactPerson !== undefined) data.contactPerson = body.contactPerson;
+        if (body?.isDefault !== undefined) {
+          if (body.isDefault) {
+            await prisma.deliveryAddress.updateMany({ where: { isDefault: true, id: { not: id } }, data: { isDefault: false } });
+          }
+          data.isDefault = body.isDefault;
+        }
+        if (!Object.keys(data).length) return jsonError(400, "no_fields_to_update");
+        await prisma.deliveryAddress.update({ where: { id }, data });
+      } else {
+        return jsonError(400, "unsupported_action");
+      }
+      const items = await prisma.deliveryAddress.findMany({ orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] });
+      return NextResponse.json({ key: "teslimatAdresi", items: items.map(x => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault })) });
+    }
+
     const item = await prisma.optionItem.findUnique({ where: { id }, include: { category: true } });
     if (!item || !item.category) return jsonError(404, "not_found");
     const key = item.category.key;
@@ -256,15 +315,84 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// Delete an option item
-export async function DELETE(req: NextRequest) {
+// PUT endpoint for frontend compatibility (update option item directly)
+export async function PUT(req: NextRequest) {
   try {
     const auth = await requireAuthApi(req);
     if (!auth) return jsonError(401, "unauthorized");
     const body = await req.json();
     const id = String(body?.id || "").trim();
+    const label = String(body?.label || body?.name || "").trim();
+    const email = body?.email == null ? undefined : String(body.email || "").trim();
+    const key = String(body?.key || "").trim();
+
+    if (!id) return jsonError(400, "invalid_payload", { message: "id_required" });
+    if (!label) return jsonError(400, "invalid_payload", { message: "label_required" });
+
+    // Check if it's a company
+    const company = await prisma.company.findUnique({ where: { id } });
+    if (company) {
+      const data: any = { name: label };
+      if (typeof email !== "undefined") data.email = email || null;
+      await prisma.company.update({ where: { id }, data });
+      const payload = await listCompanies();
+      return NextResponse.json(payload);
+    }
+
+    // Check if it's an option item
+    const item = await prisma.optionItem.findUnique({ where: { id }, include: { category: true } });
+    if (!item || !item.category) return jsonError(404, "not_found");
+
+    const categoryKey = item.category.key;
+    if (["tedarikci", "firma"].includes(categoryKey)) {
+      return jsonError(400, "unsupported_category", { message: "Bu kategori Ayarlar'dan düzenlenemez" });
+    }
+
+    const data: any = { label };
+    if (categoryKey === "birim" && typeof email !== "undefined") {
+      data.email = email || null;
+    }
+
+    await prisma.optionItem.update({ where: { id }, data });
+    const payload = await listItemsByKey(categoryKey);
+    return NextResponse.json(payload);
+  } catch (e: any) {
+    console.error("[API/Options] PUT ERROR:", e);
+    return jsonError(500, "options_update_failed", { message: e?.message });
+  }
+}
+
+// Delete an option item
+export async function DELETE(req: NextRequest) {
+  try {
+    const auth = await requireAuthApi(req);
+    if (!auth) return jsonError(401, "unauthorized");
+
+    // Accept id from query params OR body
+    const { searchParams } = new URL(req.url);
+    let id = searchParams.get("id") || "";
+
+    // If not in query params, try to get from body
+    if (!id) {
+      try {
+        const body = await req.json();
+        id = String(body?.id || "").trim();
+      } catch {
+        // Body might be empty for query param requests
+      }
+    }
 
     if (!id) return jsonError(400, "invalid_payload");
+
+    // Check if it's a delivery address
+    const deliveryAddress = await prisma.deliveryAddress.findUnique({ where: { id } });
+    if (deliveryAddress) {
+      const inUseCount = await prisma.order.count({ where: { deliveryAddressId: id } });
+      if (inUseCount > 0) return jsonError(409, "in_use", { message: "Bu adres bağlı siparişler nedeniyle silinemiyor" });
+      await prisma.deliveryAddress.delete({ where: { id } });
+      const items = await prisma.deliveryAddress.findMany({ orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] });
+      return NextResponse.json({ key: "teslimatAdresi", items: items.map(x => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault })) });
+    }
 
     // Check if it's a company
     const company = await prisma.company.findUnique({ where: { id } });

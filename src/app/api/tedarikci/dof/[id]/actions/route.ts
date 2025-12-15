@@ -1,0 +1,1 @@
+export { GET, POST, PATCH, DELETE } from "../../../capa/[id]/actions/route";

@@ -18,8 +18,10 @@ model Role {
   name        String   @unique
   key         String   @unique
   description String?
-  permissions Json     @default("{}")
-  isSystem    Boolean  @default(false)
+  permissions Json     @default("[]") // Array of permission strings like ["talep:read", "siparis:create"]
+  isSystem    Boolean  @default(false) // System roles cannot be deleted
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(100)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   users       User[]
@@ -142,6 +144,7 @@ model SupplierCategory {
   parent    SupplierCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children  SupplierCategory[] @relation("CategoryHierarchy")
   suppliers Supplier[]
+  rfqItems  RfqItem[]
   
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
@@ -157,6 +160,25 @@ model Company {
   phone     String? @db.VarChar(50)
   email     String? @db.VarChar(200)
   orders    Order[]
+  rfqs      Rfq[]
+}
+
+// Teslimat Adresleri (Kurumun Farklı Lokasyonları)
+model DeliveryAddress {
+  id            String   @id @default(cuid())
+  name          String   // "Merkez Kampüs", "Tuzla Kampüs"
+  address       String   @db.VarChar(500)
+  city          String?
+  district      String?
+  postalCode    String?
+  phone         String?
+  contactPerson String?
+  active        Boolean  @default(true)
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  orders        Order[]
+  rfqs          Rfq[]
 }
 
 model Request {
@@ -241,6 +263,7 @@ model Order {
   currencyId        String
   supplierId        String
   companyId         String
+  deliveryAddressId String?              // Teslimat Adresi
   realizedTotal     Decimal              @db.Decimal(18, 2)
   responsibleUserId String?
   request           Request?             @relation(fields: [requestId], references: [id], onDelete: SetNull)
@@ -250,6 +273,7 @@ model Order {
   currency          OptionItem           @relation("OrderCurrency", fields: [currencyId], references: [id])
   supplier          Supplier             @relation(fields: [supplierId], references: [id])
   company           Company              @relation(fields: [companyId], references: [id])
+  deliveryAddress   DeliveryAddress?     @relation(fields: [deliveryAddressId], references: [id])
   items             OrderItem[]
   // existing relations...
   contracts           Contract[]
@@ -720,25 +744,31 @@ model ApprovalRecord {
 
 // Teklif İsteme (RFQ) Ana Kaydı
 model Rfq {
-  id          String    @id @default(cuid())
-  rfxCode     String    @unique // Örn: RFQ-2025-001
-  title       String
-  status      String    @default("ACTIVE") // DRAFT, ACTIVE, COMPLETED, CANCELLED
-  deadline    DateTime? // Son teklif verme tarihi
+  id                String    @id @default(cuid())
+  rfxCode           String    @unique // Örn: RFQ-2025-001
+  title             String
+  status            String    @default("ACTIVE") // DRAFT, ACTIVE, COMPLETED, CANCELLED
+  deadline          DateTime? // Son teklif verme tarihi
   
   // İlişkiler
-  createdById String
-  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdById       String
+  createdBy         User      @relation(fields: [createdById], references: [id])
+  
+  // Fatura Carisi ve Teslimat Adresi
+  companyId         String?
+  company           Company?  @relation(fields: [companyId], references: [id])
+  deliveryAddressId String?
+  deliveryAddress   DeliveryAddress? @relation(fields: [deliveryAddressId], references: [id])
   
   // Hangi talepler için açıldı? (Birden fazla talep birleştirilebilir)
-  requests    Request[]
+  requests          Request[]
   
   // Hangi tedarikçilere gidildi?
-  suppliers   RfqSupplier[]
+  suppliers         RfqSupplier[]
   
-  items       RfqItem[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  items             RfqItem[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 // RFQ Kalemleri (RequestItem'dan türetilir)

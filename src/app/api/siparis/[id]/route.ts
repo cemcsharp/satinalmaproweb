@@ -254,6 +254,53 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
           await dispatchEmail({ to, subject: evalSubject, html: evalHtml, category: "evaluation_request" });
         }
       }
+
+      // SUPPLIER NOTIFICATION: Send order confirmation email when status becomes "Onaylandı" or "Sipariş Geçildi"
+      const approvalWords = ["onaylı", "onaylanmış", "onaylan", "sipariş geçildi", "siparis gecildi"];
+      const wasApprovedBefore = approvalWords.some(w => prev.includes(w));
+      const isNowApproved = approvalWords.some(w => next.includes(w));
+      const supplierEmail = (after as any)?.supplier?.email;
+
+      if (!wasApprovedBefore && isNowApproved && supplierEmail) {
+        const supplierName = (after as any)?.supplier?.name || "Tedarikçi";
+        const companyName = (after as any)?.company?.name || "";
+        const orderTotal = typeof (after as any)?.realizedTotal?.toNumber === "function"
+          ? (after as any).realizedTotal.toNumber()
+          : Number((after as any)?.realizedTotal ?? 0);
+        const currencyLabel = (after as any)?.currency?.label || "TRY";
+        const orderItems = await prisma.orderItem.findMany({ where: { orderId } });
+
+        const supplierSubject = `Sipariş Onayı – ${after?.barcode} – ${companyName}`;
+        const supplierFields = [
+          { label: "Sipariş No", value: String(after?.barcode || orderId) },
+          ...(after?.refNumber ? [{ label: "Referans No", value: after.refNumber }] : []),
+          { label: "Alıcı Firma", value: companyName },
+          { label: "Sipariş Durumu", value: String(after?.status?.label || "") },
+          { label: "Toplam Tutar", value: `${orderTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ${currencyLabel}` },
+          { label: "Sipariş Tarihi", value: new Date().toLocaleDateString("tr-TR") },
+        ];
+        const supplierItemsList = orderItems.map((it: any) => ({
+          name: it.name,
+          quantity: typeof it.quantity?.toNumber === "function" ? it.quantity.toNumber() : Number(it.quantity),
+          unitPrice: typeof it.unitPrice?.toNumber === "function" ? it.unitPrice.toNumber() : Number(it.unitPrice),
+        }));
+
+        const supplierHtml = renderEmailTemplate("detail", {
+          title: "Siparişiniz Onaylandı",
+          intro: `Sayın ${supplierName}, siparişiniz onaylanmıştır. Aşağıda sipariş detaylarını bulabilirsiniz.`,
+          fields: supplierFields,
+          items: supplierItemsList,
+          actionUrl: "",
+          actionText: ""
+        });
+
+        try {
+          await dispatchEmail({ to: supplierEmail, subject: supplierSubject, html: supplierHtml, category: "supplier_order_notification" });
+          console.log(`[Supplier Notification] Email sent to ${supplierEmail} for order ${after?.barcode}`);
+        } catch (emailErr) {
+          console.error(`[Supplier Notification] Failed to send email to ${supplierEmail}:`, emailErr);
+        }
+      }
     } catch { }
 
     return NextResponse.json({ ok: true, id: result.id });
@@ -281,20 +328,33 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
   }
   try {
     await prisma.$transaction(async (tx) => {
-      // 1) Remove items (cascades also handle this, but explicit for clarity)
+      // 1) First, remove delivery items (they reference order items via orderItemId)
+      const deliveries = await tx.deliveryReceipt.findMany({ where: { orderId }, select: { id: true } });
+      if (deliveries.length > 0) {
+        const deliveryIds = deliveries.map((d) => d.id);
+        await tx.deliveryItem.deleteMany({ where: { deliveryId: { in: deliveryIds } } });
+        await tx.attachment.deleteMany({ where: { deliveryId: { in: deliveryIds } } });
+        await tx.deliveryReceipt.deleteMany({ where: { id: { in: deliveryIds } } });
+      }
+
+      // 2) Now safe to remove order items
       await tx.orderItem.deleteMany({ where: { orderId } });
-      // 2) Null-out nullable relations
+
+      // 3) Remove delivery tokens  
+      await tx.deliveryToken.deleteMany({ where: { orderId } });
+
+      // 4) Null-out nullable relations
       await tx.contract.updateMany({ where: { orderId }, data: { orderId: null } });
       await tx.invoice.updateMany({ where: { orderId }, data: { orderId: null } });
 
-      // 3) Supplier evaluations linked to order: delete answers by evaluation, then evaluations
+      // 5) Supplier evaluations linked to order: delete answers by evaluation, then evaluations
       const evals = await tx.supplierEvaluation.findMany({ where: { orderId }, select: { id: true } });
       if (evals.length > 0) {
         const evalIds = evals.map((e) => e.id);
         await tx.supplierEvaluationAnswer.deleteMany({ where: { evaluationId: { in: evalIds } } });
         await tx.supplierEvaluation.deleteMany({ where: { id: { in: evalIds } } });
       }
-      // 4) Finally delete order
+      // 6) Finally delete order
       await tx.order.delete({ where: { id: orderId } });
     });
     return NextResponse.json({ ok: true, id: orderId });

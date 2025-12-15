@@ -3,38 +3,40 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/Button";
-import IconButton from "@/components/ui/IconButton";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
-import { fetchJsonWithRetry } from "@/lib/http";
 
 type Role = {
     id: string;
     name: string;
     key: string;
     description: string | null;
-    permissions: Record<string, string[]>;
+    permissions: string[];
     isSystem: boolean;
     userCount: number;
 };
 
-type Module = { key: string; name: string };
-
-const ACTIONS = ["read", "write", "delete"];
-const ACTION_LABELS: Record<string, string> = {
-    read: "Okuma",
-    write: "Yazma",
-    delete: "Silme"
-};
+// Permission categories for display
+const PERMISSION_CATEGORIES = [
+    { key: "talep", label: "Talep", perms: ["talep:read", "talep:create", "talep:edit", "talep:delete"] },
+    { key: "siparis", label: "Sipariş", perms: ["siparis:read", "siparis:create", "siparis:edit", "siparis:delete"] },
+    { key: "fatura", label: "Fatura", perms: ["fatura:read", "fatura:create", "fatura:edit", "fatura:delete"] },
+    { key: "sozlesme", label: "Sözleşme", perms: ["sozlesme:read", "sozlesme:create", "sozlesme:edit", "sozlesme:delete"] },
+    { key: "tedarikci", label: "Tedarikçi", perms: ["tedarikci:read", "tedarikci:create", "tedarikci:edit", "tedarikci:delete"] },
+    { key: "teslimat", label: "Teslimat", perms: ["teslimat:read", "teslimat:create", "teslimat:edit", "teslimat:delete"] },
+    { key: "rfq", label: "RFQ/Teklif", perms: ["rfq:read", "rfq:create", "rfq:edit", "rfq:delete"] },
+    { key: "urun", label: "Ürün", perms: ["urun:read", "urun:create", "urun:edit", "urun:delete"] },
+    { key: "rapor", label: "Raporlama", perms: ["rapor:read"] },
+    { key: "diger", label: "Diğer", perms: ["evaluation:submit", "ayarlar:read", "ayarlar:edit", "user:manage", "role:manage"] },
+];
 
 export default function RolesPage() {
     const router = useRouter();
     const { show } = useToast();
     const [roles, setRoles] = useState<Role[]>([]);
-    const [modules, setModules] = useState<Module[]>([]);
     const [loading, setLoading] = useState(false);
 
     // Modal state
@@ -43,14 +45,15 @@ export default function RolesPage() {
     const [formName, setFormName] = useState("");
     const [formKey, setFormKey] = useState("");
     const [formDescription, setFormDescription] = useState("");
-    const [formPermissions, setFormPermissions] = useState<Record<string, string[]>>({});
+    const [formPermissions, setFormPermissions] = useState<string[]>([]);
+    const [saving, setSaving] = useState(false);
 
     const load = async () => {
         setLoading(true);
         try {
-            const data = await fetchJsonWithRetry<any>("/api/roller");
+            const res = await fetch("/api/roles");
+            const data = await res.json();
             setRoles(data.items || []);
-            setModules(data.modules || []);
         } catch (e) {
             show({ title: "Hata", description: "Roller yüklenemedi", variant: "error" });
         } finally {
@@ -65,7 +68,7 @@ export default function RolesPage() {
         setFormName("");
         setFormKey("");
         setFormDescription("");
-        setFormPermissions({});
+        setFormPermissions([]);
         setModalOpen(true);
     };
 
@@ -74,19 +77,23 @@ export default function RolesPage() {
         setFormName(role.name);
         setFormKey(role.key);
         setFormDescription(role.description || "");
-        setFormPermissions(role.permissions || {});
+        setFormPermissions(Array.isArray(role.permissions) ? role.permissions : []);
         setModalOpen(true);
     };
 
-    const togglePermission = (moduleKey: string, action: string) => {
-        setFormPermissions(prev => {
-            const current = prev[moduleKey] || [];
-            if (current.includes(action)) {
-                return { ...prev, [moduleKey]: current.filter(a => a !== action) };
-            } else {
-                return { ...prev, [moduleKey]: [...current, action] };
-            }
-        });
+    const togglePermission = (perm: string) => {
+        setFormPermissions(prev =>
+            prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]
+        );
+    };
+
+    const toggleCategoryAll = (category: typeof PERMISSION_CATEGORIES[0]) => {
+        const allSelected = category.perms.every(p => formPermissions.includes(p));
+        if (allSelected) {
+            setFormPermissions(prev => prev.filter(p => !category.perms.includes(p)));
+        } else {
+            setFormPermissions(prev => [...new Set([...prev, ...category.perms])]);
+        }
     };
 
     const handleSave = async () => {
@@ -95,26 +102,34 @@ export default function RolesPage() {
             return;
         }
 
+        setSaving(true);
         try {
-            const payload = {
-                id: editTarget?.id,
-                name: formName,
-                key: formKey,
-                description: formDescription,
-                permissions: formPermissions
-            };
+            const endpoint = editTarget ? `/api/roles/${editTarget.id}` : "/api/roles";
+            const method = editTarget ? "PATCH" : "POST";
 
-            const method = editTarget ? "PUT" : "POST";
-            await fetchJsonWithRetry("/api/roller", {
+            const res = await fetch(endpoint, {
                 method,
-                body: JSON.stringify(payload)
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: formName,
+                    key: formKey,
+                    description: formDescription,
+                    permissions: formPermissions
+                })
             });
 
-            show({ title: "Başarılı", description: editTarget ? "Rol güncellendi" : "Rol oluşturuldu", variant: "success" });
-            setModalOpen(false);
-            load();
+            if (res.ok) {
+                show({ title: "Başarılı", description: editTarget ? "Rol güncellendi" : "Rol oluşturuldu", variant: "success" });
+                setModalOpen(false);
+                load();
+            } else {
+                const err = await res.json();
+                throw new Error(err.message || "Kaydetme başarısız");
+            }
         } catch (e: any) {
-            show({ title: "Hata", description: e.message || "Kaydetme başarısız", variant: "error" });
+            show({ title: "Hata", description: e.message, variant: "error" });
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -126,76 +141,87 @@ export default function RolesPage() {
         if (!confirm(`"${role.name}" rolünü silmek istediğinize emin misiniz?`)) return;
 
         try {
-            await fetchJsonWithRetry(`/api/roller?id=${role.id}`, { method: "DELETE" });
-            show({ title: "Başarılı", description: "Rol silindi", variant: "success" });
-            load();
+            const res = await fetch(`/api/roles/${role.id}`, { method: "DELETE" });
+            if (res.ok) {
+                show({ title: "Başarılı", description: "Rol silindi", variant: "success" });
+                load();
+            } else {
+                const err = await res.json();
+                throw new Error(err.message || "Silme başarısız");
+            }
         } catch (e: any) {
-            show({ title: "Hata", description: e.message || "Silme başarısız", variant: "error" });
+            show({ title: "Hata", description: e.message, variant: "error" });
         }
     };
 
     return (
-        <div className="space-y-6 max-w-6xl mx-auto">
+        <div className="space-y-6 max-w-6xl mx-auto pb-10">
             <PageHeader
                 title="Rol Yönetimi"
                 description="Kullanıcı rollerini ve izinlerini yönetin"
                 actions={
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={() => router.push("/ayarlar")}>← Geri</Button>
-                        <Button onClick={openCreate} className="bg-blue-600 text-white hover:bg-blue-700">Yeni Rol</Button>
+                        <Button variant="gradient" onClick={openCreate}>+ Yeni Rol</Button>
                     </div>
                 }
             />
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {roles.map(role => (
-                    <Card key={role.id} className="relative group hover:shadow-lg transition-all">
-                        <div className="flex items-start justify-between mb-4">
-                            <div>
-                                <h3 className="font-bold text-lg text-slate-800">{role.name}</h3>
-                                <code className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{role.key}</code>
+            {loading ? (
+                <div className="text-center py-10 text-slate-500">Yükleniyor...</div>
+            ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {roles.map(role => (
+                        <Card key={role.id} className="p-5 relative group hover:shadow-lg transition-all">
+                            <div className="flex items-start justify-between mb-4">
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-800">{role.name}</h3>
+                                    <code className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{role.key}</code>
+                                </div>
+                                {role.isSystem && (
+                                    <Badge variant="info" className="text-xs">Sistem</Badge>
+                                )}
                             </div>
-                            {role.isSystem && (
-                                <Badge variant="info" className="bg-blue-100 text-blue-700 border-blue-200 text-xs">Sistem</Badge>
+
+                            {role.description && (
+                                <p className="text-sm text-slate-600 mb-4">{role.description}</p>
                             )}
-                        </div>
 
-                        {role.description && (
-                            <p className="text-sm text-slate-600 mb-4">{role.description}</p>
-                        )}
+                            <div className="text-xs text-slate-500 mb-4">
+                                <span className="font-medium">{role.userCount}</span> kullanıcı
+                            </div>
 
-                        <div className="text-xs text-slate-500 mb-4">
-                            <span className="font-medium">{role.userCount}</span> kullanıcı
-                        </div>
-
-                        <div className="flex flex-wrap gap-1 mb-4">
-                            {Object.entries(role.permissions || {}).map(([mod, actions]) => (
-                                actions.length > 0 && (
-                                    <span key={mod} className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
-                                        {mod}: {(actions as string[]).join(", ")}
+                            <div className="flex flex-wrap gap-1 mb-4">
+                                {(Array.isArray(role.permissions) ? role.permissions.slice(0, 5) : []).map((perm: string) => (
+                                    <span key={perm} className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
+                                        {perm}
                                     </span>
-                                )
-                            ))}
-                        </div>
+                                ))}
+                                {Array.isArray(role.permissions) && role.permissions.length > 5 && (
+                                    <span className="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded">
+                                        +{role.permissions.length - 5} daha
+                                    </span>
+                                )}
+                            </div>
 
-                        <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(role)}>Düzenle</Button>
-                            {!role.isSystem && (
-                                <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => handleDelete(role)}>Sil</Button>
-                            )}
-                        </div>
-                    </Card>
-                ))}
-            </div>
+                            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                                <Button variant="ghost" size="sm" onClick={() => openEdit(role)}>Düzenle</Button>
+                                {!role.isSystem && (
+                                    <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => handleDelete(role)}>Sil</Button>
+                                )}
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            )}
 
             {/* Role Modal */}
             <Modal
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
                 title={editTarget ? "Rol Düzenle" : "Yeni Rol"}
-                size="lg"
             >
-                <div className="space-y-6">
+                <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <Input
                             label="Rol Adı"
@@ -208,7 +234,7 @@ export default function RolesPage() {
                             value={formKey}
                             onChange={e => setFormKey(e.target.value.toLowerCase().replace(/\s+/g, "_"))}
                             placeholder="Örn: satin_alma_uzman"
-                            disabled={editTarget?.isSystem}
+                            disabled={!!editTarget?.isSystem}
                         />
                     </div>
 
@@ -219,56 +245,49 @@ export default function RolesPage() {
                         placeholder="Bu rolün kısa açıklaması"
                     />
 
-                    {/* Permission Matrix */}
-                    <div>
-                        <h4 className="font-semibold text-slate-800 mb-3">İzin Matrisi</h4>
-                        <div className="border border-slate-200 rounded-lg overflow-hidden">
-                            <table className="w-full text-sm">
-                                <thead className="bg-slate-50">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left font-medium text-slate-600">Modül</th>
-                                        {ACTIONS.map(action => (
-                                            <th key={action} className="px-4 py-3 text-center font-medium text-slate-600 w-24">
-                                                {ACTION_LABELS[action]}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {modules.map(mod => (
-                                        <tr key={mod.key} className="hover:bg-slate-50/50">
-                                            <td className="px-4 py-3 font-medium text-slate-700">{mod.name}</td>
-                                            {ACTIONS.map(action => {
-                                                const checked = (formPermissions[mod.key] || []).includes(action);
-                                                return (
-                                                    <td key={action} className="px-4 py-3 text-center">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => togglePermission(mod.key, action)}
-                                                            className={`w-6 h-6 rounded border-2 transition-all ${checked
-                                                                ? "bg-blue-600 border-blue-600 text-white"
-                                                                : "border-slate-300 hover:border-blue-400"
-                                                                }`}
-                                                        >
-                                                            {checked && (
-                                                                <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                                </svg>
-                                                            )}
-                                                        </button>
-                                                    </td>
-                                                );
-                                            })}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    {/* Permission Categories */}
+                    <div className="border-t pt-4">
+                        <h4 className="font-medium mb-3">İzinler</h4>
+                        <div className="space-y-3 max-h-64 overflow-y-auto">
+                            {PERMISSION_CATEGORIES.map(cat => {
+                                const allSelected = cat.perms.every(p => formPermissions.includes(p));
+                                const someSelected = cat.perms.some(p => formPermissions.includes(p));
+                                return (
+                                    <div key={cat.key} className="border rounded p-3">
+                                        <label className="flex items-center gap-2 font-medium mb-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={allSelected}
+                                                ref={el => {
+                                                    if (el) el.indeterminate = someSelected && !allSelected;
+                                                }}
+                                                onChange={() => toggleCategoryAll(cat)}
+                                                className="w-4 h-4"
+                                            />
+                                            {cat.label}
+                                        </label>
+                                        <div className="flex flex-wrap gap-2 ml-6">
+                                            {cat.perms.map(perm => (
+                                                <label key={perm} className="flex items-center gap-1 text-xs cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formPermissions.includes(perm)}
+                                                        onChange={() => togglePermission(perm)}
+                                                        className="w-3 h-3"
+                                                    />
+                                                    {perm.split(":")[1]}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
                         <Button variant="outline" onClick={() => setModalOpen(false)}>İptal</Button>
-                        <Button onClick={handleSave} className="bg-blue-600 text-white hover:bg-blue-700">Kaydet</Button>
+                        <Button variant="gradient" onClick={handleSave} loading={saving}>Kaydet</Button>
                     </div>
                 </div>
             </Modal>

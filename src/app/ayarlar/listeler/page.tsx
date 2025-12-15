@@ -22,8 +22,8 @@ const dropdownCategories = [
     { key: "siparisDurumu", name: "Sipariş Durumu", icon: "🛒" },
     { key: "alimYontemi", name: "Alım Yöntemi", icon: "📋" },
     { key: "yonetmelikMaddesi", name: "Yönetmelik Maddesi", icon: "📜" },
-    { key: "tedarikci", name: "Tedarikçi", icon: "🏭" },
     { key: "firma", name: "Firma Listesi", icon: "🏛️" },
+    { key: "teslimatAdresi", name: "Teslimat Adresi", icon: "📍" },
 ];
 
 export default function ListelerPage() {
@@ -143,8 +143,8 @@ export default function ListelerPage() {
                                 key={cat.key}
                                 onClick={() => setActiveCategory(cat.key)}
                                 className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-3 ${activeCategory === cat.key
-                                        ? "bg-blue-600 text-white shadow-md shadow-blue-200"
-                                        : "hover:bg-slate-100 text-slate-600 hover:text-slate-900"
+                                    ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                                    : "hover:bg-slate-100 text-slate-600 hover:text-slate-900"
                                     }`}
                             >
                                 <span className="text-lg">{cat.icon}</span>

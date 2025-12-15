@@ -139,15 +139,47 @@ export async function POST(req: NextRequest) {
                     refNumber = customOrderNumbers[offerId];
                 }
 
+                // Get default option IDs from database
+                const statusOption = await tx.optionItem.findFirst({
+                    where: { category: { key: "siparisDurumu" }, active: true },
+                    orderBy: { sort: "asc" }
+                });
+                const methodOption = await tx.optionItem.findFirst({
+                    where: { category: { key: "alimYontemi" }, active: true },
+                    orderBy: { sort: "asc" }
+                });
+                const regulationOption = await tx.optionItem.findFirst({
+                    where: { category: { key: "yonetmelikMaddesi" }, active: true },
+                    orderBy: { sort: "asc" }
+                });
+                const currencyOption = await tx.optionItem.findFirst({
+                    where: {
+                        category: { key: "paraBirimi" },
+                        active: true,
+                        label: offer.currency || "TRY"
+                    }
+                }) || await tx.optionItem.findFirst({
+                    where: { category: { key: "paraBirimi" }, active: true },
+                    orderBy: { sort: "asc" }
+                });
+                const unitOption = await tx.optionItem.findFirst({
+                    where: { category: { key: "birimTipi" }, active: true },
+                    orderBy: { sort: "asc" }
+                });
+
+                if (!statusOption || !methodOption || !regulationOption || !currencyOption) {
+                    throw new Error("Gerekli sistem seçenekleri eksik. Lütfen Ayarlar > Listeler sayfasından kontrol edin.");
+                }
+
                 // Create Order
                 const order = await tx.order.create({
                     data: {
                         barcode: barcode,
                         refNumber: refNumber, // Map to new field
-                        status: { connect: { id: "s2" } },
-                        method: { connect: { id: "m1" } },
-                        regulation: { connect: { id: "y1" } },
-                        currency: { connect: { id: getCurrencyId(offer.currency) } },
+                        status: { connect: { id: statusOption.id } },
+                        method: { connect: { id: methodOption.id } },
+                        regulation: { connect: { id: regulationOption.id } },
+                        currency: { connect: { id: currencyOption.id } },
                         supplier: { connect: { id: supplierId } },
                         company: { connect: { id: companyId } },
                         realizedTotal: orderTotal,
@@ -158,7 +190,7 @@ export async function POST(req: NextRequest) {
                                 sku: d.sku,
                                 quantity: d.quantity,
                                 unitPrice: d.unitPrice,
-                                unit: { connect: { id: "u1" } }
+                                ...(unitOption ? { unit: { connect: { id: unitOption.id } } } : {})
                             }))
                         }
                     }

@@ -50,10 +50,10 @@ export default function DegerlendirmePage() {
         try {
             const [qRes, stRes] = await Promise.all([
                 fetchJsonWithRetry<{ questions: EvaluationQuestion[]; scoringTypes: ScoringType[] }>("/api/ayarlar/degerlendirme"),
-                fetchJsonWithRetry<ScoringType[]>("/api/ayarlar/puanlama-tipleri")
+                fetchJsonWithRetry<{ items: ScoringType[] }>("/api/ayarlar/puanlama-tipleri")
             ]);
             setQuestions(qRes.questions || []);
-            setScoringTypes(stRes || []);
+            setScoringTypes(stRes.items || []);
         } catch (e) {
             show({ title: "Hata", description: "Veriler yüklenemedi", variant: "error" });
         } finally {

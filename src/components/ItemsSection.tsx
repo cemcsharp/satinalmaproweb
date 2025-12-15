@@ -17,6 +17,7 @@ export type ProductRow = {
   unit: string;
   unitPrice: number;
   extraCosts: number;
+  currency?: string;      // Para birimi (TRY, USD, EUR, GBP)
 };
 
 type CatalogProduct = {
@@ -34,6 +35,8 @@ type Props = {
   items: ProductRow[];
   onItemsChange: (next: ProductRow[]) => void;
   unitOptions: Option[];
+  currencyOptions?: Option[];  // Para birimi seçenekleri
+  defaultCurrency?: string;    // Varsayılan para birimi ID
   productCatalog?: { name: string; unitPrice: number; unitId: string }[]; // Legacy uyumluluk
 };
 
@@ -43,6 +46,8 @@ export default function ItemsSection({
   items,
   onItemsChange,
   unitOptions,
+  currencyOptions = [],
+  defaultCurrency,
 }: Props) {
   const [editing, setEditing] = useState<Record<string, { quantity?: string; unitPrice?: string; extraCosts?: string }>>({});
   const [errors, setErrors] = useState<Record<string, { quantity?: string; unitPrice?: string; extraCosts?: string }>>({});
@@ -79,7 +84,15 @@ export default function ItemsSection({
   const addItem = () => {
     onItemsChange([
       ...items,
-      { id: crypto.randomUUID(), name: "", quantity: 1, unit: unitOptions[0]?.id || "u1", unitPrice: 0, extraCosts: 0 },
+      {
+        id: crypto.randomUUID(),
+        name: "",
+        quantity: 1,
+        unit: unitOptions[0]?.id || "u1",
+        unitPrice: 0,
+        extraCosts: 0,
+        currency: defaultCurrency || currencyOptions[0]?.id || undefined
+      },
     ]);
   };
   const removeItem = (id: string) => onItemsChange(items.filter((p) => p.id !== id));
@@ -186,14 +199,15 @@ export default function ItemsSection({
         <div style={{ overflow: 'visible' }}>
           <table className="min-w-full w-full table-fixed">
             <colgroup>
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "20%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "6%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "18%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "5%" }} />
             </colgroup>
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
@@ -202,6 +216,7 @@ export default function ItemsSection({
                 <th className="p-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Miktar</th>
                 <th className="p-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Birim</th>
                 <th className="p-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Birim Fiyat</th>
+                <th className="p-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Para Br.</th>
                 <th className="p-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Ek Masraflar</th>
                 <th className="p-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Toplam</th>
                 <th className="p-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider"></th>
@@ -384,6 +399,24 @@ export default function ItemsSection({
                       error={errors[pr.id]?.unitPrice}
                       className="text-right"
                     />
+                  </td>
+
+                  {/* Para Birimi */}
+                  <td className="p-2 align-top">
+                    {currencyOptions.length > 0 ? (
+                      <Select
+                        size="sm"
+                        value={pr.currency || defaultCurrency || currencyOptions[0]?.id || ""}
+                        onChange={(e) => updateItem(pr.id, { currency: e.target.value })}
+                        className="bg-transparent"
+                      >
+                        {currencyOptions.map((o) => (
+                          <option key={o.id} value={o.id}>{o.label}</option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <span className="text-sm text-slate-400 px-2">TRY</span>
+                    )}
                   </td>
 
                   {/* Ek Masraflar */}

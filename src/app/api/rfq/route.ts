@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { title, deadline, requestIds, suppliers, itemCategories } = body; // itemCategories: { requestItemId: categoryId }
+        const { title, deadline, requestIds, suppliers, itemCategories, companyId, deliveryAddressId } = body;
 
         if (!title || !Array.isArray(requestIds) || requestIds.length === 0 || !Array.isArray(suppliers) || suppliers.length === 0) {
             return jsonError(400, "missing_fields");
@@ -118,6 +118,8 @@ export async function POST(req: NextRequest) {
                     title,
                     deadline: deadlineDate,
                     createdById: user.id,
+                    companyId: companyId || null,
+                    deliveryAddressId: deliveryAddressId || null,
                     items: {
                         create: finalRfqItems
                     },
@@ -163,6 +165,9 @@ export async function POST(req: NextRequest) {
                         title: `Fiyat Teklifi İsteği: ${result.rfq.rfxCode}`,
                         body: `<p>Sayın ${invite.contactName},</p>
                    <p><strong>${title}</strong> için fiyat teklifinizi bekliyoruz.</p>
+                   <p style="background-color:#fffbeb; border:1px solid #fcd34d; padding:12px; border-radius:6px; margin:16px 0;">
+                     <strong style="color:#b45309;">⚠️ ÖNEMLİ:</strong> <span style="color:#92400e;">Tüm fiyatlar <strong>KDV HARİÇ</strong> olarak girilmelidir. Kurumumuz teklif değerlendirmelerini KDV hariç fiyatlar üzerinden yapmaktadır.</span>
+                   </p>
                    <p>Aşağıdaki bağlantıya tıklayarak teklifinizi doğrudan sisteme girebilirsiniz:</p>
                    <p>Son Teklif Tarihi: ${deadlineDate ? deadlineDate.toLocaleDateString("tr-TR") : "Belirtilmedi"}</p>`,
                         actionUrl: link,

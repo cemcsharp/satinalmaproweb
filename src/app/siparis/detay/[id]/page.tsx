@@ -8,6 +8,7 @@ import { TableContainer, Table, THead, TBody, TR, TH, TD } from "@/components/ui
 import Skeleton from "@/components/ui/Skeleton";
 import Button from "@/components/ui/Button";
 import DeliverySection from "@/components/DeliverySection";
+import { useToast } from "@/components/ui/Toast";
 
 type OrderItem = { id: string; name: string; quantity: number; unitPrice: number };
 type OrderDetail = {
@@ -31,6 +32,7 @@ function SiparisDetayContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { show } = useToast();
   const id = String((params as any)?.id || "");
   const [data, setData] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +40,7 @@ function SiparisDetayContent() {
   const [requestBudget, setRequestBudget] = useState<number | null>(null);
   const [requestCurrency, setRequestCurrency] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"detay" | "teslimat">("detay");
+  const [notifying, setNotifying] = useState(false);
 
   useEffect(() => {
     const t = searchParams.get("tab");
@@ -109,6 +112,27 @@ function SiparisDetayContent() {
     return "default";
   };
 
+  const handleNotifySupplier = async () => {
+    if (!data?.id) return;
+    setNotifying(true);
+    try {
+      const res = await fetch(`/api/siparis/${encodeURIComponent(data.id)}/notify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const result = await res.json();
+      if (res.ok) {
+        show({ title: "Bildirim Gönderildi", description: result.message || "Tedarikçiye e-posta gönderildi.", variant: "success" });
+      } else {
+        show({ title: "Hata", description: result.error || "Bildirim gönderilemedi.", variant: "error" });
+      }
+    } catch (err) {
+      show({ title: "Hata", description: "Bağlantı hatası oluştu.", variant: "error" });
+    } finally {
+      setNotifying(false);
+    }
+  };
+
   if (loading) return <div className="p-10 text-center"><Skeleton height={300} /></div>;
   if (error) return <div className="p-10 text-center text-red-600">{error}</div>;
   if (!data) return <div className="p-10 text-center text-muted-foreground">Sipariş bulunamadı</div>;
@@ -151,6 +175,28 @@ function SiparisDetayContent() {
                 title="Sözleşme taslağı oluştur"
               >
                 Sözleşme Oluştur
+              </Button>
+            )}
+            {/* Tedarikçiye Bildir Butonu */}
+            {(isAdmin || permissions.includes("siparis:update")) && (
+              <Button
+                variant="secondary"
+                onClick={handleNotifySupplier}
+                disabled={notifying}
+                title="Tedarikçiye sipariş hakkında e-posta gönder"
+                className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+              >
+                {notifying ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Gönderiliyor...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    Tedarikçiye Bildir
+                  </span>
+                )}
               </Button>
             )}
           </div>

@@ -1,0 +1,1 @@
+export { GET, PATCH } from "../../capa/[id]/route";

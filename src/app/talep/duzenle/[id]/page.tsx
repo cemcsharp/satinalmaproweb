@@ -215,11 +215,9 @@ export default function TalepDuzenlePage() {
             <ItemsSection
               items={items}
               onItemsChange={setItems}
-              // For unit options, we need a list of units for items. 
-              // Assuming 'birim' or 'birimTipi' options are used for items? 
-              // TalepOlustur uses `u1` etc. but typically there's a unit list.
-              // I'll pass empty for now or try to use a generic unit list if available in options.
-              unitOptions={[{ id: "u1", label: "Adet" }, { id: "u2", label: "Kutu" }]} // Mocking if not in options
+              unitOptions={options.birimTipi?.length > 0 ? options.birimTipi : [{ id: "u1", label: "Adet" }, { id: "u2", label: "Kutu" }]}
+              currencyOptions={options.paraBirimi}
+              defaultCurrency={currencyId}
             />
           </Card>
         </div>

@@ -12,7 +12,7 @@ import ItemsSection from "@/components/ItemsSection";
 import { formatNumberTR, parseDecimalFlexible } from "@/lib/format";
 
 type Option = { id: string; label: string; active?: boolean; email?: string | null };
-type ProductRow = { id: string; name: string; quantity: number; unit: string; unitPrice: number; extraCosts: number };
+type ProductRow = { id: string; name: string; quantity: number; unit: string; unitPrice: number; extraCosts: number; currency?: string };
 
 type OptionsPayload = Record<string, Option[]>;
 const emptyOptions: OptionsPayload = { ilgiliKisi: [], birim: [], durum: [], paraBirimi: [], birimTipi: [] };
@@ -140,6 +140,20 @@ export default function TalepOlusturPage() {
     [products]
   );
 
+  // Calculate totals per currency from products
+  const currencyTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    products.forEach(p => {
+      const currencyId = p.currency || selected.paraBirimi || options.paraBirimi[0]?.id;
+      const lineTotal = (p.unitPrice || 0) * (p.quantity || 0) + (p.extraCosts || 0);
+      if (currencyId) {
+        totals[currencyId] = (totals[currencyId] || 0) + lineTotal;
+      }
+    });
+    return totals;
+  }, [products, selected.paraBirimi, options.paraBirimi]);
+
+
   const [budgetLimit, setBudgetLimit] = useState<number | "">("");
 
   // Currency Rates State
@@ -166,6 +180,17 @@ export default function TalepOlusturPage() {
     }
     fetchRates();
   }, []);
+
+  // Calculate TRY equivalent of all items (must be after rates declaration)
+  const tryEquivalentTotal = useMemo(() => {
+    let total = 0;
+    Object.entries(currencyTotals).forEach(([currencyId, amount]) => {
+      const currencyLabel = options.paraBirimi.find(o => o.id === currencyId)?.label || "TRY";
+      const rate = rates[currencyLabel] || 1;
+      total += amount * rate;
+    });
+    return total;
+  }, [currencyTotals, options.paraBirimi, rates]);
 
   const convertAmount = (amount: number, fromId: string, toId: string) => {
     if (fromId === toId) return amount;
@@ -441,6 +466,8 @@ export default function TalepOlusturPage() {
               items={products}
               onItemsChange={setProducts}
               unitOptions={options.birimTipi}
+              currencyOptions={options.paraBirimi}
+              defaultCurrency={selected.paraBirimi}
               productCatalog={productCatalog}
             />
           </div>
@@ -450,46 +477,47 @@ export default function TalepOlusturPage() {
               <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </div>
-              Bütçe Bilgileri
+              Bütçe Özeti
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-1">
-                <Select
-                  label="Para Birimi"
-                  value={selected.paraBirimi}
-                  disabled={optionsLoading || options.paraBirimi.length === 0}
-                  onChange={(e) => setSelected((s) => ({ ...s, paraBirimi: e.target.value }))}
-                >
-                  {options.paraBirimi.map((o) => (
-                    <option key={o.id} value={o.id}>{o.label}</option>
-                  ))}
-                </Select>
-                {options.paraBirimi.length > 0 && (
-                  <div className="text-xs text-slate-500 mt-2 bg-slate-50 p-2 rounded border border-slate-100">
-                    <span className="font-semibold block mb-1">Tahmini Karşılıklar:</span>
-                    <ul className="space-y-0.5">
-                      {options.paraBirimi.map((o) => (
-                        <li key={o.id} className="flex justify-between">
-                          <span>{o.label}:</span>
-                          <span className="font-medium">{formatNumberTR(convertAmount(Number(budget || 0), selected.paraBirimi, o.id))}</span>
-                        </li>
-                      ))}
-                    </ul>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Para Birimi Bazında Toplamlar */}
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <h4 className="text-sm font-semibold text-slate-600 mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                  Para Birimi Bazında Toplamlar
+                </h4>
+                <div className="space-y-2">
+                  {Object.keys(currencyTotals).length > 0 ? (
+                    Object.entries(currencyTotals).map(([currencyId, amount]) => {
+                      const currency = options.paraBirimi.find(o => o.id === currencyId);
+                      const label = currency?.label || "TRY";
+                      return (
+                        <div key={currencyId} className="flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-slate-100">
+                          <span className="font-medium text-slate-700">{label}</span>
+                          <span className="text-lg font-bold text-slate-800">{formatNumberTR(amount)}</span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-sm text-slate-400 text-center py-4">Henüz ürün eklenmedi</div>
+                  )}
+                </div>
+              </div>
+
+              {/* TRY Karşılığı ve Limit */}
+              <div className="space-y-4">
+                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200">
+                  <h4 className="text-sm font-semibold text-emerald-700 mb-2 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                    TRY Karşılığı (Genel Toplam)
+                  </h4>
+                  <div className="text-3xl font-bold text-emerald-800">
+                    {formatNumberTR(tryEquivalentTotal)}
+                    <span className="text-base font-normal text-emerald-600 ml-2">₺</span>
                   </div>
-                )}
-              </div>
+                  <p className="text-xs text-emerald-600 mt-1">Güncel döviz kurları ile hesaplanmıştır</p>
+                </div>
 
-              <div className="space-y-1">
-                <Input
-                  label="Toplam Bütçe"
-                  value={budget === "" ? "0,00" : formatNumberTR(Number(budget))}
-                  readOnly
-                  className="bg-slate-50 font-bold text-slate-700"
-                  description="Formdaki ürünler ve masraflardan otomatik hesaplanır."
-                />
-              </div>
-
-              <div className="space-y-1">
                 <Input
                   label="Bütçe Limiti (opsiyonel)"
                   type="text"
@@ -501,8 +529,8 @@ export default function TalepOlusturPage() {
                     const parsed = parseDecimalFlexible(raw);
                     setBudgetLimit(parsed == null ? "" : parsed);
                   }}
-                  placeholder="örn. 1.000,00"
-                  error={budgetLimit !== "" && Number(budget) > Number(budgetLimit) ? "Bütçe limiti aşıldı!" : undefined}
+                  placeholder="örn. 1.000,00 TRY"
+                  error={budgetLimit !== "" && tryEquivalentTotal > Number(budgetLimit) ? "Bütçe limiti aşıldı!" : undefined}
                 />
               </div>
             </div>
