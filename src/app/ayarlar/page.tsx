@@ -75,6 +75,15 @@ const settingsCategories = [
     gradient: "from-orange-500 to-red-600",
     iconBg: "bg-orange-100",
     iconColor: "text-orange-600"
+  },
+  {
+    title: "Onay Akışları",
+    description: "Talep, sipariş ve sözleşme onay süreçlerini dinamik olarak yapılandırın.",
+    href: "/ayarlar/onay-akislari",
+    icon: "✅",
+    gradient: "from-green-500 to-emerald-600",
+    iconBg: "bg-green-100",
+    iconColor: "text-green-600"
   }
 ];
 
@@ -89,37 +98,29 @@ export default function SettingsPage() {
         variant="gradient"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {settingsCategories.map((cat) => (
           <Card
             key={cat.href}
-            className="group cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+            className="group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 overflow-hidden"
             onClick={() => router.push(cat.href)}
           >
             {/* Gradient Top Bar */}
-            <div className={`h-1.5 bg-gradient-to-r ${cat.gradient}`} />
+            <div className={`h-1 bg-gradient-to-r ${cat.gradient}`} />
 
-            <div className="p-6">
+            <div className="p-4">
               {/* Icon */}
-              <div className={`w-14 h-14 rounded-2xl ${cat.iconBg} flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform`}>
+              <div className={`w-10 h-10 rounded-xl ${cat.iconBg} flex items-center justify-center text-lg mb-3 group-hover:scale-110 transition-transform`}>
                 {cat.icon}
               </div>
 
               {/* Content */}
-              <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+              <h3 className="text-sm font-semibold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
                 {cat.title}
               </h3>
-              <p className="text-sm text-slate-500 leading-relaxed">
+              <p className="text-xs text-slate-500 leading-snug line-clamp-2">
                 {cat.description}
               </p>
-
-              {/* Arrow */}
-              <div className="mt-4 flex items-center text-sm font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                Düzenle
-                <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
             </div>
           </Card>
         ))}

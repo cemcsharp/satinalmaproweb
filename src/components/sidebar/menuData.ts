@@ -51,7 +51,8 @@ export const menuItems: MenuItem[] = [
     { label: "Ürün Ekle", href: "/urun/olustur", icon: "plus-circle", category: "Ürün", requiredRole: ["admin", "satinalma_muduru"], moduleKey: "urun" },
     { label: "Kategoriler", href: "/urun/kategoriler", icon: "folder", category: "Ürün", requiredRole: ["admin", "satinalma_muduru"], moduleKey: "urun" },
 
-    { label: "Ayarlar", href: "/ayarlar", icon: "settings", category: "Ayarlar" },
+    // Ayarlar - Sadece admin erişebilir
+    { label: "Ayarlar", href: "/ayarlar", icon: "settings", category: "Ayarlar", requiredRole: ["admin"] },
 ];
 
 /**

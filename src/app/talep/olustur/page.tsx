@@ -15,7 +15,7 @@ type Option = { id: string; label: string; active?: boolean; email?: string | nu
 type ProductRow = { id: string; name: string; quantity: number; unit: string; unitPrice: number; extraCosts: number; currency?: string };
 
 type OptionsPayload = Record<string, Option[]>;
-const emptyOptions: OptionsPayload = { ilgiliKisi: [], birim: [], durum: [], paraBirimi: [], birimTipi: [] };
+const emptyOptions: OptionsPayload = { kullanici: [], birim: [], durum: [], paraBirimi: [], birimTipi: [] };
 
 const genId = () => (typeof crypto !== "undefined" && typeof (crypto as any).randomUUID === "function"
   ? (crypto as any).randomUUID()
@@ -61,6 +61,141 @@ export default function TalepOlusturPage() {
 
   const formatDate = (d: Date) => d.toISOString().slice(0, 10);
   const [requestDateStr, setRequestDateStr] = useState<string>(formatDate(new Date()));
+  const [priority, setPriority] = useState<string>("normal");
+  const [dueDate, setDueDate] = useState<string>("");
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+
+  // Draft State
+  const [drafts, setDrafts] = useLocalStorageState("talep.drafts", {
+    "default": {
+      id: "default",
+      name: "Taslak 1",
+      updatedAt: Date.now(),
+      subject: "",
+      items: [{ id: "init_1", name: "", quantity: 1, unit: "u1", unitPrice: 0, extraCosts: 0 }],
+      priority: "normal",
+      selected: { ...emptyOptions, ...{ ilgiliKisi: "p1", birim: "b1", durum: "d1", paraBirimi: "c1" } }
+    }
+  });
+  const [currentDraftId, setCurrentDraftId] = useLocalStorageState("talep.currentDraftId", "default");
+  const [isDraftLoading, setIsDraftLoading] = useState(false);
+
+  // Load Draft Effect
+  useEffect(() => {
+    const d = drafts[currentDraftId];
+    if (d) {
+      setIsDraftLoading(true);
+      // Load fields
+      setSubject(d.subject || "");
+      setJustification(d.justification || "");
+      // Only override items if draft has them, else keep default empty row
+      if (d.items && d.items.length > 0) setProducts(d.items);
+      if (d.priority) setPriority(d.priority);
+      if (d.dueDate) setDueDate(d.dueDate);
+      if (d.selected) setSelected(prev => ({ ...prev, ...d.selected }));
+
+      // Small delay to prevent save-loop triggering immediately?
+      setTimeout(() => setIsDraftLoading(false), 100);
+    } else {
+      // If draft not found (deleted?), reset to default or create new?
+      // Fallback to default
+      if (currentDraftId !== "default") setCurrentDraftId("default");
+    }
+  }, [currentDraftId]); // Depend only on ID change
+
+  // Auto-Save Effect (Debounced)
+  useEffect(() => {
+    if (isDraftLoading) return; // Don't save while loading
+    // Don't save if no draft exists
+    if (!drafts[currentDraftId]) return;
+
+    const t = setTimeout(() => {
+      setDrafts(prev => ({
+        ...prev,
+        [currentDraftId]: {
+          ...prev[currentDraftId],
+          subject,
+          justification,
+          items: products,
+          priority,
+          dueDate,
+          selected,
+          updatedAt: Date.now()
+        }
+      }));
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [subject, justification, products, priority, dueDate, selected, currentDraftId, isDraftLoading]);
+
+  // Draft Actions
+  const handleNewDraft = () => {
+    const id = genId();
+    const name = `Taslak ${Object.keys(drafts).length + 1}`;
+    setDrafts(prev => ({
+      ...prev,
+      [id]: {
+        id,
+        name,
+        updatedAt: Date.now(),
+        subject: "",
+        items: [{ id: genId(), name: "", quantity: 1, unit: "u1", unitPrice: 0, extraCosts: 0 }],
+        priority: "normal",
+        selected: selected
+      }
+    }));
+    setCurrentDraftId(id);
+    show({ title: "Yeni Taslak", description: `${name} oluşturuldu`, variant: "success" });
+  };
+
+  const handleDeleteDraft = () => {
+    if (Object.keys(drafts).length <= 1) {
+      show({ title: "Uyarı", description: "Son taslak silinemez", variant: "warning" });
+      return;
+    }
+    if (!confirm("Bu taslağı silmek istediğinizden emin misiniz?")) return;
+
+    setDrafts(prev => {
+      const next = { ...prev };
+      delete next[currentDraftId];
+      return next;
+    });
+    // Switch to another draft
+    const remaining = Object.keys(drafts).filter(k => k !== currentDraftId);
+    setCurrentDraftId(remaining[0]);
+    show({ title: "Silindi", description: "Taslak silindi", variant: "info" });
+  };
+
+  useEffect(() => {
+    fetch("/api/templates")
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setTemplates(data); })
+      .catch(console.error);
+  }, []);
+
+  const handleLoadTemplate = (tId: string) => {
+    if (!tId) { setSelectedTemplateId(""); return; }
+    const tmpl = templates.find(t => t.id === tId);
+    if (!tmpl) return;
+
+    if (confirm("Şablon yüklendiğinde mevcut form verileri (konu ve ürünler) değişecektir. Devam edilsin mi?")) {
+      if (tmpl.subject) setSubject(tmpl.subject);
+      if (Array.isArray(tmpl.items) && tmpl.items.length > 0) {
+        const newItems = tmpl.items.map((i: any) => ({
+          id: genId(),
+          name: i.name || "",
+          quantity: Number(i.quantity) || 1,
+          unit: i.unit || "u1",
+          unitPrice: Number(i.unitPrice) || 0,
+          extraCosts: Number(i.extraCosts) || 0,
+          currency: i.currency
+        }));
+        setProducts(newItems);
+      }
+      setSelectedTemplateId(tId);
+      show({ title: "Başarılı", description: "Şablon yüklendi", variant: "success" });
+    }
+  };
 
   const productCatalog = useMemo(
     () => [
@@ -89,7 +224,7 @@ export default function TalepOlusturPage() {
         const merged = { ...emptyOptions, ...data };
         setOptions(merged);
         setSelected((s) => ({
-          ilgiliKisi: merged.ilgiliKisi[0]?.id ?? s.ilgiliKisi,
+          ilgiliKisi: merged.kullanici?.[0]?.id ?? s.ilgiliKisi,
           birim: merged.birim[0]?.id ?? s.birim,
           durum: merged.durum[0]?.id ?? s.durum,
           paraBirimi: merged.paraBirimi[0]?.id ?? s.paraBirimi,
@@ -250,6 +385,8 @@ export default function TalepOlusturPage() {
           currencyId: selected.paraBirimi,
           unitEmail: unitEmail || undefined,
           justification: justification || undefined,
+          priority: priority,
+          dueDate: dueDate || undefined,
           items: products.map((p) => ({ name: p.name, quantity: p.quantity, unitId: p.unit, unitPrice: p.unitPrice, extraCosts: p.extraCosts })),
         }),
       });
@@ -370,6 +507,29 @@ export default function TalepOlusturPage() {
 
               <div className="space-y-1">
                 <Select
+                  label="Öncelik"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                >
+                  <option value="low">🟢 Düşük</option>
+                  <option value="normal">🔵 Normal</option>
+                  <option value="high">🟠 Yüksek</option>
+                  <option value="urgent">🔴 Acil</option>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Input
+                  label="Beklenen Tamamlanma Tarihi"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  description="Opsiyonel - acil işler için belirtin"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Select
                   label="Talep Durumu"
                   value={selected.durum}
                   disabled={optionsLoading || options.durum.length === 0}
@@ -393,11 +553,12 @@ export default function TalepOlusturPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <Select
-                  label="İlgili Kişi"
+                  label="İlgili Kişi (Kullanıcı)"
                   value={selected.ilgiliKisi}
                   onChange={(e) => setSelected((s) => ({ ...s, ilgiliKisi: e.target.value }))}
                 >
-                  {options.ilgiliKisi.map((o) => (
+                  <option value="">Seçiniz...</option>
+                  {(options.kullanici || []).map((o) => (
                     <option key={o.id} value={o.id}>{o.label}</option>
                   ))}
                 </Select>

@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 import { jsonError } from "@/lib/apiError";
 import { getUserWithPermissions } from "@/lib/apiAuth"; // Import auth helper
+import { logRequestRevision } from "@/lib/revision";
 
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -246,6 +247,34 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       const before = await prisma.request.findUnique({ where: { id: safeId }, include: { status: true, owner: true, responsible: true } });
       const updated = await prisma.request.update({ where: { id: safeId }, data });
       const after = await prisma.request.findUnique({ where: { id: safeId }, include: { status: true, owner: true, responsible: true } });
+
+      // Revision Logging
+      if (before && after) {
+        if (before.subject !== after.subject) {
+          await logRequestRevision({
+            requestId: safeId, userId: user.id, action: "update", fieldName: "Konu",
+            oldValue: before.subject, newValue: after.subject
+          });
+        }
+        if (Number(before.budget) !== Number(after.budget)) {
+          await logRequestRevision({
+            requestId: safeId, userId: user.id, action: "update", fieldName: "Bütçe",
+            oldValue: String(before.budget), newValue: String(after.budget)
+          });
+        }
+        if (before.statusId !== after.statusId) {
+          await logRequestRevision({
+            requestId: safeId, userId: user.id, action: "status_change", fieldName: "Durum",
+            oldValue: before.status?.label, newValue: after.status?.label
+          });
+        }
+        if (data.items) {
+          await logRequestRevision({
+            requestId: safeId, userId: user.id, action: "update", fieldName: "Kalemler",
+            comment: "Talep kalemleri güncellendi"
+          });
+        }
+      }
 
       // Mail gönderimini arka planda yap (await etme)
       (async () => {

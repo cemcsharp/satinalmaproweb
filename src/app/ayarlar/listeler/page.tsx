@@ -42,6 +42,9 @@ export default function ListelerPage() {
     // Firma fields
     const [companyFields, setCompanyFields] = useState({ taxId: "", address: "", taxOffice: "", phone: "", email: "" });
 
+    // Teslimat Adresi fields
+    const [addressFields, setAddressFields] = useState({ address: "", city: "", district: "", phone: "", contactPerson: "" });
+
     const loadOptions = async () => {
         setLoading(true);
         try {
@@ -69,6 +72,7 @@ export default function ListelerPage() {
             if (modalMode === "edit" && editId) body.id = editId;
             if (activeCategory === "birim") body.email = editEmail || null;
             if (activeCategory === "firma") Object.assign(body, companyFields);
+            if (activeCategory === "teslimatAdresi") Object.assign(body, addressFields);
 
             await fetchJsonWithRetry("/api/options", { method, body: JSON.stringify(body) });
             show({ title: "Başarılı", description: modalMode === "add" ? "Eklendi" : "Güncellendi", variant: "success" });
@@ -108,6 +112,7 @@ export default function ListelerPage() {
         setEditValue("");
         setEditEmail("");
         setCompanyFields({ taxId: "", address: "", taxOffice: "", phone: "", email: "" });
+        setAddressFields({ address: "", city: "", district: "", phone: "", contactPerson: "" });
         setModalOpen(true);
     };
 
@@ -116,6 +121,16 @@ export default function ListelerPage() {
         setEditId(item.id);
         setEditValue(item.label);
         setEditEmail(item.email || "");
+        // Load address fields if available (for teslimatAdresi)
+        if ((item as any).address) {
+            setAddressFields({
+                address: (item as any).address || "",
+                city: (item as any).city || "",
+                district: (item as any).district || "",
+                phone: (item as any).phone || "",
+                contactPerson: (item as any).contactPerson || ""
+            });
+        }
         setModalOpen(true);
     };
 
@@ -219,7 +234,8 @@ export default function ListelerPage() {
             >
                 <div className="space-y-4">
                     <Input
-                        label={activeCategory === "firma" ? "Firma Adı" : "Değer / İsim"}
+                        label={activeCategory === "firma" ? "Firma Adı" : activeCategory === "teslimatAdresi" ? "Adres Adı (Lokasyon)" : "Değer / İsim"}
+                        placeholder={activeCategory === "teslimatAdresi" ? "Örn: Merkez Kampüs, Tuzla Kampüs" : ""}
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
                         autoFocus
@@ -234,6 +250,26 @@ export default function ListelerPage() {
                             <Input label="Adres" value={companyFields.address} onChange={(e) => setCompanyFields({ ...companyFields, address: e.target.value })} />
                             <Input label="Telefon" value={companyFields.phone} onChange={(e) => setCompanyFields({ ...companyFields, phone: e.target.value })} />
                             <Input label="E-posta" value={companyFields.email} onChange={(e) => setCompanyFields({ ...companyFields, email: e.target.value })} />
+                        </>
+                    )}
+                    {activeCategory === "teslimatAdresi" && (
+                        <>
+                            <Input
+                                label="Tam Adres *"
+                                placeholder="Sokak, bina, kapı no..."
+                                value={addressFields.address}
+                                onChange={(e) => setAddressFields({ ...addressFields, address: e.target.value })}
+                                multiline
+                                rows={2}
+                            />
+                            <div className="grid grid-cols-2 gap-3">
+                                <Input label="İl" placeholder="İstanbul" value={addressFields.city} onChange={(e) => setAddressFields({ ...addressFields, city: e.target.value })} />
+                                <Input label="İlçe" placeholder="Kadıköy" value={addressFields.district} onChange={(e) => setAddressFields({ ...addressFields, district: e.target.value })} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Input label="Telefon" placeholder="0212 XXX XX XX" value={addressFields.phone} onChange={(e) => setAddressFields({ ...addressFields, phone: e.target.value })} />
+                                <Input label="İlgili Kişi" placeholder="Teslimat sorumlusu" value={addressFields.contactPerson} onChange={(e) => setAddressFields({ ...addressFields, contactPerson: e.target.value })} />
+                            </div>
                         </>
                     )}
                 </div>

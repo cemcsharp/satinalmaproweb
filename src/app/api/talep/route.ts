@@ -15,6 +15,8 @@ type CreateRequestBody = {
   statusId: string;
   currencyId: string;
   unitEmail?: string;
+  priority?: string; // "low" | "normal" | "high" | "urgent"
+  dueDate?: string;
   items: { name: string; quantity: number; unitId: string; unitPrice?: number }[];
 };
 
@@ -40,16 +42,48 @@ export async function POST(req: NextRequest) {
     // }
 
     const body = (await req.json()) as CreateRequestBody;
-    if (!body?.barcode || !body.subject || !body.budget || !body.relatedPersonId || !body.unitId || !body.statusId || !body.currencyId) {
-      return jsonError(400, "missing_fields");
-    }
-    const existing = await prisma.request.findUnique({ where: { barcode: body.barcode.trim() } });
-    if (existing) return jsonError(409, "duplicate_barcode");
 
-    const unitEmail = typeof body.unitEmail === "string" ? body.unitEmail.trim() : "";
-    if (unitEmail && !/^\S+@\S+\.\S+$/.test(unitEmail)) {
-      return jsonError(400, "invalid_unitEmail");
+    // =============================================
+    // ENHANCED VALIDATION
+    // =============================================
+    const errors: Record<string, string> = {};
+
+    // Required field checks
+    if (!body?.barcode?.trim()) errors.barcode = "Barkod zorunludur";
+    if (!body?.subject?.trim()) errors.subject = "Konu zorunludur";
+    if (body.subject && body.subject.length < 5) errors.subject = "Konu en az 5 karakter olmalıdır";
+    if (body.subject && body.subject.length > 500) errors.subject = "Konu en fazla 500 karakter olabilir";
+    if (!body.budget || body.budget <= 0) errors.budget = "Bütçe 0'dan büyük olmalıdır";
+    if (body.budget && body.budget > 100000000) errors.budget = "Bütçe limiti aşıldı (max: 100.000.000)";
+    // relatedPersonId artık opsiyonel - relatedUserId kullanılıyor
+    if (!body.unitId) errors.unitId = "Birim zorunludur";
+    if (!body.statusId) errors.statusId = "Durum zorunludur";
+    if (!body.currencyId) errors.currencyId = "Para birimi zorunludur";
+
+    // Items validation
+    if (!body.items || body.items.length === 0) {
+      errors.items = "En az 1 kalem eklemelisiniz";
+    } else {
+      body.items.forEach((item, index) => {
+        if (!item.name?.trim()) errors[`items.${index}.name`] = `Kalem ${index + 1}: İsim zorunludur`;
+        if (!item.quantity || item.quantity <= 0) errors[`items.${index}.quantity`] = `Kalem ${index + 1}: Miktar 0'dan büyük olmalıdır`;
+        if (!item.unitId) errors[`items.${index}.unitId`] = `Kalem ${index + 1}: Birim zorunludur`;
+      });
     }
+
+    // Email format validation
+    const unitEmail = typeof body.unitEmail === "string" ? body.unitEmail.trim() : "";
+    if (unitEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(unitEmail)) {
+      errors.unitEmail = "Geçersiz e-posta formatı";
+    }
+
+    // Return errors if any
+    if (Object.keys(errors).length > 0) {
+      return jsonError(400, "validation_failed", { errors, message: Object.values(errors).join(", ") });
+    }
+
+    // Duplicate check
+    const existing = await prisma.request.findUnique({ where: { barcode: body.barcode.trim() } });
 
     // Enforce Unit Isolation: User can only create requests for their own unit
     // Exception: Admins AND Satinalma unit can create for any unit
@@ -71,18 +105,27 @@ export async function POST(req: NextRequest) {
 
     let created;
     try {
+      // Priority validation
+      const validPriorities = ["low", "normal", "high", "urgent"];
+      const priority = validPriorities.includes(body.priority) ? body.priority : "normal";
+      const dueDate = body.dueDate ? new Date(body.dueDate) : null;
+
       created = await prisma.request.create({
         data: {
           barcode: body.barcode.trim(),
           subject: body.subject.trim(),
           budget: body.budget,
-          relatedPersonId: body.relatedPersonId,
+          relatedUserId: body.relatedPersonId || null, // Now stores User ID instead of OptionItem
           unitId: body.unitId,
           statusId: body.statusId,
           currencyId: body.currencyId,
           unitEmail: unitEmail || null,
           justification: body.justification?.trim() || null,
           ownerUserId: String(auth.userId),
+          priority: priority,
+          dueDate: dueDate,
+          approvalStartedAt: new Date(), // SLA tracking start
+          approvalDeadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // Default SLA: 3 days
           items: body.items && body.items.length > 0 ? {
             create: body.items.map((i) => ({ name: i.name.trim(), quantity: i.quantity, unitId: i.unitId, unitPrice: Number(i.unitPrice ?? 0) }))
           } : undefined,
@@ -235,6 +278,7 @@ export async function GET(req: NextRequest) {
     const sortDir = (url.searchParams.get("sortDir") || "desc") as "asc" | "desc";
     const page = Math.max(1, Number(url.searchParams.get("page") || 1));
     const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize") || 20)));
+    const responsibleUserId = url.searchParams.get("responsibleUserId")?.trim() || "";
 
     const where: any = {};
     if (q) {
@@ -273,10 +317,21 @@ export async function GET(req: NextRequest) {
       where.status = { is: { label: status } };
     }
 
+    // Filter by responsible user (for 'Bana Atananlar' feature)
+    if (responsibleUserId) {
+      where.responsibleUserId = responsibleUserId;
+    }
+
     const include = {
       unit: true,
       status: true,
       currency: true,
+      responsible: {
+        select: { id: true, username: true, email: true }
+      },
+      owner: {
+        select: { id: true, username: true, email: true }
+      }
     };
 
     const total = await prisma.request.count({ where });
@@ -300,6 +355,10 @@ export async function GET(req: NextRequest) {
       unit: r.unit?.label || "",
       status: r.status?.label || "",
       currency: r.currency?.label || "",
+      responsible: r.responsible || null,
+      owner: r.owner || null,
+      responsibleUserId: r.responsibleUserId || null,
+      ownerUserId: r.ownerUserId || null,
     }));
 
     return NextResponse.json({

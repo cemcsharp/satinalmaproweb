@@ -1,131 +1,157 @@
+// Roller Seed Script
+// Usage: npx tsx prisma/seed-roles.ts
+
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Default roles with their permissions based on approved matrix
-const defaultRoles = [
+// 7 Standart Rol Tanımları
+const standardRoles = [
     {
+        name: "Sistem Admini",
         key: "admin",
-        name: "admin",
-        displayName: "Sistem Yöneticisi",
-        isSystem: true,
+        description: "Tüm sistem erişimi olan yönetici",
         permissions: [
-            "talep:create", "talep:read", "talep:edit", "talep:delete",
+            "talep:create", "talep:read", "talep:edit", "talep:delete", "talep:approve",
             "siparis:create", "siparis:read", "siparis:edit", "siparis:delete",
+            "tedarikci:create", "tedarikci:read", "tedarikci:edit", "tedarikci:delete",
             "fatura:create", "fatura:read", "fatura:edit", "fatura:delete",
-            "sozlesme:create", "sozlesme:read", "sozlesme:edit", "sozlesme:delete",
-            "tedarikci:manage", "tedarikci:read",
-            "evaluation:submit",
-            "rapor:read",
-            "user:manage", "role:manage"
-        ]
+            "rfq:create", "rfq:read", "rfq:edit", "rfq:delete",
+            "user:create", "user:read", "user:edit", "user:delete",
+            "settings:read", "settings:edit",
+            "reports:read", "reports:export"
+        ],
+        isSystem: true,
+        sortOrder: 1
     },
     {
-        key: "purchasing_manager",
-        name: "purchasing_manager",
-        displayName: "Satın Alma Müdürü",
-        isSystem: true,
+        name: "Genel Müdür",
+        key: "genel_mudur",
+        description: "Üst düzey onay ve raporlama yetkisi",
         permissions: [
-            "talep:create", "talep:read", "talep:edit", "talep:delete",
-            "siparis:create", "siparis:read", "siparis:edit", "siparis:delete",
-            "fatura:create", "fatura:read", "fatura:edit", "fatura:delete",
-            "sozlesme:create", "sozlesme:read", "sozlesme:edit", "sozlesme:delete",
-            "tedarikci:manage", "tedarikci:read",
-            "evaluation:submit",
-            "rapor:read"
-        ]
+            "talep:read", "talep:approve",
+            "siparis:read", "siparis:approve",
+            "reports:read", "reports:export",
+            "dashboard:read"
+        ],
+        isSystem: true,
+        sortOrder: 2
     },
     {
-        key: "purchasing_specialist",
-        name: "purchasing_specialist",
-        displayName: "Satın Alma Uzmanı",
-        isSystem: true,
+        name: "Satınalma Müdürü",
+        key: "satinalma_muduru",
+        description: "Satınalma departmanı yönetimi ve atama yetkisi",
         permissions: [
-            // Same as Satın Alma Müdürü
-            "talep:create", "talep:read", "talep:edit", "talep:delete",
-            "siparis:create", "siparis:read", "siparis:edit", "siparis:delete",
-            "fatura:create", "fatura:read", "fatura:edit", "fatura:delete",
-            "sozlesme:create", "sozlesme:read", "sozlesme:edit", "sozlesme:delete",
-            "tedarikci:manage", "tedarikci:read",
-            "evaluation:submit",
-            "rapor:read"
-        ]
+            "talep:read", "talep:assign", "talep:approve",
+            "siparis:create", "siparis:read", "siparis:edit", "siparis:approve",
+            "tedarikci:create", "tedarikci:read", "tedarikci:edit",
+            "fatura:create", "fatura:read", "fatura:edit",
+            "rfq:create", "rfq:read", "rfq:edit",
+            "reports:read", "reports:export",
+            "dashboard:read"
+        ],
+        isSystem: true,
+        sortOrder: 3
     },
     {
-        key: "unit_manager",
-        name: "unit_manager",
-        displayName: "Birim Müdürü",
+        name: "Satınalma Personeli",
+        key: "satinalma_personeli",
+        description: "Satınalma operasyonları",
+        permissions: [
+            "talep:read",
+            "siparis:create", "siparis:read", "siparis:edit",
+            "tedarikci:read",
+            "fatura:read",
+            "rfq:create", "rfq:read", "rfq:edit",
+            "dashboard:read"
+        ],
         isSystem: true,
+        sortOrder: 4
+    },
+    {
+        name: "Birim Müdürü",
+        key: "birim_muduru",
+        description: "Birim taleplerini görüntüleme ve onaylama",
+        permissions: [
+            "talep:create", "talep:read", "talep:edit", "talep:approve",
+            "reports:read",
+            "dashboard:read"
+        ],
+        isSystem: true,
+        sortOrder: 5
+    },
+    {
+        name: "Birim Personeli",
+        key: "birim_personeli",
+        description: "Talep oluşturma ve kendi birim taleplerini görüntüleme",
         permissions: [
             "talep:create", "talep:read",
-            "siparis:read",
-            "sozlesme:read",
-            "tedarikci:read",
-            "evaluation:submit"
-        ]
+            "dashboard:read"
+        ],
+        isSystem: true,
+        sortOrder: 6
     },
     {
-        key: "unit_user",
-        name: "unit_user",
-        displayName: "Birim Kullanıcısı",
-        isSystem: true,
+        name: "Firma Yetkilisi",
+        key: "firma_yetkilisi",
+        description: "Salt okunur raporlama erişimi",
         permissions: [
-            "talep:create", "talep:read",
-            "sozlesme:read",
-            "tedarikci:read",
-            "evaluation:submit"
-        ]
-    },
-    {
-        key: "birim_evaluator",
-        name: "birim_evaluator",
-        displayName: "Değerlendirici",
+            "reports:read",
+            "dashboard:read"
+        ],
         isSystem: true,
-        permissions: [
-            "evaluation:submit",
-            "tedarikci:read"
-        ]
+        sortOrder: 7
     }
 ];
 
-async function seedRoles() {
-    console.log("🔄 Seeding roles...");
+async function main() {
+    console.log("🔄 Roller oluşturuluyor...");
 
-    for (const role of defaultRoles) {
-        const existing = await prisma.role.findUnique({ where: { key: role.key } });
+    for (const role of standardRoles) {
+        const existing = await prisma.role.findUnique({
+            where: { key: role.key }
+        });
 
         if (existing) {
-            // Update existing role with new permissions
+            console.log(`  ⏭️  ${role.name} (${role.key}) zaten mevcut, güncelleniyor...`);
             await prisma.role.update({
                 where: { key: role.key },
                 data: {
-                    name: role.displayName,
+                    name: role.name,
+                    description: role.description,
                     permissions: role.permissions,
-                    isSystem: role.isSystem
-                }
-            });
-            console.log(`✅ Updated role: ${role.displayName}`);
-        } else {
-            // Create new role
-            await prisma.role.create({
-                data: {
-                    key: role.key,
-                    name: role.displayName,
                     isSystem: role.isSystem,
-                    permissions: role.permissions
+                    sortOrder: role.sortOrder,
+                    active: true
                 }
             });
-            console.log(`✅ Created role: ${role.displayName}`);
+        } else {
+            console.log(`  ✅ ${role.name} (${role.key}) oluşturuluyor...`);
+            await prisma.role.create({
+                data: role
+            });
         }
     }
 
-    console.log("✅ Roles seeding completed!");
+    console.log("\n✅ Tüm roller başarıyla oluşturuldu/güncellendi!");
+
+    // Mevcut rolleri listele
+    const allRoles = await prisma.role.findMany({
+        orderBy: { sortOrder: "asc" },
+        select: { key: true, name: true, sortOrder: true }
+    });
+
+    console.log("\n📋 Mevcut Roller:");
+    allRoles.forEach(r => {
+        console.log(`   ${r.sortOrder}. ${r.name} (${r.key})`);
+    });
 }
 
-seedRoles()
-    .then(() => prisma.$disconnect())
-    .catch((e) => {
-        console.error("❌ Error seeding roles:", e);
-        prisma.$disconnect();
+main()
+    .catch(e => {
+        console.error("Hata:", e);
         process.exit(1);
+    })
+    .finally(() => {
+        prisma.$disconnect();
     });

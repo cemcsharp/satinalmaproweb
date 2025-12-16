@@ -195,7 +195,116 @@ export default function ItemsSection({
         </Button>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm" style={{ overflow: 'visible' }}>
+      {/* Mobile View (Cards) */}
+      <div className="md:hidden space-y-4 mb-4">
+        {items.map((pr, idx) => (
+          <div key={pr.id} className="p-4 border border-slate-200 rounded-lg bg-white shadow-sm space-y-4">
+            {/* Header: Delete + SKU */}
+            <div className="flex justify-between items-start gap-3">
+              <div className="flex-1 space-y-1">
+                <label className="text-[10px] uppercase text-slate-500 font-semibold">Ürün Adı</label>
+                <div ref={(el) => { inputRefs.current[`m_name_${pr.id}`] = el as any; }}>
+                  <Input
+                    value={pr.productId ? pr.name : (searchQueries[`name_${pr.id}`] ?? pr.name)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (pr.productId) updateItem(pr.id, { sku: undefined, productId: undefined, name: "", unitPrice: 0 });
+                      updateItem(pr.id, { name: value });
+                      setSearchQueries(prev => ({ ...prev, [`name_${pr.id}`]: value }));
+                      setActiveDropdown(`m_name_${pr.id}`);
+                    }}
+                    onFocus={() => setActiveDropdown(`m_name_${pr.id}`)}
+                    placeholder="Ürün adı ara..."
+                    className={pr.productId ? "text-slate-700 font-medium" : ""}
+                  />
+                </div>
+                {/* Mobile Name Dropdown */}
+                <DropdownPortal
+                  anchorRef={{ current: inputRefs.current[`m_name_${pr.id}`] }}
+                  isOpen={activeDropdown === `m_name_${pr.id}` && !pr.productId && (searchResults[`name_${pr.id}`]?.length || 0) > 0}
+                >
+                  {searchResults[`name_${pr.id}`]?.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => selectProduct(pr.id, product)}
+                      className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-slate-100 last:border-0"
+                    >
+                      <div className="font-medium text-sm text-slate-800">{product.name}</div>
+                      <div className="text-xs text-slate-500">{product.sku}</div>
+                    </button>
+                  ))}
+                </DropdownPortal>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => removeItem(pr.id)} className="text-red-400 -mt-1 -mr-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </Button>
+            </div>
+
+            {/* SKU & Quantity Row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase text-slate-500 font-semibold">Miktar</label>
+                <Input
+                  type="text" inputMode="decimal"
+                  value={editing[pr.id]?.quantity ?? formatNumberTR(pr.quantity, 3)}
+                  onFocus={() => setEditing((m) => ({ ...m, [pr.id]: { ...(m[pr.id] || {}), quantity: pr.quantity ? formatNumberTR(pr.quantity, 3) : "" } }))}
+                  onChange={(e) => {
+                    const masked = formatTRInput(e.target.value, 3);
+                    setEditing((m) => ({ ...m, [pr.id]: { ...(m[pr.id] || {}), quantity: masked } }));
+                    const num = parseDecimalFlexible(masked);
+                    if (num != null) updateItem(pr.id, { quantity: Math.max(num, 0) });
+                  }}
+                  onBlur={() => setEditing((m) => ({ ...m, [pr.id]: { ...(m[pr.id] || {}), quantity: undefined } }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase text-slate-500 font-semibold">Birim</label>
+                <Select value={pr.unit} onChange={(e) => updateItem(pr.id, { unit: e.target.value })}>
+                  {unitOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </Select>
+              </div>
+            </div>
+
+            {/* Price & Current & Total */}
+            <div className="grid grid-cols-3 gap-3 items-end">
+              <div className="col-span-1 space-y-1">
+                <label className="text-[10px] uppercase text-slate-500 font-semibold">Birim Fiyat</label>
+                <Input
+                  type="text" inputMode="decimal" placeholder="0,00"
+                  value={editing[pr.id]?.unitPrice ?? formatNumberTR(pr.unitPrice)}
+                  onFocus={() => setEditing((m) => ({ ...m, [pr.id]: { ...(m[pr.id] || {}), unitPrice: pr.unitPrice ? formatNumberTR(pr.unitPrice) : "" } }))}
+                  onChange={(e) => {
+                    const masked = formatTRInput(e.target.value, 2);
+                    setEditing((m) => ({ ...m, [pr.id]: { ...(m[pr.id] || {}), unitPrice: masked } }));
+                    const num = parseDecimalFlexible(masked);
+                    if (num != null) updateItem(pr.id, { unitPrice: Math.max(num, 0) });
+                  }}
+                  onBlur={() => setEditing((m) => ({ ...m, [pr.id]: { ...(m[pr.id] || {}), unitPrice: undefined } }))}
+                />
+              </div>
+              <div className="col-span-1 space-y-1">
+                <label className="text-[10px] uppercase text-slate-500 font-semibold">Para Br.</label>
+                <Select
+                  value={pr.currency || defaultCurrency || currencyOptions[0]?.id || ""}
+                  onChange={(e) => updateItem(pr.id, { currency: e.target.value })}
+                  className="px-1"
+                >
+                  {currencyOptions.length > 0 ? currencyOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>) : <option>TRY</option>}
+                </Select>
+              </div>
+              <div className="col-span-1 text-right pb-2">
+                <div className="text-sm font-bold text-slate-700">
+                  {formatNumberTR((pr.quantity || 0) * (pr.unitPrice || 0) + (pr.extraCosts || 0))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {items.length === 0 && <div className="text-center p-4 text-slate-400 text-sm italic">Henüz ürün eklenmedi.</div>}
+      </div>
+
+      <div className="hidden md:block rounded-xl border border-slate-200 bg-white shadow-sm" style={{ overflow: 'visible' }}>
         <div style={{ overflow: 'visible' }}>
           <table className="min-w-full w-full table-fixed">
             <colgroup>
@@ -237,7 +346,9 @@ export default function ItemsSection({
                             updateItem(pr.id, { sku: undefined, productId: undefined, name: "", unitPrice: 0 });
                           }
                           setSearchQueries(prev => ({ ...prev, [pr.id]: value }));
+                          setActiveDropdown(pr.id);
                         }}
+                        onFocus={() => setActiveDropdown(pr.id)}
                         onClick={(e) => e.stopPropagation()}
                         placeholder="SKU ara..."
                         className={`bg-transparent ${pr.productId ? "font-mono text-blue-700 font-bold" : ""}`}
@@ -250,7 +361,7 @@ export default function ItemsSection({
                     {/* Portal Dropdown - body'ye render edilir */}
                     <DropdownPortal
                       anchorRef={{ current: inputRefs.current[pr.id] }}
-                      isOpen={!pr.productId && (searchResults[pr.id]?.length || 0) > 0}
+                      isOpen={activeDropdown === pr.id && !pr.productId && (searchResults[pr.id]?.length || 0) > 0}
                     >
                       {searchResults[pr.id]?.map((product) => (
                         <button
@@ -284,11 +395,10 @@ export default function ItemsSection({
                           }
                           updateItem(pr.id, { name: value });
                           setSearchQueries(prev => ({ ...prev, [`name_${pr.id}`]: value }));
+                          setActiveDropdown(`name_${pr.id}`);
                         }}
                         onFocus={() => {
-                          if (searchResults[`name_${pr.id}`]?.length > 0) {
-                            setActiveDropdown(`name_${pr.id}`);
-                          }
+                          setActiveDropdown(`name_${pr.id}`);
                         }}
                         onClick={(e) => e.stopPropagation()}
                         placeholder="Ürün adı ara..."
@@ -302,7 +412,7 @@ export default function ItemsSection({
                     {/* Portal Dropdown - body'ye render edilir, her şeyin üstünde */}
                     <DropdownPortal
                       anchorRef={{ current: inputRefs.current[`name_${pr.id}`] }}
-                      isOpen={!pr.productId && (searchResults[`name_${pr.id}`]?.length || 0) > 0}
+                      isOpen={activeDropdown === `name_${pr.id}` && !pr.productId && (searchResults[`name_${pr.id}`]?.length || 0) > 0}
                     >
                       {searchResults[`name_${pr.id}`]?.map((product) => (
                         <button

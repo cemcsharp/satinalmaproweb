@@ -48,6 +48,8 @@ function TalepListeContent() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [myAssignmentsOnly, setMyAssignmentsOnly] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const canEditAdvanced = sessionStatus === "authenticated";
 
   // Fetch permissions
@@ -58,6 +60,7 @@ function TalepListeContent() {
         if (data) {
           setPermissions(data.permissions || []);
           setIsAdmin(data.role === "admin" || data.roleRef?.key === "admin");
+          setCurrentUserId(data.id);
         }
       })
       .catch(() => { });
@@ -129,6 +132,9 @@ function TalepListeContent() {
     params.set("sortDir", sortDir);
     params.set("page", String(page));
     params.set("pageSize", String(pageSize));
+    if (myAssignmentsOnly && currentUserId) {
+      params.set("responsibleUserId", currentUserId);
+    }
     return params;
   };
 
@@ -178,7 +184,7 @@ function TalepListeContent() {
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [initialized, page, pageSize, query, unit, status, dateFrom, dateTo, sortBy, sortDir]);
+  }, [initialized, page, pageSize, query, unit, status, dateFrom, dateTo, sortBy, sortDir, myAssignmentsOnly, currentUserId]);
 
   useEffect(() => {
     return () => { listAbortRef.current?.abort(); };
@@ -288,7 +294,15 @@ function TalepListeContent() {
         <Button className="ml-auto" variant="outline" size="sm" onClick={() => setFiltersOpen((v) => !v)} aria-expanded={filtersOpen} aria-controls="filters-panel">
           {filtersOpen ? "Filtreleri Gizle" : "Filtreleri Göster"}
         </Button>
-        <Button variant="outline" size="sm" onClick={() => { setQuery(""); setUnit(""); setStatus(""); setDateFrom(""); setDateTo(""); setPage(1); }}>Temizle</Button>
+        <Button variant="outline" size="sm" onClick={() => { setQuery(""); setUnit(""); setStatus(""); setDateFrom(""); setDateTo(""); setMyAssignmentsOnly(false); setPage(1); }}>Temizle</Button>
+        <Button
+          variant={myAssignmentsOnly ? "primary" : "outline"}
+          size="sm"
+          onClick={() => { setMyAssignmentsOnly(!myAssignmentsOnly); setPage(1); }}
+          className={myAssignmentsOnly ? "bg-blue-600 text-white" : ""}
+        >
+          📋 Bana Atananlar
+        </Button>
       </div>
 
       <div id="filters-panel" className={filtersOpen ? "grid grid-cols-1 gap-1 md:grid-cols-3 lg:grid-cols-5" : "hidden"}>
@@ -331,8 +345,9 @@ function TalepListeContent() {
               <TH>Konu</TH>
               <TH>Bütçe</TH>
               <TH>Birim</TH>
+              <TH>Talep Eden</TH>
+              <TH>Satınalma Sorumlusu</TH>
               <TH>Durum</TH>
-              <TH>Para Birimi</TH>
               <TH className="w-[1%] whitespace-nowrap text-right">İşlemler</TH>
             </TR>
           </THead>
@@ -340,6 +355,7 @@ function TalepListeContent() {
             {loading
               ? Array.from({ length: 5 }).map((_, i) => (
                 <TR key={`skeleton-${i}`}>
+                  <TD><Skeleton height={16} /></TD>
                   <TD><Skeleton height={16} /></TD>
                   <TD><Skeleton height={16} /></TD>
                   <TD><Skeleton height={16} /></TD>
@@ -359,7 +375,19 @@ function TalepListeContent() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                         </svg>
                       </div>
-                      <span className="font-semibold text-slate-700">{r.barcode}</span>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-slate-700">{r.barcode}</span>
+                        {(r as any).priority && (r as any).priority !== "normal" && (
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full w-fit ${(r as any).priority === "urgent" ? "bg-red-100 text-red-700" :
+                              (r as any).priority === "high" ? "bg-orange-100 text-orange-700" :
+                                (r as any).priority === "low" ? "bg-green-100 text-green-700" : ""
+                            }`}>
+                            {(r as any).priority === "urgent" ? "🔴 Acil" :
+                              (r as any).priority === "high" ? "🟠 Yüksek" :
+                                (r as any).priority === "low" ? "🟢 Düşük" : ""}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </TD>
                   <TD>
@@ -391,14 +419,33 @@ function TalepListeContent() {
                     <span className="text-sm text-slate-600">{r.unit}</span>
                   </TD>
                   <TD>
+                    {(r as any).owner ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-slate-600">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        {(r as any).owner.username}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">-</span>
+                    )}
+                  </TD>
+                  <TD>
+                    {(r as any).responsible ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-50 text-purple-700 text-xs font-medium border border-purple-200">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        {(r as any).responsible.username}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">Atanmadı</span>
+                    )}
+                  </TD>
+                  <TD>
                     <Badge variant={statusVariant(r.status)} className="shadow-sm font-medium">
                       {r.status}
                     </Badge>
-                  </TD>
-                  <TD>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium border border-blue-200">
-                      {r.currency}
-                    </span>
                   </TD>
                   <TD className="text-right">
                     <div className="inline-flex items-center gap-1 sm:gap-2">

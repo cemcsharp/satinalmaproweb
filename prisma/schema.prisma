@@ -52,6 +52,8 @@ model User {
   deliveriesReceived    DeliveryReceipt[]
   auditLogs             AuditLog[]
   createdRfqs           Rfq[]
+  requestsRelated       Request[]               @relation("RequestRelatedUser") // İlgili kişi olarak atandığı talepler
+  createdTemplates      RequestTemplate[]       @relation("CreatedTemplates")
 }
 
 model AuditLog {
@@ -89,12 +91,12 @@ model OptionItem {
   category                OptionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   email                   String?
   // Back-relations for named relations
-  requestsAsRelatedPerson Request[]      @relation("RequestRelatedPerson")
   requestsAsUnit          Request[]      @relation("RequestUnit")
   requestsAsStatus        Request[]      @relation("RequestStatus")
   requestsAsCurrency      Request[]      @relation("RequestCurrency")
   requestItemsAsUnit      RequestItem[]  @relation("RequestItemUnit")
   ordersAsStatus          Order[]        @relation("OrderStatus")
+  workflows               ApprovalWorkflow[] @relation("WorkflowUnit")
   ordersAsMethod          Order[]        @relation("OrderMethod")
   ordersAsRegulation      Order[]        @relation("OrderRegulation")
   ordersAsCurrency        Order[]        @relation("OrderCurrency")
@@ -185,15 +187,24 @@ model Request {
   id                String        @id @default(cuid())
   barcode           String        @unique
   createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @default(now()) @updatedAt
   subject           String        @db.VarChar(500)
   justification     String?       @db.VarChar(2000)
   budget            Decimal       @db.Decimal(18, 2)
-  relatedPersonId   String
+  relatedUserId     String?       // İlgili Kişi - User tablosundan
   unitId            String
   statusId          String
   currencyId        String
   unitEmail         String?
-  relatedPerson     OptionItem    @relation("RequestRelatedPerson", fields: [relatedPersonId], references: [id])
+  // Priority System
+  priority          String        @default("normal") // "low", "normal", "high", "urgent"
+  dueDate           DateTime?     // Beklenen tamamlanma tarihi
+  // SLA Tracking
+  approvalStartedAt DateTime?     // Onay sürecinin başladığı tarih
+  approvalDeadline  DateTime?     // Onay için son tarih
+  lastApprovalAt    DateTime?     // Son onay işlemi tarihi
+  // Relations
+  relatedUser       User?         @relation("RequestRelatedUser", fields: [relatedUserId], references: [id])
   unit              OptionItem    @relation("RequestUnit", fields: [unitId], references: [id])
   status            OptionItem    @relation("RequestStatus", fields: [statusId], references: [id])
   currency          OptionItem    @relation("RequestCurrency", fields: [currencyId], references: [id])
@@ -232,6 +243,39 @@ model Comment {
   createdAt DateTime @default(now())
   request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
   author    User     @relation("UserComments", fields: [authorId], references: [id])
+}
+
+// Talep Revizyon Geçmişi
+model RequestRevision {
+  id          String   @id @default(cuid())
+  requestId   String
+  userId      String   // Kim değiştirdi
+  action      String   // "create", "update", "status_change", "approve", "reject"
+  fieldName   String?  // Hangi alan değişti
+  oldValue    String?  @db.VarChar(2000)
+  newValue    String?  @db.VarChar(2000)
+  comment     String?  @db.VarChar(500)
+  createdAt   DateTime @default(now())
+  
+  @@index([requestId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// Talep Şablonları
+model RequestTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  subject     String?
+  items       Json     // [{ name, quantity, unit, ... }]
+  isPublic    Boolean  @default(false)
+  createdById String
+  createdBy   User     @relation("CreatedTemplates", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([createdById])
 }
 
 model RequestItem {
@@ -692,6 +736,8 @@ model ApprovalWorkflow {
   displayName String         @db.VarChar(100) // "Talep Onay Akışı"
   entityType  String         @db.VarChar(50) // "Request", "Order"
   active      Boolean        @default(true)
+  unitId      String?
+  unit        OptionItem?    @relation("WorkflowUnit", fields: [unitId], references: [id])
   steps       ApprovalStep[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -710,10 +756,23 @@ model ApprovalStep {
   required     Boolean          @default(true)
   autoApprove  Boolean          @default(false) // Bütçe limiti altındaysa otomatik onayla
   budgetLimit  Decimal?         @db.Decimal(18, 2) // Otomatik onay için limit
+  minApprovals Int              @default(1) // Kaç kişinin onayı gerekiyor?
+  approvers    ApprovalStepApprover[]
   createdAt    DateTime         @default(now())
 
   @@unique([workflowId, stepOrder])
   @@index([workflowId])
+}
+
+model ApprovalStepApprover {
+  id        String       @id @default(cuid())
+  stepId    String
+  step      ApprovalStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  roleKey   String       @db.VarChar(50) // "finance", "manager"
+  unitId    String?      // Opsiyonel birim kısıtı
+  createdAt DateTime     @default(now())
+
+  @@index([stepId])
 }
 
 // Onay işlemleri geçmişi (her talep/sipariş için)
@@ -960,4 +1019,3 @@ model ModuleAccess {
   @@index([moduleKey])
   @@index([roleKey])
 }
-
