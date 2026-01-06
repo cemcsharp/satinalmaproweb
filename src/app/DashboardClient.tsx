@@ -89,11 +89,14 @@ export default function DashboardPage() {
   ];
 
   // Filter quick actions based on permissions
-  // Bypass permissions as requested
-  const quickActions = allQuickActions;
+  const quickActions = allQuickActions.filter(action => {
+    if (isAdmin) return true;
+    if (!action.requiredPermission) return true;
+    return userPermissions.includes(action.requiredPermission);
+  });
 
   // Check if user can create talep (for header button)
-  const canCreateTalep = true;
+  const canCreateTalep = isAdmin || userPermissions.includes("talep:create");
 
   // Time-based greeting logic
   const getGreeting = () => {

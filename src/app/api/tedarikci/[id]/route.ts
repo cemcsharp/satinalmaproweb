@@ -29,8 +29,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     since.setMonth(since.getMonth() - 6);
     const recentOrders = await prisma.order.count({ where: { supplierId: safeId, createdAt: { gte: since } } });
 
-    // CAPA counts
-    // CAPA stats removed
+
 
 
     const payload = {
@@ -47,7 +46,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       createdAt: (supplier as any).createdAt?.toISOString?.() ?? null,
       aggregates: {
         recentOrders,
-        // CAPA removed
+
         latestSummary: latestSummary
           ? {
             period: latestSummary.period,

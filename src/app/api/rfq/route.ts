@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
+import { requirePermissionApi } from "@/lib/apiAuth";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 
 // Helper for token generation
@@ -15,20 +16,9 @@ function generateToken() {
 
 export async function POST(req: NextRequest) {
     try {
-        const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-        const user = await getUserWithPermissions(req);
-        if (!user) return jsonError(401, "unauthorized");
-
-        // RFQ modülü sadece admin ve satınalma müdürü için
-        const allowedRoles = ["admin", "satinalma_muduru"];
-        if (!user.isAdmin && !allowedRoles.includes(user.role)) {
-            return jsonError(403, "forbidden", { message: "Bu modüle erişim yetkiniz yok." });
-        }
-
-        // Check permission (assuming 'talep:create' or admin is enough for now, strictly should be 'rfq:create')
-        if (!user.isAdmin && !userHasPermission(user, "siparis:create")) {
-            return jsonError(403, "forbidden");
-        }
+        // Permission check: rfq:create required
+        const user = await requirePermissionApi(req, "rfq:create");
+        if (!user) return jsonError(403, "forbidden", { message: "RFQ oluşturma yetkiniz yok." });
 
         const body = await req.json();
         const { title, deadline, requestIds, suppliers, itemCategories, companyId, deliveryAddressId } = body;
@@ -195,9 +185,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     try {
-        const { getUserWithPermissions } = await import("@/lib/apiAuth");
-        const user = await getUserWithPermissions(req);
-        if (!user) return jsonError(401, "unauthorized");
+        // Permission check: rfq:read required
+        const user = await requirePermissionApi(req, "rfq:read");
+        if (!user) return jsonError(403, "forbidden", { message: "RFQ görüntüleme yetkiniz yok." });
 
         const { searchParams } = new URL(req.url);
         const page = Number(searchParams.get("page") || 1);
@@ -206,8 +196,7 @@ export async function GET(req: NextRequest) {
 
         // Admin ve satınalma müdürü tüm RFQ'ları görür
         // Diğer kullanıcılar sadece kendi taleplerinin RFQ'larını görür
-        const allowedRoles = ["admin", "satinalma_muduru"];
-        const isFullAccess = user.isAdmin || allowedRoles.includes(user.role);
+        const isFullAccess = user.isAdmin;
 
         // WHERE koşulu oluştur
         let whereClause: any = {};

@@ -23,6 +23,26 @@ export const PERMISSION_CATEGORIES = {
             { key: "siparis:delete", label: "Silme" },
         ],
     },
+    rfq: {
+        label: "RFQ/Teklif",
+        permissions: [
+            { key: "rfq:read", label: "Görüntüleme" },
+            { key: "rfq:create", label: "Oluşturma" },
+            { key: "rfq:edit", label: "Düzenleme" },
+            { key: "rfq:delete", label: "Silme" },
+            { key: "offer:submit", label: "Teklif Verme" },
+            { key: "portal:access", label: "Portal Erişimi" },
+        ],
+    },
+    teslimat: {
+        label: "Teslimat",
+        permissions: [
+            { key: "teslimat:read", label: "Görüntüleme" },
+            { key: "teslimat:create", label: "Oluşturma" },
+            { key: "teslimat:edit", label: "Düzenleme" },
+            { key: "teslimat:delete", label: "Silme" },
+        ],
+    },
     fatura: {
         label: "Fatura",
         permissions: [
@@ -49,6 +69,15 @@ export const PERMISSION_CATEGORIES = {
             { key: "tedarikci:edit", label: "Düzenleme" },
             { key: "tedarikci:delete", label: "Silme" },
             { key: "evaluation:submit", label: "Değerlendirme Yapma" },
+        ],
+    },
+    urun: {
+        label: "Ürün",
+        permissions: [
+            { key: "urun:read", label: "Görüntüleme" },
+            { key: "urun:create", label: "Oluşturma" },
+            { key: "urun:edit", label: "Düzenleme" },
+            { key: "urun:delete", label: "Silme" },
         ],
     },
     rapor: {
@@ -134,45 +163,4 @@ export function getPermissionInfo(permissionKey: string): { category: string; la
     }
     return null;
 }
-// Rol bazlı varsayılan izinler
-export const ROLE_PERMISSIONS: Record<string, string[]> = {
-    admin: ALL_PERMISSIONS, // Admin her yetkiye sahip
-    satinalma_muduru: [
-        "talep:read", "talep:edit", "talep:delete",
-        "siparis:create", "siparis:read", "siparis:edit", "siparis:delete",
-        "fatura:create", "fatura:read", "fatura:edit",
-        "sozlesme:create", "sozlesme:read", "sozlesme:edit",
-        "tedarikci:create", "tedarikci:read", "tedarikci:edit", "tedarikci:delete",
-        "tedarikci:evaluation", // old key support if needed
-        "evaluation:submit",
-        "rapor:read",
-        "ayarlar:read", "ayarlar:edit", "user:manage"
-    ],
-    birim_yetkilisi: [
-        "talep:create", "talep:read",
-        "siparis:read",
-        "teslimat:read",
-        "rapor:read"
-    ],
-    birim_evaluator: [
-        "talep:read",
-        "siparis:read",
-        "teslimat:read",
-        "evaluation:submit"
-    ],
-    depo_gorevlisi: [
-        "teslimat:read", "teslimat:create", "teslimat:edit"
-    ],
-    user: [
-        "talep:create", "talep:read"
-    ]
-};
 
-/**
- * Rol için varsayılan izinleri döndürür
- */
-export function getPermissionsForRole(role: string): string[] {
-    // Admin check logic is handled in hasPermission but explicitly returning all here helps frontend
-    if (role === "admin") return ALL_PERMISSIONS;
-    return ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS["user"];
-}

@@ -121,16 +121,20 @@ export const authOptions: NextAuthOptions = {
       const uid = String((tok.userId || (token as any).sub || initialUserId || ""));
       if (uid) {
         try {
-          const me = await prisma.user.findUnique({ where: { id: uid } });
+          // Fetch actual user with their Role relation
+          const me = await prisma.user.findUnique({
+            where: { id: uid },
+            include: { roleRef: true }
+          });
+
           tok.userId = uid;
-          let role: string | undefined = (me as any)?.role;
-          // Legacy roleId fallback removed
-          if (!role) {
-            const isAdminEmail = String(me?.email || "").toLowerCase() === "admin@sirket.com";
-            role = (me?.username === "admin" || isAdminEmail) ? "admin" : "user";
-          }
+
+          // Prioritize roleRef.key, fallback to flat role field
+          let role = me?.roleRef?.key || me?.role || "user";
           tok.role = role;
-        } catch { }
+        } catch (err) {
+          console.error('[Auth JWT] Sync error:', err);
+        }
       }
       return tok;
     },

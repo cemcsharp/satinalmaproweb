@@ -23,8 +23,8 @@ export const menuItems: MenuItem[] = [
     { label: "Talep Listesi", href: "/talep/liste", icon: "file-text", category: "Talep", requiredPermission: "talep:read", moduleKey: "talep" },
 
     // Teklif (RFQ) - Talep'ten sonra, Sipariş'ten önce
-    { label: "Teklif Listesi", href: "/rfq/liste", icon: "inbox", category: "Teklif", moduleKey: "rfq" },
-    { label: "Yeni RFQ", href: "/rfq/olustur", icon: "file-plus", category: "Teklif", requiredRole: ["admin", "satinalma_muduru"], moduleKey: "rfq" },
+    { label: "Teklif Listesi", href: "/rfq/liste", icon: "inbox", category: "Teklif", requiredPermission: "rfq:read", moduleKey: "rfq" },
+    { label: "Yeni RFQ", href: "/rfq/olustur", icon: "file-plus", category: "Teklif", requiredPermission: "rfq:create", moduleKey: "rfq" },
 
     { label: "Sipariş Oluştur", href: "/siparis/olustur", icon: "cart", category: "Sipariş", requiredPermission: "siparis:create", moduleKey: "siparis" },
     { label: "Sipariş Listesi", href: "/siparis/liste", icon: "package", category: "Sipariş", requiredPermission: "siparis:read", moduleKey: "siparis" },
@@ -47,11 +47,11 @@ export const menuItems: MenuItem[] = [
     { label: "Dashboard", href: "/raporlama/dashboard", icon: "pie-chart", category: "Raporlama", requiredPermission: "rapor:read", moduleKey: "raporlama" },
 
     // Ürün Katalog Modülü (Ayrı kategori)
-    { label: "Ürün Listesi", href: "/urun/liste", icon: "package", category: "Ürün", moduleKey: "urun" },
-    { label: "Ürün Ekle", href: "/urun/olustur", icon: "plus-circle", category: "Ürün", requiredRole: ["admin", "satinalma_muduru"], moduleKey: "urun" },
-    { label: "Kategoriler", href: "/urun/kategoriler", icon: "folder", category: "Ürün", requiredRole: ["admin", "satinalma_muduru"], moduleKey: "urun" },
+    { label: "Ürün Listesi", href: "/urun/liste", icon: "package", category: "Ürün", requiredPermission: "urun:read", moduleKey: "urun" },
+    { label: "Ürün Ekle", href: "/urun/olustur", icon: "plus-circle", category: "Ürün", requiredPermission: "urun:create", moduleKey: "urun" },
+    { label: "Kategoriler", href: "/urun/kategoriler", icon: "folder", category: "Ürün", requiredPermission: "urun:edit", moduleKey: "urun" },
 
-    { label: "Ayarlar", href: "/ayarlar", icon: "settings", category: "Ayarlar" },
+    { label: "Ayarlar", href: "/ayarlar", icon: "settings", category: "Ayarlar", requiredPermission: "ayarlar:read" },
 ];
 
 /**

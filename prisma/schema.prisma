@@ -36,6 +36,9 @@ model User {
   roleId                String?
   roleRef               Role?                   @relation(fields: [roleId], references: [id], onDelete: SetNull)
   unitId                String?
+  supplierId            String?
+  supplier              Supplier?               @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  isActive              Boolean                 @default(true)
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
   // Relations
@@ -121,7 +124,6 @@ model Supplier {
   orders              Order[]
   // Supplier-related relations
   evaluations         SupplierEvaluation[]
-  // CAPA relation removed
   performanceMetrics  SupplierPerformanceMetric[] @relation("SupplierPerformanceMetrics")
   evaluationSummaries SupplierEvaluationSummary[] @relation("SupplierEvaluationSummaries")
   alerts              SupplierAlert[]             @relation("SupplierAlerts")
@@ -135,6 +137,9 @@ model Supplier {
   // Category Relation
   categoryId          String?
   category            SupplierCategory?           @relation(fields: [categoryId], references: [id])
+  
+  // Relation to users (for supplier portal)
+  users               User[]
 }
 
 model SupplierCategory {
@@ -282,7 +287,6 @@ model Order {
 
   // Supplier-related relations
   evaluations         SupplierEvaluation[]
-  // CAPA relation removed
   responsible         User?                @relation(fields: [responsibleUserId], references: [id])
   deliveryTokens      DeliveryToken[]
 }
@@ -499,7 +503,6 @@ model SupplierEvaluation {
   submittedAt DateTime?
   totalScore  Decimal?                   @db.Decimal(18, 2)
   answers     SupplierEvaluationAnswer[]
-  // CAPA relation removed
 }
 
 model SupplierEvaluationAnswer {
@@ -510,9 +513,6 @@ model SupplierEvaluationAnswer {
   questionId   String
   value        String // stores selected option id or free text
 }
-
-// Corrective and Preventive Actions (CAPA)
-// CAPA models removed
 
 // User-defined reporting templates
 model ReportTemplate {

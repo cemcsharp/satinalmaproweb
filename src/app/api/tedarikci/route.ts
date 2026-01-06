@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { requirePermissionApi } from "@/lib/apiAuth";
 
 // Standardized supplier list with filtering, sorting, and pagination
 export async function GET(req: NextRequest) {
-  // Permission check
-  const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-  const user = await getUserWithPermissions(req);
-  if (!user) return jsonError(401, "unauthorized");
-  if (!userHasPermission(user, "tedarikci:read")) return jsonError(403, "forbidden");
+  // Permission check: tedarikci:read required
+  const user = await requirePermissionApi(req, "tedarikci:read");
+  if (!user) return jsonError(403, "forbidden", { message: "Tedarikçi görüntüleme yetkiniz yok." });
 
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q") || "";
@@ -71,11 +68,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Permission check
-    const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-    const user = await getUserWithPermissions(req);
-    if (!user) return jsonError(401, "unauthorized");
-    if (!userHasPermission(user, "tedarikci:create")) return jsonError(403, "forbidden");
+    // Permission check: tedarikci:create required
+    const user = await requirePermissionApi(req, "tedarikci:create");
+    if (!user) return jsonError(403, "forbidden", { message: "Tedarikçi oluşturma yetkiniz yok." });
 
     const body = await req.json();
     const name = String(body?.name || "").trim();

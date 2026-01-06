@@ -26,6 +26,21 @@ export default function RfqListePage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const { execute, loading } = useApiRequest<{ items: RfqListItem[], totalPages: number }>();
+    const [canCreate, setCanCreate] = useState(false);
+
+    // Fetch permissions
+    useEffect(() => {
+        fetch("/api/profile")
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data) {
+                    const isAdmin = data.role === "admin" || data.isAdmin;
+                    const perms: string[] = data.permissions || [];
+                    setCanCreate(isAdmin || perms.includes("rfq:create"));
+                }
+            })
+            .catch(() => { });
+    }, []);
 
     useEffect(() => {
         execute({
@@ -59,11 +74,11 @@ export default function RfqListePage() {
             <PageHeader
                 title="Teklif Talepleri (RFQ)"
                 description="Tedarikçilerden toplanan fiyat tekliflerini yönetin."
-                actions={
+                actions={canCreate ? (
                     <Button variant="gradient" onClick={() => router.push("/rfq/olustur")}>
                         Yeni RFQ Oluştur
                     </Button>
-                }
+                ) : undefined}
             />
 
             <Card className="p-0 overflow-hidden">

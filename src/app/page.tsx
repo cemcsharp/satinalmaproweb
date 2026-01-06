@@ -10,5 +10,11 @@ export default async function HomePage() {
         redirect("/login");
     }
 
+    // Role-based redirection
+    const role = (session as any)?.role;
+    if (role === "supplier") {
+        redirect("/portal/dashboard");
+    }
+
     return <DashboardClient />;
 }

@@ -3,10 +3,9 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import type { Role } from "@/lib/apiAuth";
-import { getPermissionsForRole } from "@/lib/permissions";
+import { getPermissionInfo } from "@/lib/permissions";
 
-// Admin emails
-const ADMIN_EMAILS = ["admin@sirket.com", "admin@satinalmapro.com"];
+
 
 export async function GET() {
     try {
@@ -30,31 +29,34 @@ export async function GET() {
             return NextResponse.json({ error: "user_not_found" }, { status: 404 });
         }
 
-        // Determine actual role
+        // Determine actual role strictly from user record
         let roleKey: string = user.role || "user";
-
-        // Admin override by email
-        if (user.email && ADMIN_EMAILS.includes(String(user.email).toLowerCase())) {
-            roleKey = "admin";
-        }
 
         let permissions: string[] = [];
 
-        if (roleKey === "admin") {
-            permissions = getPermissionsForRole("admin");
-        } else if (user.roleRef && user.roleRef.permissions) {
-            // Extract dynamic permissions from JSON
-            const dbPerms = user.roleRef.permissions as Record<string, string[]>;
+        if (user.roleRef && user.roleRef.permissions) {
+            // Extract dynamic permissions from JSON (user has roleId linked)
+            const dbPerms = user.roleRef.permissions;
 
-            // Flatten to ["category:action", ...] format
-            permissions = Object.entries(dbPerms).flatMap(([category, actions]) => {
-                if (Array.isArray(actions)) {
-                    return actions.map(action => `${category}:${action}`);
-                }
-                return [];
+            if (Array.isArray(dbPerms)) {
+                permissions = dbPerms as string[];
+            } else if (typeof dbPerms === 'object' && dbPerms !== null) {
+                // Handle legacy object format if still present
+                permissions = Object.keys(dbPerms).filter(k => (dbPerms as any)[k]);
+            }
+        } else if (roleKey) {
+            // FALLBACK: User has role string but no roleId linkage
+            // Fetch permissions directly from Role table by key
+            const roleRecord = await prisma.role.findUnique({
+                where: { key: roleKey }
             });
-        } else {
-            permissions = getPermissionsForRole(roleKey);
+            if (roleRecord && Array.isArray(roleRecord.permissions)) {
+                permissions = roleRecord.permissions as string[];
+            } else if (roleKey === "admin") {
+                // Ultimate fallback for admin
+                const { ALL_PERMISSIONS } = await import("@/lib/permissions");
+                permissions = [...ALL_PERMISSIONS];
+            }
         }
 
         return NextResponse.json({

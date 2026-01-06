@@ -1,24 +1,15 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
+import { requirePermissionApi } from "@/lib/apiAuth";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 
 // Standardized list API: supports filtering, sorting and pagination
 export async function GET(req: NextRequest) {
   try {
-    // Import permission helpers
-    const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-
-    // Check authentication and get user info
-    const user = await getUserWithPermissions(req);
-    if (!user) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
-
-    // Check read permission
-    if (!userHasPermission(user, "sozlesme:read")) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
-    }
+    // Permission check: sozlesme:read required
+    const user = await requirePermissionApi(req, "sozlesme:read");
+    if (!user) return jsonError(403, "forbidden", { message: "Sözleşme görüntüleme yetkiniz yok." });
 
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q") || "";
@@ -107,19 +98,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Import permission helpers
-    const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-
-    // Check authentication and get user info
-    const user = await getUserWithPermissions(req);
-    if (!user) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
-
-    // Check create permission
-    if (!userHasPermission(user, "sozlesme:create")) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
-    }
+    // Permission check: sozlesme:create required
+    const user = await requirePermissionApi(req, "sozlesme:create");
+    if (!user) return jsonError(403, "forbidden", { message: "Sözleşme oluşturma yetkiniz yok." });
 
     const body = await req.json().catch(() => ({}));
     const numberRaw = body?.number;

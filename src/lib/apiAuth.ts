@@ -3,15 +3,14 @@ import { getServerSession } from "next-auth";
 import type { NextRequest } from "next/server";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/db";
-import { getPermissionsForRole } from "@/lib/permissions";
+import { getPermissionInfo } from "@/lib/permissions";
 
 // Role hierarchy: admin > manager > user
 export type Role = "admin" | "manager" | "user" | string;
 
 export type ApiAuth = { userId: string } | null;
 
-// Admin emails (automatic admin role)
-const ADMIN_EMAILS = ["admin@sirket.com", "admin@satinalmapro.com"];
+
 
 export async function requireAuthApi(req: NextRequest): Promise<ApiAuth> {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
@@ -24,28 +23,23 @@ export async function requireAuthApi(req: NextRequest): Promise<ApiAuth> {
 export async function getSessionUser(): Promise<{ id: string; role: Role } | null> {
   const session = await getServerSession(authOptions);
   let userId = (session as any)?.user?.id || (session as any)?.userId || null;
-  let email = (session as any)?.user?.email || null;
-  let role: Role = "user";
 
   if (!userId) {
-    // Check admin email fallback
-    if (email && ADMIN_EMAILS.includes(String(email).toLowerCase())) {
-      return { id: String(email), role: "admin" };
-    }
     return null;
   }
 
-  // Fetch actual user role from DB
-  const user = await prisma.user.findUnique({ where: { id: String(userId) } }).catch(() => null);
-  if (user) {
-    role = (user.role as Role) || "user";
-    // Admin override by email
-    if (user.email && ADMIN_EMAILS.includes(String(user.email).toLowerCase())) {
-      role = "admin";
-    }
-  }
+  // Fetch actual user role from DB with relation
+  const user = await prisma.user.findUnique({
+    where: { id: String(userId) },
+    include: { roleRef: true }
+  }).catch(() => null);
 
-  return { id: (user?.id || String(userId)), role };
+  if (!user) return null;
+
+  // Prioritize roleRef.key, fallback to user.role string
+  const role = (user.roleRef?.key || user.role || "user") as Role;
+
+  return { id: user.id, role };
 }
 
 export async function ensureRole(required: Role | Role[]): Promise<{ id: string; role: Role } | null> {
@@ -68,15 +62,14 @@ export async function ensureRoleApi(req: NextRequest, required: Role | Role[]): 
   const userId = (token as any)?.userId || (token as any)?.sub || null;
   if (!userId) return null;
 
-  const user = await prisma.user.findUnique({ where: { id: String(userId) } });
+  const user = await prisma.user.findUnique({
+    where: { id: String(userId) },
+    include: { roleRef: true }
+  });
   if (!user) return null;
 
-  let role: Role = (user.role as Role) || "user";
-
-  // Admin override by email
-  if (user.email && ADMIN_EMAILS.includes(String(user.email).toLowerCase())) {
-    role = "admin";
-  }
+  // Prioritize roleRef.key
+  const role: Role = (user.roleRef?.key || user.role || "user") as Role;
 
   const roles = Array.isArray(required) ? required : [required];
 
@@ -100,8 +93,13 @@ export async function ensurePermission(permission: string): Promise<{ id: string
   // Admin has all permissions
   if (user.role === "admin") return user;
 
-  // New centralized permission check
-  const permissions = getPermissionsForRole(user.role);
+  // Re-fetch user with full permission context
+  const fullUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    include: { roleRef: true }
+  });
+
+  const permissions = (fullUser?.roleRef?.permissions as string[]) || [];
   if (permissions.includes(permission)) return user;
 
   return null;
@@ -134,11 +132,6 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
 
   let roleKey: Role = (user.role as Role) || "user";
 
-  // Admin override by email
-  if (user.email && ADMIN_EMAILS.includes(String(user.email).toLowerCase())) {
-    roleKey = "admin";
-  }
-
   // Try to get permissions from Role table first
   let permissions: string[] = [];
 
@@ -157,9 +150,10 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
     }
   }
 
-  // Fallback to legacy hardcoded permissions if empty
-  if (permissions.length === 0) {
-    permissions = getPermissionsForRole(roleKey);
+  // No fallback to hardcoded permissions. If it's not in DB, it doesn't exist.
+  if (permissions.length === 0 && roleKey !== "admin") {
+    // Optionally log this as a potential configuration issue
+    console.warn(`[apiAuth] No permissions found for user ${userId} with role ${roleKey}`);
   }
 
   // Admin always gets all permissions
@@ -186,7 +180,33 @@ export function userHasPermission(user: UserWithPermissions, permission: string)
 // Utility: Check if user can access a module with specific action
 export function canAccess(role: Role, module: string, action: "read" | "write" | "delete"): boolean {
   if (role === "admin") return true;
-  const perms = MODULE_PERMISSIONS[module];
-  if (!perms) return true; // Unknown module = allow
-  return perms[action]?.includes(role) || false;
+  // This legacy function is now deprecated in favor of specific permission checks
+  return false;
+}
+
+/**
+ * Require specific permission(s) for API access.
+ * Returns user with permissions if authorized, or null if not.
+ * Use this at the start of any API handler that needs permission control.
+ */
+export async function requirePermissionApi(
+  req: NextRequest,
+  requiredPermission: string | string[]
+): Promise<UserWithPermissions | null> {
+  const user = await getUserWithPermissions(req);
+  if (!user) return null;
+
+  // Admin bypass
+  if (user.isAdmin) return user;
+
+  // Check permissions
+  const perms = Array.isArray(requiredPermission) ? requiredPermission : [requiredPermission];
+  const hasAny = perms.some(p => user.permissions.includes(p));
+
+  if (!hasAny) {
+    console.warn(`[Permission Denied] User ${user.id} lacks: ${perms.join(', ')}`);
+    return null;
+  }
+
+  return user;
 }

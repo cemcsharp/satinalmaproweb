@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
+import { requirePermissionApi } from "@/lib/apiAuth";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 import * as bcrypt from "bcryptjs";
 
@@ -17,19 +18,9 @@ function generateTempPassword(length = 12): string {
 // Standardized invoice list
 export async function GET(req: NextRequest) {
   try {
-    // Import permission helpers
-    const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-
-    // Check authentication and get user info
-    const user = await getUserWithPermissions(req);
-    if (!user) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
-
-    // Check read permission
-    if (!userHasPermission(user, "fatura:read")) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
-    }
+    // Permission check: fatura:read required
+    const user = await requirePermissionApi(req, "fatura:read");
+    if (!user) return jsonError(403, "forbidden", { message: "Fatura görüntüleme yetkiniz yok." });
 
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q") || "";
@@ -129,19 +120,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Import permission helpers
-    const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
+    // Permission check: fatura:create required
+    const user = await requirePermissionApi(req, "fatura:create");
+    if (!user) return jsonError(403, "forbidden", { message: "Fatura oluşturma yetkiniz yok." });
 
-    // Check authentication and get user info
-    const user = await getUserWithPermissions(req);
-    if (!user) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
-
-    // Check create permission
-    if (!userHasPermission(user, "fatura:create")) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
-    }
     const body = await req.json().catch(() => ({}));
     const number = String(body?.number || "").trim();
     const orderNo = String(body?.orderNo || "").trim();

@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
-import { requireAuthApi } from "@/lib/apiAuth";
+import { requirePermissionApi } from "@/lib/apiAuth";
 import { notify } from "@/lib/notification-service";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 
@@ -29,15 +29,9 @@ function generateTempPassword(length = 12): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAuthApi(req);
-    if (!auth) return jsonError(401, "unauthorized");
-
-    // Permission check removed as requested
-    // const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-    // const user = await getUserWithPermissions(req);
-    // if (!user || !userHasPermission(user, "talep:create")) {
-    //   return jsonError(403, "forbidden");
-    // }
+    // Permission check: talep:create required
+    const user = await requirePermissionApi(req, "talep:create");
+    if (!user) return jsonError(403, "forbidden", { message: "Talep oluşturma yetkiniz yok." });
 
     const body = (await req.json()) as CreateRequestBody;
     if (!body?.barcode || !body.subject || !body.budget || !body.relatedPersonId || !body.unitId || !body.statusId || !body.currencyId) {
@@ -53,12 +47,9 @@ export async function POST(req: NextRequest) {
 
     // Enforce Unit Isolation: User can only create requests for their own unit
     // Exception: Admins AND Satinalma unit can create for any unit
-    const user = await import("@/lib/apiAuth").then(m => m.getUserWithPermissions(req));
-    if (!user) return jsonError(401, "unauthorized");
-
     const targetUnitId = body.unitId;
     const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
-    const isOwnerOrAdmin = user.isAdmin || user.role === "admin" || isSatinalma;
+    const isOwnerOrAdmin = user.isAdmin || isSatinalma;
 
     if (!isOwnerOrAdmin) {
       if (!user.unitId) {
@@ -82,7 +73,7 @@ export async function POST(req: NextRequest) {
           currencyId: body.currencyId,
           unitEmail: unitEmail || null,
           justification: body.justification?.trim() || null,
-          ownerUserId: String(auth.userId),
+          ownerUserId: String(user.id),
           items: body.items && body.items.length > 0 ? {
             create: body.items.map((i) => ({ name: i.name.trim(), quantity: i.quantity, unitId: i.unitId, unitPrice: Number(i.unitPrice ?? 0) }))
           } : undefined,
@@ -103,7 +94,7 @@ export async function POST(req: NextRequest) {
             statusId: body.statusId,
             currencyId: body.currencyId,
             unitEmail: unitEmail || null,
-            ownerUserId: String(auth.userId),
+            ownerUserId: String(user.id),
             items: body.items && body.items.length > 0 ? {
               create: body.items.map((i) => ({ name: i.name.trim(), quantity: i.quantity, unitId: i.unitId }))
             } : undefined,
@@ -133,7 +124,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      await notify({ userId: String(auth.userId), title: "Talep oluşturuldu", body: `${body.subject} (${body.barcode})` });
+      await notify({ userId: String(user.id), title: "Talep oluşturuldu", body: `${body.subject} (${body.barcode})` });
       const origin = req.nextUrl.origin;
       const link = `${origin}/talep/detay/${encodeURIComponent(created.id)}`;
       const createdAt = new Date().toLocaleString("tr-TR");
@@ -197,7 +188,7 @@ export async function POST(req: NextRequest) {
       const items = Array.isArray((after as any)?.items) ? ((after as any).items as Array<any>).map((it) => ({ name: String(it.name), quantity: Number(it.quantity), unitPrice: Number(it.unitPrice || 0) })) : [];
       const html = renderEmailTemplate("detail", { title: unitLabel ? `Yeni Talep Oluşturuldu – Birim: ${unitLabel}` : "Yeni Talep Oluşturuldu", intro: "Talebin özeti ve kalemleri aşağıdadır.", fields, items, actionUrl: link, actionText: "Talebi Aç" });
       const subject = unitLabel ? `Yeni Talep Oluşturuldu – Birim: ${unitLabel}` : "Yeni Talep Oluşturuldu";
-      const owner = await prisma.user.findUnique({ where: { id: String(auth.userId) } });
+      const owner = await prisma.user.findUnique({ where: { id: String(user.id) } });
       if (owner?.email) await dispatchEmail({ to: owner.email, subject, html, category: "request_create" });
       if (unitEmail) await dispatchEmail({ to: unitEmail, subject, html, category: "request_create" });
     } catch { }
@@ -211,19 +202,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    // Import permission helpers
-    const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-
-    // Check authentication and get user info
-    const user = await getUserWithPermissions(req);
-    if (!user) {
-      return jsonError(401, "unauthorized");
-    }
-
-    // Check read permission
-    if (!userHasPermission(user, "talep:read")) {
-      return jsonError(403, "forbidden");
-    }
+    // Permission check: talep:read required
+    const user = await requirePermissionApi(req, "talep:read");
+    if (!user) return jsonError(403, "forbidden", { message: "Talep görüntüleme yetkiniz yok." });
 
     const url = new URL(req.url);
     const q = url.searchParams.get("q")?.trim() || "";
@@ -256,7 +237,7 @@ export async function GET(req: NextRequest) {
 
     // Unit-based data isolation - Users only see their unit's data
     // Admin users see all data
-    if (user.isAdmin || user.role === "admin") {
+    if (user.isAdmin) {
       // Admin sees all - apply manual filter if requested
       if (unit) {
         where.unit = { is: { label: unit } };
@@ -319,8 +300,9 @@ type UpdateStatusBody = { id?: string; barcode?: string; statusId: string; note?
 
 export async function PATCH(req: NextRequest) {
   try {
-    const auth = await requireAuthApi(req);
-    if (!auth) return jsonError(401, "unauthorized");
+    // Permission check: talep:edit required
+    const user = await requirePermissionApi(req, "talep:edit");
+    if (!user) return jsonError(403, "forbidden", { message: "Talep düzenleme yetkiniz yok." });
     const body = (await req.json()) as UpdateStatusBody;
     const identifier = String(body.id || body.barcode || "").trim();
     if (!identifier || !body.statusId) return jsonError(400, "missing_fields");

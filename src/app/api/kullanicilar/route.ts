@@ -15,20 +15,27 @@ export async function GET(req: NextRequest) {
 
     const list = await prisma.user.findMany({
       orderBy: { createdAt: "desc" },
-      include: { unit: true } // Removed roleRef
+      include: {
+        unit: true,
+        roleRef: true
+      }
     });
 
     const items = list
-      .filter((u) => (q ? ((u.username || "").toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q)) : true))
-      .map((u) => ({
+      .filter((u: any) => (q ? ((u.username || "").toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q)) : true))
+      .map((u: any) => ({
         id: u.id,
         username: u.username,
         email: u.email || null,
         createdAt: u.createdAt,
-        role: u.role, // String
-        roleId: null, // Removed
-        unitId: u.unitId,
-        roleRef: null, // Removed
+        role: u.role,
+        roleId: u.roleId,
+        isActive: u.isActive,
+        roleRef: u.roleRef ? {
+          id: u.roleRef.id,
+          name: u.roleRef.name,
+          key: u.roleRef.key
+        } : null,
         unit: u.unit ? {
           id: u.unit.id,
           label: u.unit.label
@@ -49,9 +56,18 @@ export async function POST(req: NextRequest) {
     const username = String(body?.username || "").trim();
     const email = String(body?.email || "").trim().toLowerCase();
     const password = String(body?.password || "").trim();
-    // const roleId = body?.roleId || null; // Removed
-    const roleString = body?.role || "user"; // Just string role
+    let roleId = body?.roleId || null;
+    let roleString = body?.role || "user";
     const unitId = body?.unitId || null;
+    const isActive = body?.isActive !== undefined ? body.isActive : true;
+
+    // If roleId is provided, sync the roleString with Role.key
+    if (roleId) {
+      const dbRole = await prisma.role.findUnique({ where: { id: roleId } });
+      if (dbRole) {
+        roleString = dbRole.key;
+      }
+    }
 
     if (!username || !email || password.length < 6) return jsonError(400, "invalid_payload");
     const existingU = await prisma.user.findUnique({ where: { username } });
@@ -65,9 +81,10 @@ export async function POST(req: NextRequest) {
         username,
         email,
         passwordHash,
-        role: roleString, // Store as string if needed, or default "user"
-        // roleId removed
-        unitId
+        role: roleString,
+        roleId,
+        unitId,
+        isActive
       }
     });
 
@@ -107,7 +124,20 @@ export async function PUT(req: NextRequest) {
     if (body.username) updateData.username = body.username;
     if (body.email) updateData.email = body.email;
     if (body.unitId !== undefined) updateData.unitId = body.unitId || null;
-    if (body.role) updateData.role = body.role; // string role update
+    if (body.roleId !== undefined) {
+      updateData.roleId = body.roleId || null;
+      if (body.roleId) {
+        const dbRole = await prisma.role.findUnique({ where: { id: body.roleId } });
+        if (dbRole) {
+          updateData.role = dbRole.key; // Sync flat string
+        }
+      } else {
+        updateData.role = "user"; // Fallback to user if roleId is cleared
+      }
+    } else if (body.role) {
+      updateData.role = body.role;
+    }
+    if (body.isActive !== undefined) updateData.isActive = body.isActive;
     if (body.password) updateData.passwordHash = await hashPassword(body.password);
 
     const updated = await prisma.user.update({

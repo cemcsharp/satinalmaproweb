@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseDecimalFlexible } from "@/lib/format";
 import { jsonError } from "@/lib/apiError";
+import { requirePermissionApi } from "@/lib/apiAuth";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 
 type CreateOrderBody = {
@@ -20,19 +21,13 @@ type CreateOrderBody = {
 
 export async function POST(req: NextRequest) {
   try {
-    // Check authentication and permission
-    const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-    const user = await getUserWithPermissions(req);
-    if (!user) {
-      return jsonError(401, "unauthorized");
-    }
-    if (!userHasPermission(user, "siparis:create")) {
-      return jsonError(403, "forbidden");
-    }
+    // Permission check: siparis:create required
+    const user = await requirePermissionApi(req, "siparis:create");
+    if (!user) return jsonError(403, "forbidden", { message: "Sipariş oluşturma yetkiniz yok." });
 
     const body = (await req.json()) as CreateOrderBody;
     const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
-    const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+    const hasFullAccess = user.isAdmin || isSatinalma;
 
     // Safety check: Avoid creating orders without request linking unless Admin/Satinalma
     // Actually, even satinalma should link to a request usually. 
@@ -152,15 +147,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    // Check authentication and permission
-    const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-    const user = await getUserWithPermissions(req);
-    if (!user) {
-      return jsonError(401, "unauthorized");
-    }
-    if (!userHasPermission(user, "siparis:read")) {
-      return jsonError(403, "forbidden");
-    }
+    // Permission check: siparis:read required
+    const user = await requirePermissionApi(req, "siparis:read");
+    if (!user) return jsonError(403, "forbidden", { message: "Sipariş görüntüleme yetkiniz yok." });
 
     const url = new URL(req.url);
     const q = url.searchParams.get("q")?.trim() || ""; // barcode
@@ -221,8 +210,8 @@ export async function GET(req: NextRequest) {
 
     // Unit-based data isolation: non-admin users only see their unit's data
     // Unit-based data isolation
-    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
-    const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+    const isSatinalmaFilter = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+    const hasFullAccess = user.isAdmin || isSatinalmaFilter;
 
     if (!hasFullAccess) {
       if (user.unitId) {

@@ -22,19 +22,168 @@ async function main() {
   // Roles
   const adminRole = await prisma.role.upsert({
     where: { key: "admin" },
-    update: { name: "Admin", permissions: ["user:manage", "report:manage"], description: "Tam yetkili yönetici" },
-    create: { key: "admin", name: "Admin", permissions: ["user:manage", "report:manage"], description: "Tam yetkili yönetici" },
+    update: {
+      name: "Admin",
+      permissions: [
+        "talep:read", "talep:create", "talep:edit", "talep:delete",
+        "siparis:read", "siparis:create", "siparis:edit", "siparis:delete",
+        "rfq:read", "rfq:create", "rfq:edit", "rfq:delete",
+        "teslimat:read", "teslimat:create", "teslimat:edit", "teslimat:delete",
+        "fatura:read", "fatura:create", "fatura:edit", "fatura:delete",
+        "sozlesme:read", "sozlesme:create", "sozlesme:edit", "sozlesme:delete",
+        "tedarikci:read", "tedarikci:create", "tedarikci:edit", "tedarikci:delete",
+        "evaluation:submit",
+        "urun:read", "urun:create", "urun:edit", "urun:delete",
+        "rapor:read",
+        "ayarlar:read", "ayarlar:edit", "user:manage", "role:manage"
+      ],
+      description: "Tam yetkili yönetici"
+    },
+    create: {
+      key: "admin",
+      name: "Admin",
+      permissions: [
+        "talep:read", "talep:create", "talep:edit", "talep:delete",
+        "siparis:read", "siparis:create", "siparis:edit", "siparis:delete",
+        "rfq:read", "rfq:create", "rfq:edit", "rfq:delete",
+        "teslimat:read", "teslimat:create", "teslimat:edit", "teslimat:delete",
+        "fatura:read", "fatura:create", "fatura:edit", "fatura:delete",
+        "sozlesme:read", "sozlesme:create", "sozlesme:edit", "sozlesme:delete",
+        "tedarikci:read", "tedarikci:create", "tedarikci:edit", "tedarikci:delete",
+        "evaluation:submit",
+        "urun:read", "urun:create", "urun:edit", "urun:delete",
+        "rapor:read",
+        "ayarlar:read", "ayarlar:edit", "user:manage", "role:manage"
+      ],
+      description: "Tam yetkili yönetici"
+    },
   });
-  const userRole = await prisma.role.upsert({
-    where: { key: "user" },
-    update: { name: "Kullanıcı", permissions: [], description: "Standart kullanıcı" },
-    create: { key: "user", name: "Kullanıcı", permissions: [], description: "Standart kullanıcı" },
+
+  const managerRole = await prisma.role.upsert({
+    where: { key: "satinalma_muduru" },
+    update: {
+      name: "Satın Alma Müdürü",
+      permissions: [
+        "talep:read", "talep:edit", "talep:delete",
+        "siparis:read", "siparis:create", "siparis:edit", "siparis:delete",
+        "rfq:read", "rfq:create", "rfq:edit", "rfq:delete",
+        "teslimat:read", "teslimat:create", "teslimat:edit",
+        "fatura:read", "fatura:create", "fatura:edit",
+        "sozlesme:read", "sozlesme:create", "sozlesme:edit",
+        "tedarikci:read", "tedarikci:create", "tedarikci:edit", "tedarikci:delete",
+        "evaluation:submit",
+        "urun:read", "urun:create", "urun:edit",
+        "rapor:read",
+        "ayarlar:read", "ayarlar:edit", "user:manage"
+      ],
+      description: "Satın alma departman yöneticisi"
+    },
+    create: {
+      key: "satinalma_muduru",
+      name: "Satın Alma Müdürü",
+      permissions: [
+        "talep:read", "talep:edit", "talep:delete",
+        "siparis:read", "siparis:create", "siparis:edit", "siparis:delete",
+        "rfq:read", "rfq:create", "rfq:edit", "rfq:delete",
+        "teslimat:read", "teslimat:create", "teslimat:edit",
+        "fatura:read", "fatura:create", "fatura:edit",
+        "sozlesme:read", "sozlesme:create", "sozlesme:edit",
+        "tedarikci:read", "tedarikci:create", "tedarikci:edit", "tedarikci:delete",
+        "evaluation:submit",
+        "urun:read", "urun:create", "urun:edit",
+        "rapor:read",
+        "ayarlar:read", "ayarlar:edit", "user:manage"
+      ],
+      description: "Satın alma departman yöneticisi"
+    },
   });
+
+  const unitOfficialRole = await prisma.role.upsert({
+    where: { key: "birim_yetkilisi" },
+    update: {
+      name: "Birim Yetkilisi",
+      permissions: [
+        "talep:create", "talep:read",
+        "siparis:read",
+        "teslimat:read",
+        "rapor:read"
+      ],
+      description: "Birim bazlı talepleri yöneten yetkili"
+    },
+    create: {
+      key: "birim_yetkilisi",
+      name: "Birim Yetkilisi",
+      permissions: [
+        "talep:create", "talep:read",
+        "siparis:read",
+        "teslimat:read",
+        "rapor:read"
+      ],
+      description: "Birim bazlı talepleri yöneten yetkili"
+    },
+  });
+
   const evaluatorRole = await prisma.role.upsert({
     where: { key: "birim_evaluator" },
-    update: { name: "Birim Değerlendiricisi", permissions: ["evaluation:submit"], description: "Sadece tedarikçi değerlendirmesi yapabilir" },
-    create: { key: "birim_evaluator", name: "Birim Değerlendiricisi", permissions: ["evaluation:submit"], description: "Sadece tedarikçi değerlendirmesi yapabilir" },
+    update: {
+      name: "Birim Değerlendiricisi",
+      permissions: [
+        "talep:read",
+        "siparis:read",
+        "teslimat:read",
+        "evaluation:submit"
+      ],
+      description: "Sadece tedarikçi değerlendirmesi yapabilir"
+    },
+    create: {
+      key: "birim_evaluator",
+      name: "Birim Değerlendiricisi",
+      permissions: [
+        "talep:read",
+        "siparis:read",
+        "teslimat:read",
+        "evaluation:submit"
+      ],
+      description: "Sadece tedarikçi değerlendirmesi yapabilir"
+    },
   });
+
+  const warehouseRole = await prisma.role.upsert({
+    where: { key: "depo_gorevlisi" },
+    update: {
+      name: "Depo Görevlisi",
+      permissions: ["teslimat:read", "teslimat:create", "teslimat:edit"],
+      description: "Teslimat ve kabul işlemlerini yöneten personel"
+    },
+    create: {
+      key: "depo_gorevlisi",
+      name: "Depo Görevlisi",
+      permissions: ["teslimat:read", "teslimat:create", "teslimat:edit"],
+      description: "Teslimat ve kabul işlemlerini yöneten personel"
+    },
+  });
+
+  const userRole = await prisma.role.upsert({
+    where: { key: "user" },
+    update: { name: "Kullanıcı", permissions: ["talep:create", "talep:read"], description: "Standart kullanıcı" },
+    create: { key: "user", name: "Kullanıcı", permissions: ["talep:create", "talep:read"], description: "Standart kullanıcı" },
+  });
+
+  const supplierRole = await prisma.role.upsert({
+    where: { key: "supplier" },
+    update: {
+      name: "Tedarikçi",
+      permissions: ["rfq:read", "offer:submit", "portal:access"],
+      description: "Dış tedarikçi portal erişimi"
+    },
+    create: {
+      key: "supplier",
+      name: "Tedarikçi",
+      permissions: ["rfq:read", "offer:submit", "portal:access"],
+      description: "Dış tedarikçi portal erişimi"
+    },
+  });
+
   // Ensure demo user exists
   try {
     const demoUsername = "admin";
@@ -43,11 +192,9 @@ async function main() {
     const demoHash = await bcrypt.hash(demoPassword, 10);
     const demoUser = await prisma.user.upsert({
       where: { username: demoUsername },
-      update: { email: demoEmail, passwordHash: demoHash, role: "admin", roleId: adminRole.id },
-      create: { username: demoUsername, email: demoEmail, passwordHash: demoHash, role: "admin", roleId: adminRole.id },
+      update: { email: demoEmail, passwordHash: demoHash, role: "admin", roleId: adminRole.id, isActive: true },
+      create: { username: demoUsername, email: demoEmail, passwordHash: demoHash, role: "admin", roleId: adminRole.id, isActive: true },
     });
-    // Ensure any admin email gets admin roleId
-    await prisma.user.updateMany({ where: { email: demoEmail }, data: { role: "admin", roleId: adminRole.id } });
   } catch (e) {
     console.warn("User creation skipped due to unique constraint or other error:", e.message);
   }

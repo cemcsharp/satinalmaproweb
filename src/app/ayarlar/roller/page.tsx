@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
+import { PERMISSION_CATEGORIES } from "@/lib/permissions";
 
 type Role = {
     id: string;
@@ -19,19 +20,7 @@ type Role = {
     userCount: number;
 };
 
-// Permission categories for display
-const PERMISSION_CATEGORIES = [
-    { key: "talep", label: "Talep", perms: ["talep:read", "talep:create", "talep:edit", "talep:delete"] },
-    { key: "siparis", label: "Sipariş", perms: ["siparis:read", "siparis:create", "siparis:edit", "siparis:delete"] },
-    { key: "fatura", label: "Fatura", perms: ["fatura:read", "fatura:create", "fatura:edit", "fatura:delete"] },
-    { key: "sozlesme", label: "Sözleşme", perms: ["sozlesme:read", "sozlesme:create", "sozlesme:edit", "sozlesme:delete"] },
-    { key: "tedarikci", label: "Tedarikçi", perms: ["tedarikci:read", "tedarikci:create", "tedarikci:edit", "tedarikci:delete"] },
-    { key: "teslimat", label: "Teslimat", perms: ["teslimat:read", "teslimat:create", "teslimat:edit", "teslimat:delete"] },
-    { key: "rfq", label: "RFQ/Teklif", perms: ["rfq:read", "rfq:create", "rfq:edit", "rfq:delete"] },
-    { key: "urun", label: "Ürün", perms: ["urun:read", "urun:create", "urun:edit", "urun:delete"] },
-    { key: "rapor", label: "Raporlama", perms: ["rapor:read"] },
-    { key: "diger", label: "Diğer", perms: ["evaluation:submit", "ayarlar:read", "ayarlar:edit", "user:manage", "role:manage"] },
-];
+// Local definition removed - using centralized ones from @/lib/permissions
 
 export default function RolesPage() {
     const router = useRouter();
@@ -87,12 +76,12 @@ export default function RolesPage() {
         );
     };
 
-    const toggleCategoryAll = (category: typeof PERMISSION_CATEGORIES[0]) => {
-        const allSelected = category.perms.every(p => formPermissions.includes(p));
+    const toggleCategoryAll = (categoryKey: string, perms: string[]) => {
+        const allSelected = perms.every(p => formPermissions.includes(p));
         if (allSelected) {
-            setFormPermissions(prev => prev.filter(p => !category.perms.includes(p)));
+            setFormPermissions(prev => prev.filter(p => !perms.includes(p)));
         } else {
-            setFormPermissions(prev => [...new Set([...prev, ...category.perms])]);
+            setFormPermissions(prev => [...new Set([...prev, ...perms])]);
         }
     };
 
@@ -249,11 +238,12 @@ export default function RolesPage() {
                     <div className="border-t pt-4">
                         <h4 className="font-medium mb-3">İzinler</h4>
                         <div className="space-y-3 max-h-64 overflow-y-auto">
-                            {PERMISSION_CATEGORIES.map(cat => {
-                                const allSelected = cat.perms.every(p => formPermissions.includes(p));
-                                const someSelected = cat.perms.some(p => formPermissions.includes(p));
+                            {Object.entries(PERMISSION_CATEGORIES).map(([catKey, cat]) => {
+                                const perms = cat.permissions.map(p => p.key);
+                                const allSelected = perms.every(p => formPermissions.includes(p));
+                                const someSelected = perms.some(p => formPermissions.includes(p));
                                 return (
-                                    <div key={cat.key} className="border rounded p-3">
+                                    <div key={catKey} className="border rounded p-3">
                                         <label className="flex items-center gap-2 font-medium mb-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
@@ -261,21 +251,21 @@ export default function RolesPage() {
                                                 ref={el => {
                                                     if (el) el.indeterminate = someSelected && !allSelected;
                                                 }}
-                                                onChange={() => toggleCategoryAll(cat)}
+                                                onChange={() => toggleCategoryAll(catKey, perms)}
                                                 className="w-4 h-4"
                                             />
                                             {cat.label}
                                         </label>
                                         <div className="flex flex-wrap gap-2 ml-6">
-                                            {cat.perms.map(perm => (
-                                                <label key={perm} className="flex items-center gap-1 text-xs cursor-pointer">
+                                            {cat.permissions.map(perm => (
+                                                <label key={perm.key} className="flex items-center gap-1 text-xs cursor-pointer">
                                                     <input
                                                         type="checkbox"
-                                                        checked={formPermissions.includes(perm)}
-                                                        onChange={() => togglePermission(perm)}
+                                                        checked={formPermissions.includes(perm.key)}
+                                                        onChange={() => togglePermission(perm.key)}
                                                         className="w-3 h-3"
                                                     />
-                                                    {perm.split(":")[1]}
+                                                    {perm.label}
                                                 </label>
                                             ))}
                                         </div>

@@ -1,22 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
-import { requireAuthApi, getUserWithPermissions } from "@/lib/apiAuth";
+import { requirePermissionApi } from "@/lib/apiAuth";
 import * as crypto from "crypto";
 
 // Create Delivery Receipt
 export async function POST(req: NextRequest) {
     try {
-        const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
-        const user = await getUserWithPermissions(req);
-        if (!user) return jsonError(401, "unauthorized");
-
-        // Auth object for create (receiverId)
-        const auth = { userId: user.id };
-
-        // Verify user exists (prevent FK error if DB was reset)
-        // const userExists = await prisma.user.findUnique({ where: { id: auth.userId } });
-        // if (!userExists) return jsonError(401, "user_not_found_relogin");
+        // Permission check: teslimat:create required
+        const user = await requirePermissionApi(req, "teslimat:create");
+        if (!user) return jsonError(403, "forbidden", { message: "Teslimat fişi oluşturma yetkiniz yok." });
 
         const body = await req.json();
         const { orderId, code, date, items, action } = body;
@@ -75,14 +68,6 @@ export async function POST(req: NextRequest) {
 
         if (!orderId || !items || !Array.isArray(items) || items.length === 0) {
             return jsonError(400, "invalid_payload", { message: "orderId and items required" });
-        }
-
-        // Permission Check for Internal Creation
-        const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
-        const canCreate = user.isAdmin || isSatinalma || userHasPermission(user, "teslimat:create");
-
-        if (!canCreate) {
-            return jsonError(403, "forbidden_create", { message: "Teslimat fişi oluşturma yetkiniz yok." });
         }
 
         // Verify Order
@@ -155,7 +140,7 @@ export async function POST(req: NextRequest) {
                 code: code || `IRS-${Date.now()}`, // Auto-generate if missing
                 date: date ? new Date(date) : new Date(),
                 orderId,
-                receiverId: auth.userId,
+                receiverId: user.id,
                 receiverUnitId: targetUnitId, // Assigned to Request Unit
                 status: "pending", // Wait for Unit Approval
                 items: {
@@ -254,9 +239,9 @@ export async function GET(req: NextRequest) {
     const dateTo = searchParams.get("dateTo");
 
     try {
-        // Get user with permissions
-        const user = await getUserWithPermissions(req);
-        if (!user) return jsonError(401, "unauthorized");
+        // Permission check: teslimat:read required
+        const user = await requirePermissionApi(req, "teslimat:read");
+        if (!user) return jsonError(403, "forbidden", { message: "Teslimat görüntüleme yetkiniz yok." });
 
         const where: any = {};
         if (orderId) where.orderId = orderId;
