@@ -8,6 +8,7 @@ describe("Permission Checker", () => {
             role: "admin",
             permissions: [],
             unitId: null,
+            unitLabel: null,
             isAdmin: true,
         };
 
@@ -22,6 +23,7 @@ describe("Permission Checker", () => {
             role: "user",
             permissions: ["talep:read", "talep:write"],
             unitId: "unit-1",
+            unitLabel: "Test Birimi",
             isAdmin: false,
         };
 
@@ -41,6 +43,7 @@ describe("Permission Checker", () => {
                 "teslimat:read", "teslimat:write",
             ],
             unitId: "unit-1",
+            unitLabel: "Test Birimi",
             isAdmin: false,
         };
 

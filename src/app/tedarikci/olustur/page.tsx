@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -32,14 +32,14 @@ export default function SupplierCreatePage() {
       .catch(() => { });
   }, []);
 
-  const renderCategoryOptions = (cats: any[], depth = 0): JSX.Element[] => {
+  const renderCategoryOptions = (cats: any[], depth = 0): React.ReactNode[] => {
     return cats.map(cat => (
-      <>
-        <option key={cat.id} value={cat.id}>
+      <React.Fragment key={cat.id}>
+        <option value={cat.id}>
           {"- ".repeat(depth)} {cat.name}
         </option>
         {cat.children && cat.children.length > 0 && renderCategoryOptions(cat.children, depth + 1)}
-      </>
+      </React.Fragment>
     ));
   };
 
