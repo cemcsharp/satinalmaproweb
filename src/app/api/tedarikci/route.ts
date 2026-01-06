@@ -6,6 +6,12 @@ import { authOptions } from "@/lib/authOptions";
 
 // Standardized supplier list with filtering, sorting, and pagination
 export async function GET(req: NextRequest) {
+  // Permission check
+  const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
+  const user = await getUserWithPermissions(req);
+  if (!user) return jsonError(401, "unauthorized");
+  if (!userHasPermission(user, "tedarikci:read")) return jsonError(403, "forbidden");
+
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q") || "";
   const active = searchParams.get("active");
@@ -65,8 +71,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return jsonError(401, "unauthorized");
+    // Permission check
+    const { getUserWithPermissions, userHasPermission } = await import("@/lib/apiAuth");
+    const user = await getUserWithPermissions(req);
+    if (!user) return jsonError(401, "unauthorized");
+    if (!userHasPermission(user, "tedarikci:create")) return jsonError(403, "forbidden");
+
     const body = await req.json();
     const name = String(body?.name || "").trim();
     if (!name) return jsonError(400, "name_required");

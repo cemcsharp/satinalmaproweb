@@ -1,1 +1,0 @@
-export { default } from "../../capa/olustur/page";

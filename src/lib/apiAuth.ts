@@ -190,4 +190,3 @@ export function canAccess(role: Role, module: string, action: "read" | "write" |
   if (!perms) return true; // Unknown module = allow
   return perms[action]?.includes(role) || false;
 }
-

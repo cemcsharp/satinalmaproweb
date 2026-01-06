@@ -85,20 +85,6 @@ export async function GET(req: Request) {
           },
         });
       }
-      if (agg === "dofStatus") {
-        const groups = await (prisma as any).cAPA.groupBy({ by: ["status"], _count: { _all: true }, where: dateFilter("openedAt") as any }).catch(() => []);
-        const payload = groups.map((g: any) => ({ label: g.status || "-", count: Number(g._count?._all || 0), spend: 0 }));
-        return NextResponse.json({ items: payload.sort((a: any, b: any) => b.count - a.count) });
-      }
-      if (agg === "dofSuppliers") {
-        const groups = await (prisma as any).cAPA.groupBy({ by: ["supplierId"], _count: { _all: true }, where: dateFilter("openedAt") as any }).catch(() => []);
-        const ids = groups.map((g: any) => g.supplierId).filter(Boolean);
-        const suppliers = await prisma.supplier.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }).catch(() => []);
-        const nameById: Record<string, string> = {};
-        for (const s of suppliers) nameById[s.id] = s.name;
-        const payload = groups.map((g: any) => ({ label: nameById[g.supplierId] || g.supplierId || "-", count: Number(g._count?._all || 0), spend: 0 }));
-        return NextResponse.json({ items: payload.sort((a: any, b: any) => b.count - a.count) });
-      }
       return NextResponse.json({ items: [] });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -121,7 +107,7 @@ export async function GET(req: Request) {
             series = obj.payload as { date: string; requests: number; orders: number; spend: number }[];
             break;
           }
-        } catch {}
+        } catch { }
       }
       const items = (series || []).map((p) => ({
         label: String(p.date),

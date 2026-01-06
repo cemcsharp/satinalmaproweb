@@ -22,8 +22,22 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     if (typeof body.username === "string" && body.username.trim()) data.username = body.username.trim();
     if (typeof body.email === "string" && body.email.trim()) data.email = body.email.trim().toLowerCase();
     if (typeof body.password === "string" && body.password.trim().length >= 6) data.passwordHash = await hashPassword(body.password.trim());
-    if (body.roleId !== undefined) data.roleId = body.roleId || null;
     if (body.unitId !== undefined) data.unitId = body.unitId || null;
+
+    // Handle role update - sync both roleId and role string
+    if (body.roleId !== undefined) {
+      data.roleId = body.roleId || null;
+
+      // Sync role string field with roleId
+      if (body.roleId) {
+        const roleRecord = await prisma.role.findUnique({ where: { id: body.roleId } });
+        if (roleRecord) {
+          data.role = roleRecord.key; // Sync role string with role key
+        }
+      } else {
+        data.role = "user"; // Default to user if roleId is cleared
+      }
+    }
 
     if (!Object.keys(data).length) return jsonError(400, "invalid_payload");
 

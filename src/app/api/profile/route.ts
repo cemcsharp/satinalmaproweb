@@ -17,11 +17,12 @@ export async function GET() {
             return NextResponse.json({ error: "unauthorized", debug: { session } }, { status: 401 });
         }
 
-        // Removed roleRef include, permissions will be static
+        // Fetch user with roleRef
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: {
-                unit: true
+                unit: true,
+                roleRef: true
             },
         });
 
@@ -37,7 +38,24 @@ export async function GET() {
             roleKey = "admin";
         }
 
-        const permissions = getPermissionsForRole(roleKey);
+        let permissions: string[] = [];
+
+        if (roleKey === "admin") {
+            permissions = getPermissionsForRole("admin");
+        } else if (user.roleRef && user.roleRef.permissions) {
+            // Extract dynamic permissions from JSON
+            const dbPerms = user.roleRef.permissions as Record<string, string[]>;
+
+            // Flatten to ["category:action", ...] format
+            permissions = Object.entries(dbPerms).flatMap(([category, actions]) => {
+                if (Array.isArray(actions)) {
+                    return actions.map(action => `${category}:${action}`);
+                }
+                return [];
+            });
+        } else {
+            permissions = getPermissionsForRole(roleKey);
+        }
 
         return NextResponse.json({
             id: user.id,

@@ -9,8 +9,12 @@ describe("route protection predicate", () => {
     expect(isProtectedPath("/profile")).toBe(true);
   });
 
-  it("does not protect login or public root", () => {
+  it("does not protect login or register pages", () => {
     expect(isProtectedPath("/login")).toBe(false);
-    expect(isProtectedPath("/")).toBe(false);
+    expect(isProtectedPath("/register")).toBe(false);
+  });
+
+  it("protects root path (dashboard)", () => {
+    expect(isProtectedPath("/")).toBe(true);
   });
 });

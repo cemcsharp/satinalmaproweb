@@ -26,7 +26,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         root.classList.remove("dark");
         root.classList.add("light");
         // Clear any stored theme preference
-        localStorage.removeItem("theme");
+        try {
+            localStorage.removeItem("theme");
+        } catch { }
     }, []);
 
     const setTheme = () => {

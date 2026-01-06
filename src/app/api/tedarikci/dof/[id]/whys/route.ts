@@ -1,1 +1,0 @@
-export { GET, POST, DELETE } from "../../../capa/[id]/whys/route";

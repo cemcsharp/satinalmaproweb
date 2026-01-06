@@ -14,7 +14,7 @@ const defaultRoles = [
             "siparis:create", "siparis:read", "siparis:edit", "siparis:delete",
             "fatura:create", "fatura:read", "fatura:edit", "fatura:delete",
             "sozlesme:create", "sozlesme:read", "sozlesme:edit", "sozlesme:delete",
-            "tedarikci:manage", "tedarikci:read",
+            "tedarikci:create", "tedarikci:read", "tedarikci:edit", "tedarikci:delete",
             "evaluation:submit",
             "rapor:read",
             "user:manage", "role:manage"
@@ -30,7 +30,7 @@ const defaultRoles = [
             "siparis:create", "siparis:read", "siparis:edit", "siparis:delete",
             "fatura:create", "fatura:read", "fatura:edit", "fatura:delete",
             "sozlesme:create", "sozlesme:read", "sozlesme:edit", "sozlesme:delete",
-            "tedarikci:manage", "tedarikci:read",
+            "tedarikci:create", "tedarikci:read", "tedarikci:edit", "tedarikci:delete",
             "evaluation:submit",
             "rapor:read"
         ]
@@ -46,7 +46,7 @@ const defaultRoles = [
             "siparis:create", "siparis:read", "siparis:edit", "siparis:delete",
             "fatura:create", "fatura:read", "fatura:edit", "fatura:delete",
             "sozlesme:create", "sozlesme:read", "sozlesme:edit", "sozlesme:delete",
-            "tedarikci:manage", "tedarikci:read",
+            "tedarikci:create", "tedarikci:read", "tedarikci:edit", "tedarikci:delete",
             "evaluation:submit",
             "rapor:read"
         ]
