@@ -4,6 +4,7 @@ import { jsonError } from "@/lib/apiError";
 import { requirePermissionApi } from "@/lib/apiAuth";
 import { notify } from "@/lib/notification-service";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
+import { logAuditWithRequest } from "@/lib/auditLogger";
 
 type CreateRequestBody = {
   barcode: string;
@@ -192,6 +193,15 @@ export async function POST(req: NextRequest) {
       if (owner?.email) await dispatchEmail({ to: owner.email, subject, html, category: "request_create" });
       if (unitEmail) await dispatchEmail({ to: unitEmail, subject, html, category: "request_create" });
     } catch { }
+
+    // Audit log for request creation
+    await logAuditWithRequest(req, {
+      userId: user.id,
+      action: "CREATE",
+      entityType: "Request",
+      entityId: created.id,
+      newData: { barcode: created.barcode, subject: body.subject, budget: body.budget },
+    });
 
     return NextResponse.json({ ok: true, id: created.id, barcode: created.barcode }, { status: 201 });
   } catch (e) {

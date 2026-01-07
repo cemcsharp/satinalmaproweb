@@ -7,14 +7,8 @@ import Button from "@/components/ui/Button";
 import PageHeader from "@/components/ui/PageHeader";
 import { fetchJsonWithRetry } from "@/lib/http";
 import { calculateWithholding } from "@/lib/withholding";
-import dynamic from "next/dynamic";
 import Skeleton from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
-
-const PDFDownloadButton = dynamic(() => import("@/components/PDFDownloadButton"), {
-    ssr: false,
-    loading: () => <Button variant="outline" size="sm" disabled>PDF...</Button>
-});
 
 export default function FaturaDetayPage() {
     const { id } = useParams();
@@ -107,7 +101,16 @@ export default function FaturaDetayPage() {
                 variant="default"
                 actions={
                     <div className="flex items-center gap-2">
-                        <PDFDownloadButton data={pdfData} fileName={`fatura-${detail.number}.pdf`} />
+                        <Button
+                            variant="secondary"
+                            onClick={() => window.open(`/api/fatura/${detail.id}/pdf`, "_blank")}
+                            className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                        >
+                            <span className="flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                PDF İndir
+                            </span>
+                        </Button>
                         <Button variant="gradient" onClick={() => router.push(`/fatura/duzenle/${detail.id}`)} className="shadow-lg shadow-blue-500/20">düzenle</Button>
                         <Button variant="outline" onClick={() => router.push("/fatura/liste")}>Listeye Dön</Button>
                     </div>
