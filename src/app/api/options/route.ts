@@ -2,6 +2,10 @@ import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
 import { requireAuthApi } from "@/lib/apiAuth";
+import { apiCache } from "@/lib/cache";
+
+const OPTIONS_CACHE_KEY = "options_all";
+const OPTIONS_PUBLIC_KEY = "options_public";
 
 // Forced Cache Invalidation - Timestamp: 9999
 export async function GET(req: NextRequest) {
@@ -11,17 +15,26 @@ export async function GET(req: NextRequest) {
 
     // Public Mode
     if (mode === "public") {
+      const cached = apiCache.get(OPTIONS_PUBLIC_KEY);
+      if (cached) return NextResponse.json(cached);
+
       const units = await prisma.optionItem.findMany({
         where: { category: { key: "birim" }, active: true },
         orderBy: { sort: "asc" },
         select: { id: true, label: true, active: true }
       });
-      return NextResponse.json({ birim: units });
+      const res = { birim: units };
+      apiCache.set(OPTIONS_PUBLIC_KEY, res);
+      return NextResponse.json(res);
     }
 
     // Auth Check
     const auth = await requireAuthApi(req);
     if (!auth) return jsonError(401, "unauthorized");
+
+    // All Options Cache (Simple implementation: cache all options for authorized users)
+    const cachedAll = apiCache.get(OPTIONS_CACHE_KEY);
+    if (cachedAll) return NextResponse.json(cachedAll);
 
     const keys = [
       "ilgiliKisi", "birim", "durum", "paraBirimi", "birimTipi",
@@ -31,7 +44,7 @@ export async function GET(req: NextRequest) {
     ];
 
     const results: Record<string, any[]> & { tedarikci?: any[], firma?: any[], kullanici?: any[] } = {};
-    keys.forEach(k => { results[k] = []; });
+    keys.forEach((k: string) => { results[k] = []; });
 
     // Fetch Option Items
     const items = await prisma.optionItem.findMany({
@@ -43,17 +56,17 @@ export async function GET(req: NextRequest) {
       orderBy: { sort: "asc" }
     });
 
-    items.forEach(item => {
+    items.forEach((item: any) => {
       const k = item.category.key;
       if (results[k]) results[k].push({ id: item.id, label: item.label, active: item.active });
     });
 
     // Fetch Standard Relations (always included in old version, so keeping it safe)
     const suppliers = await prisma.supplier.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, active: true } });
-    results.tedarikci = suppliers.map(x => ({ id: x.id, label: x.name, active: x.active }));
+    results.tedarikci = suppliers.map((x: any) => ({ id: x.id, label: x.name, active: x.active }));
 
     const companies = await prisma.company.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, active: true } });
-    results.firma = companies.map(x => ({ id: x.id, label: x.name, active: x.active }));
+    results.firma = companies.map((x: any) => ({ id: x.id, label: x.name, active: x.active }));
 
     // Some option lists treated "firma" or "tedarikci" as OptionItems too? 
     // If so, they are mapped above. If they are relational tables, they are mapped here.
@@ -61,12 +74,13 @@ export async function GET(req: NextRequest) {
     // So this explicit mapping is correct.
 
     const users = await prisma.user.findMany({ orderBy: { username: 'asc' }, select: { id: true, username: true, email: true } });
-    results.kullanici = users.map(x => ({ id: x.id, label: x.username || x.email, active: true }));
+    results.kullanici = users.map((x: any) => ({ id: x.id, label: x.username || x.email, active: true }));
 
     // Teslimat Adresleri
     const deliveryAddresses = await prisma.deliveryAddress.findMany({ orderBy: [{ isDefault: 'desc' }, { name: 'asc' }], select: { id: true, name: true, active: true, address: true, isDefault: true } });
-    results.teslimatAdresi = deliveryAddresses.map(x => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault }));
+    results.teslimatAdresi = deliveryAddresses.map((x: any) => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault }));
 
+    apiCache.set(OPTIONS_CACHE_KEY, results);
     return NextResponse.json(results);
 
   } catch (e: any) {
@@ -88,12 +102,12 @@ async function listItemsByKey(key: string) {
     where: { categoryId: cat.id },
     orderBy: [{ sort: "asc" }, { label: "asc" }],
   });
-  return { key, items: items.map((it) => ({ id: it.id, label: it.label, active: it.active, sort: it.sort, email: it.email ?? null })) };
+  return { key, items: items.map((it: any) => ({ id: it.id, label: it.label, active: it.active, sort: it.sort, email: it.email ?? null })) };
 }
 
 async function listCompanies() {
   const companies = await prisma.company.findMany({ orderBy: { name: "asc" } });
-  return { key: "firma", items: companies.map((c, i) => ({ id: c.id, label: c.name, active: !!c.active, sort: i + 1 })) };
+  return { key: "firma", items: companies.map((c: any, i: number) => ({ id: c.id, label: c.name, active: !!c.active, sort: i + 1 })) };
 }
 
 // Create new option item under given category key
@@ -123,6 +137,10 @@ export async function POST(req: NextRequest) {
           addedCount++;
         }
       }
+      // Invalidate cache since we added items
+      apiCache.delete(OPTIONS_CACHE_KEY);
+      apiCache.delete(OPTIONS_PUBLIC_KEY);
+
       return NextResponse.json({ message: "Synced", added: addedCount });
     }
 
@@ -172,7 +190,7 @@ export async function POST(req: NextRequest) {
         return jsonError(500, "server_error", { message: e.message });
       }
       const items = await prisma.deliveryAddress.findMany({ orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] });
-      return NextResponse.json({ key: "teslimatAdresi", items: items.map(x => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault })) }, { status: 201 });
+      return NextResponse.json({ key: "teslimatAdresi", items: items.map((x: any) => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault })) }, { status: 201 });
     }
     if (!label) return jsonError(400, "invalid_payload");
     if (key === "tedarikci") return jsonError(400, "unsupported_category", { message: "Bu kategori Ayarlar'dan düzenlenemez" });
@@ -201,6 +219,11 @@ export async function PATCH(req: NextRequest) {
   try {
     const auth = await requireAuthApi(req);
     if (!auth) return jsonError(401, "unauthorized");
+
+    // Invalidate cache
+    apiCache.delete(OPTIONS_CACHE_KEY);
+    apiCache.delete(OPTIONS_PUBLIC_KEY);
+
     const body = await req.json();
     const action = String(body?.action || "");
     const id = String(body?.id || "").trim();
@@ -271,7 +294,7 @@ export async function PATCH(req: NextRequest) {
         return jsonError(400, "unsupported_action");
       }
       const items = await prisma.deliveryAddress.findMany({ orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] });
-      return NextResponse.json({ key: "teslimatAdresi", items: items.map(x => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault })) });
+      return NextResponse.json({ key: "teslimatAdresi", items: items.map((x: any) => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault })) });
     }
 
     const item = await prisma.optionItem.findUnique({ where: { id }, include: { category: true } });
@@ -295,13 +318,13 @@ export async function PATCH(req: NextRequest) {
       const dir = Number(body?.dir);
       if (![-1, 1].includes(dir)) return jsonError(400, "invalid_payload");
       const items = await prisma.optionItem.findMany({ where: { categoryId: (item as any).categoryId }, orderBy: [{ sort: "asc" }, { label: "asc" }] });
-      const idx = items.findIndex((x) => x.id === id);
+      const idx = items.findIndex((x: any) => x.id === id);
       if (idx < 0) return jsonError(404, "not_found");
       const newIdx = Math.max(0, Math.min(items.length - 1, idx + dir));
       const arr = [...items];
       const [it] = arr.splice(idx, 1);
       arr.splice(newIdx, 0, it);
-      const updates = arr.map((x, i) => prisma.optionItem.update({ where: { id: x.id }, data: { sort: i + 1 } }));
+      const updates = arr.map((x: any, i: number) => prisma.optionItem.update({ where: { id: x.id }, data: { sort: i + 1 } }));
       await prisma.$transaction(updates);
     } else {
       return jsonError(400, "invalid_action");
@@ -320,6 +343,11 @@ export async function PUT(req: NextRequest) {
   try {
     const auth = await requireAuthApi(req);
     if (!auth) return jsonError(401, "unauthorized");
+
+    // Invalidate cache
+    apiCache.delete(OPTIONS_CACHE_KEY);
+    apiCache.delete(OPTIONS_PUBLIC_KEY);
+
     const body = await req.json();
     const id = String(body?.id || "").trim();
     const label = String(body?.label || body?.name || "").trim();
@@ -368,6 +396,10 @@ export async function DELETE(req: NextRequest) {
     const auth = await requireAuthApi(req);
     if (!auth) return jsonError(401, "unauthorized");
 
+    // Invalidate cache
+    apiCache.delete(OPTIONS_CACHE_KEY);
+    apiCache.delete(OPTIONS_PUBLIC_KEY);
+
     // Accept id from query params OR body
     const { searchParams } = new URL(req.url);
     let id = searchParams.get("id") || "";
@@ -391,7 +423,7 @@ export async function DELETE(req: NextRequest) {
       if (inUseCount > 0) return jsonError(409, "in_use", { message: "Bu adres bağlı siparişler nedeniyle silinemiyor" });
       await prisma.deliveryAddress.delete({ where: { id } });
       const items = await prisma.deliveryAddress.findMany({ orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] });
-      return NextResponse.json({ key: "teslimatAdresi", items: items.map(x => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault })) });
+      return NextResponse.json({ key: "teslimatAdresi", items: items.map((x: any) => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault })) });
     }
 
     // Check if it's a company
@@ -417,7 +449,7 @@ export async function DELETE(req: NextRequest) {
 
     // Reorder remaining items
     const items = await prisma.optionItem.findMany({ where: { categoryId: item.categoryId }, orderBy: [{ sort: "asc" }, { label: "asc" }] });
-    const updates = items.map((x, i) => prisma.optionItem.update({ where: { id: x.id }, data: { sort: i + 1 } }));
+    const updates = items.map((x: any, i: number) => prisma.optionItem.update({ where: { id: x.id }, data: { sort: i + 1 } }));
     if (updates.length) await prisma.$transaction(updates);
 
     const payload = await listItemsByKey(key);

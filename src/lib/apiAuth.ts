@@ -148,12 +148,30 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
     if (user.roleRef.key) {
       roleKey = user.roleRef.key as Role;
     }
+  } else if (roleKey) {
+    // FALLBACK: If roleId is not linked, fetch the role by its key
+    try {
+      const roleRecord = await prisma.role.findUnique({
+        where: { key: roleKey }
+      });
+      if (roleRecord && roleRecord.permissions) {
+        const rolePerms = roleRecord.permissions;
+        if (Array.isArray(rolePerms)) {
+          permissions = rolePerms as string[];
+        } else if (typeof rolePerms === 'object') {
+          permissions = Object.keys(rolePerms).filter(k => (rolePerms as any)[k]);
+        }
+      }
+    } catch (err) {
+      console.error(`[apiAuth] Fallback role fetch failed for ${roleKey}:`, err);
+    }
   }
 
   // No fallback to hardcoded permissions. If it's not in DB, it doesn't exist.
   if (permissions.length === 0 && roleKey !== "admin") {
-    // Optionally log this as a potential configuration issue
-    console.warn(`[apiAuth] No permissions found for user ${userId} with role ${roleKey}`);
+    console.warn(`[apiAuth Debug] NO PERMS for user ${userId} (Role: ${roleKey}). Found Role Record?`);
+  } else {
+    console.log(`[apiAuth Debug] User ${userId} has perms:`, permissions);
   }
 
   // Admin always gets all permissions

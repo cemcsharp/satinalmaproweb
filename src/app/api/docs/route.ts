@@ -61,6 +61,22 @@ const options: swaggerJsdoc.Options = {
                         requestBarcode: { type: 'string' },
                         total: { type: 'number' },
                         status: { type: 'string' },
+                        supplier: { $ref: '#/components/schemas/Supplier' },
+                        createdAt: { type: 'string', format: 'date-time' }
+                    }
+                },
+                Supplier: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        taxId: { type: 'string', nullable: true },
+                        contactName: { type: 'string', nullable: true },
+                        email: { type: 'string', nullable: true },
+                        phone: { type: 'string', nullable: true },
+                        address: { type: 'string', nullable: true },
+                        website: { type: 'string', nullable: true },
+                        active: { type: 'boolean' },
                         createdAt: { type: 'string', format: 'date-time' }
                     }
                 },
@@ -89,10 +105,47 @@ const options: swaggerJsdoc.Options = {
                     type: 'object',
                     properties: {
                         id: { type: 'string' },
+                        number: { type: 'string' },
                         title: { type: 'string' },
+                        type: { type: 'string' },
+                        parties: { type: 'string' },
                         startDate: { type: 'string', format: 'date' },
-                        endDate: { type: 'string', format: 'date' },
-                        amount: { type: 'number' }
+                        endDate: { type: 'string', format: 'date', nullable: true },
+                        status: { type: 'string' },
+                        amount: { type: 'number', nullable: true }
+                    }
+                },
+                SearchResult: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        type: { type: 'string' },
+                        typeLabel: { type: 'string' },
+                        title: { type: 'string' },
+                        subtitle: { type: 'string' },
+                        href: { type: 'string' },
+                        createdAt: { type: 'string', format: 'date-time' }
+                    }
+                },
+                SearchResponse: {
+                    type: 'object',
+                    properties: {
+                        results: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/SearchResult' }
+                        },
+                        query: { type: 'string' },
+                        count: { type: 'integer' },
+                        modules: {
+                            type: 'object',
+                            properties: {
+                                talep: { type: 'integer' },
+                                siparis: { type: 'integer' },
+                                sozlesme: { type: 'integer' },
+                                fatura: { type: 'integer' },
+                                tedarikci: { type: 'integer' }
+                            }
+                        }
                     }
                 }
             }

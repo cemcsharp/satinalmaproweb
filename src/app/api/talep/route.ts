@@ -28,6 +28,60 @@ function generateTempPassword(length = 12): string {
   return password;
 }
 
+/**
+ * @swagger
+ * /api/talep:
+ *   post:
+ *     summary: Yeni satın alma talebi oluştur
+ *     description: Yeni bir satın alma talebi oluşturur, kalemleri ekler ve ilgili kişilere bildirim gönderir.
+ *     tags:
+ *       - Request
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - barcode
+ *               - subject
+ *               - budget
+ *               - relatedPersonId
+ *               - unitId
+ *               - statusId
+ *               - currencyId
+ *             properties:
+ *               barcode: { type: 'string', description: 'Benzersiz talep barkodu' }
+ *               subject: { type: 'string', description: 'Talep konusu' }
+ *               justification: { type: 'string', description: 'Talep gerekçesi' }
+ *               budget: { type: 'number', description: 'Tahmini bütçe' }
+ *               relatedPersonId: { type: 'string', description: 'İlgili kişi ID' }
+ *               unitId: { type: 'string', description: 'Birim ID' }
+ *               statusId: { type: 'string', description: 'Başlangıç durum ID' }
+ *               currencyId: { type: 'string', description: 'Para birimi ID' }
+ *               unitEmail: { type: 'string', description: 'Birim e-posta adresi (otomatik hesap açılışı için)' }
+ *               items:
+ *                 type: 'array',
+ *                 items:
+ *                   type: 'object',
+ *                   required: [name, quantity, unitId]
+ *                   properties:
+ *                     name: { type: 'string' }
+ *                     quantity: { type: 'number' }
+ *                     unitId: { type: 'string' }
+ *                     unitPrice: { type: 'number' }
+ *     responses:
+ *       201:
+ *         description: Talep başarıyla oluşturuldu
+ *       400:
+ *         description: Eksik alanlar veya geçersiz veri
+ *       403:
+ *         description: Yetkisiz erişim
+ *       409:
+ *         description: Barkod çakışması
+ */
 export async function POST(req: NextRequest) {
   try {
     // Permission check: talep:create required
@@ -210,6 +264,65 @@ export async function POST(req: NextRequest) {
   }
 }
 
+/**
+ * @swagger
+ * /api/talep:
+ *   get:
+ *     summary: Talepleri listele
+ *     description: Yetki dahilindeki satın alma taleplerini filtreleme ve sıralama seçenekleriyle listeler.
+ *     tags:
+ *       - Request
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema: { type: 'string' }
+ *         description: Barkod veya konuda arama terimi
+ *       - in: query
+ *         name: unit
+ *         schema: { type: 'string' }
+ *         description: Birim etiketine göre filtrele
+ *       - in: query
+ *         name: status
+ *         schema: { type: 'string' }
+ *         description: Durum etiketine göre filtrele
+ *       - in: query
+ *         name: dateFrom
+ *         schema: { type: 'string', format: 'date' }
+ *         description: Başlangıç tarihi
+ *       - in: query
+ *         name: dateTo
+ *         schema: { type: 'string', format: 'date' }
+ *         description: Bitiş tarihi
+ *       - in: query
+ *         name: sortBy
+ *         schema: { type: 'string', enum: [date, budget], default: date }
+ *       - in: query
+ *         name: sortDir
+ *         schema: { type: 'string', enum: [asc, desc], default: desc }
+ *       - in: query
+ *         name: page
+ *         schema: { type: 'integer', default: 1 }
+ *       - in: query
+ *         name: pageSize
+ *         schema: { type: 'integer', default: 20 }
+ *     responses:
+ *       200:
+ *         description: Talep listesi başarıyla döndürüldü
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items:
+ *                   type: 'array'
+ *                   items: { $ref: '#/components/schemas/Request' }
+ *                 total: { type: 'integer' }
+ *                 page: { type: 'integer' }
+ *                 pageSize: { type: 'integer' }
+ *                 totalPages: { type: 'integer' }
+ */
 export async function GET(req: NextRequest) {
   try {
     // Permission check: talep:read required
@@ -279,7 +392,7 @@ export async function GET(req: NextRequest) {
       take: pageSize,
     });
 
-    const mapped = rows.map((r) => ({
+    const mapped = rows.map((r: any) => ({
       id: r.id,
       barcode: r.barcode,
       date: r.createdAt.toISOString(),

@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermissionApi } from "@/lib/apiAuth";
+import { requirePermissionApi, getUserWithPermissions } from "@/lib/apiAuth";
 import { jsonError } from "@/lib/apiError";
 import { formatAuditAction, formatEntityType, type AuditAction, type AuditEntityType } from "@/lib/auditLogger";
 
 // GET - List audit logs with pagination
 export async function GET(req: NextRequest) {
     try {
-        const user = await requirePermissionApi(req, "ayarlar:read");
-        if (!user) return jsonError(403, "forbidden", { message: "Audit loglarını görüntüleme yetkiniz yok." });
+        const user = await getUserWithPermissions(req);
+        if (!user) return jsonError(401, "unauthorized");
+
+        const hasAyarlarRead = user.isAdmin || user.permissions.includes("ayarlar:read");
 
         const url = new URL(req.url);
         const page = parseInt(url.searchParams.get("page") || "1");
@@ -23,7 +25,14 @@ export async function GET(req: NextRequest) {
         const where: any = {};
         if (entityType) where.entityType = entityType;
         if (entityId) where.entityId = entityId;
-        if (userId) where.userId = userId;
+
+        // Security: Non-admin users can ONLY see their own logs unless they have ayarlar:read
+        if (!hasAyarlarRead) {
+            where.userId = user.id;
+        } else if (userId) {
+            where.userId = userId;
+        }
+
         if (action) where.action = action;
         if (dateFrom || dateTo) {
             where.createdAt = {};

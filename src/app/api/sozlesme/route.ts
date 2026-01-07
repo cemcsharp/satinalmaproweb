@@ -3,8 +3,83 @@ import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
 import { requirePermissionApi } from "@/lib/apiAuth";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
+import { logAuditWithRequest } from "@/lib/auditLogger";
 
 // Standardized list API: supports filtering, sorting and pagination
+/**
+ * @swagger
+ * /api/sozlesme:
+ *   get:
+ *     summary: Sözleşme listesini getirir
+ *     description: Filtreleme, sıralama ve sayfalama destekli sözleşme listesi. Birim bazlı veri izolasyonu içerir.
+ *     tags: [Sözleşme]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Başlık veya Sözleşme no içinde arama yapar
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: expiry
+ *         schema:
+ *           type: string
+ *           enum: [expiring, expired, active, perpetual]
+ *         description: "Vade durumuna göre filtreler (Örn. expiring: 30 gün içinde bitecekler)"
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [date, number]
+ *       - in: query
+ *         name: sortDir
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Sözleşme listesi başarıyla getirildi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Contract'
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 pageSize:
+ *                   type: integer
+ *       403:
+ *         description: Yetkisiz erişim
+ */
 export async function GET(req: NextRequest) {
   try {
     // Permission check: sozlesme:read required
@@ -96,6 +171,66 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * @swagger
+ * /api/sozlesme:
+ *   post:
+ *     summary: Yeni sözleşme oluşturur
+ *     description: Sözleşme oluşturur ve ilgili kişilere bilgilendirme e-postası gönderir.
+ *     tags: [Sözleşme]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - type
+ *               - parties
+ *               - startDate
+ *               - status
+ *             properties:
+ *               number:
+ *                 type: string
+ *                 description: Manuel numara (boşsa sistem üretir)
+ *               title:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               parties:
+ *                 type: string
+ *                 description: Taraflar (virgülle ayrılmış veya dizi)
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *               endDate:
+ *                 type: string
+ *                 format: date
+ *               status:
+ *                 type: string
+ *               orderId:
+ *                 type: string
+ *               responsibleUserId:
+ *                 type: string
+ *               attachments:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     title: { type: string }
+ *                     url: { type: string }
+ *                     mimeType: { type: string }
+ *     responses:
+ *       201:
+ *         description: Sözleşme başarıyla oluşturuldu
+ *       400:
+ *         description: Geçersiz veri
+ *       409:
+ *         description: Mükerrer sözleşme
+ */
 export async function POST(req: NextRequest) {
   try {
     // Permission check: sozlesme:create required
@@ -217,6 +352,14 @@ export async function POST(req: NextRequest) {
         await dispatchEmail({ to, subject, html, category: "contract_create" });
       }
     } catch { }
+    // Audit log for contract creation
+    await logAuditWithRequest(req, {
+      userId: user.id,
+      action: "CREATE",
+      entityType: "Contract",
+      entityId: created.id,
+      newData: { number: created.number, title: created.title, type: created.type },
+    });
     return NextResponse.json(created, { status: 201 });
   } catch (e: any) {
     const code = e?.code;

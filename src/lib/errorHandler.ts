@@ -95,12 +95,13 @@ export function handleError(error: unknown): NextResponse<ApiErrorResponse> {
     }
 
     // Generic error
-    const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.INTERNAL;
+    let errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.INTERNAL;
+    let errorCode = 'INTERNAL_ERROR';
 
-    // In production, log error to monitoring service (Sentry)
+    // In production, log error to monitoring service (Sentry) and MASK the message
     if (process.env.NODE_ENV === 'production') {
-        // Sentry already configured via @sentry/nextjs
         console.error('[API Error]', error);
+        errorMessage = ERROR_MESSAGES.INTERNAL; // Mask specific error
     } else {
         // In development, log to console
         console.error('[API Error]', error);
@@ -109,7 +110,7 @@ export function handleError(error: unknown): NextResponse<ApiErrorResponse> {
     return NextResponse.json(
         {
             error: true,
-            code: 'INTERNAL_ERROR',
+            code: errorCode,
             message: errorMessage,
         },
         { status: 500 }

@@ -9,8 +9,10 @@ import Skeleton from "@/components/ui/Skeleton";
 import Button from "@/components/ui/Button";
 import DeliverySection from "@/components/DeliverySection";
 import { useToast } from "@/components/ui/Toast";
+import Modal from "@/components/ui/Modal";
+import PriceTrendChart from "@/components/analytics/PriceTrendChart";
 
-type OrderItem = { id: string; name: string; quantity: number; unitPrice: number };
+type OrderItem = { id: string; name: string; sku?: string | null; quantity: number; unitPrice: number };
 type OrderDetail = {
   id: string;
   barcode: string;
@@ -41,6 +43,7 @@ function SiparisDetayContent() {
   const [requestCurrency, setRequestCurrency] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"detay" | "teslimat">("detay");
   const [notifying, setNotifying] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<{ name: string, sku?: string | null } | null>(null);
 
   useEffect(() => {
     const t = searchParams.get("tab");
@@ -280,7 +283,8 @@ function SiparisDetayContent() {
                       <TH className="bg-slate-50/50">Hizmet/Ürün Adı</TH>
                       <TH className="bg-slate-50/50">Miktar</TH>
                       <TH className="bg-slate-50/50 text-right">Birim Fiyat</TH>
-                      <TH className="bg-slate-50/50 text-right pr-6">Tutar</TH>
+                      <TH className="bg-slate-50/50 text-right">Tutar</TH>
+                      <TH className="bg-slate-50/50 text-center pr-6">Analiz</TH>
                     </TR>
                   </THead>
                   <TBody>
@@ -298,9 +302,20 @@ function SiparisDetayContent() {
                           <TD className="text-right font-mono text-slate-700">
                             {Number(item.unitPrice).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </TD>
-                          <TD className="text-right pr-6 font-bold text-slate-900 font-mono">
+                          <TD className="text-right font-bold text-slate-900 font-mono">
                             {(Number(item.quantity) * Number(item.unitPrice)).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             <span className="text-xs font-normal text-slate-400 ml-1">{data.currency}</span>
+                          </TD>
+                          <TD className="text-center pr-6">
+                            <button
+                              onClick={() => setSelectedItem({ name: item.name, sku: item.sku })}
+                              className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                              title="Fiyat Analizi"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                              </svg>
+                            </button>
                           </TD>
                         </TR>
                       ))
@@ -397,6 +412,18 @@ function SiparisDetayContent() {
           onUpdate={loadOrder}
         />
       )}
+
+      {/* Fiyat Analizi Modalı */}
+      <Modal
+        isOpen={!!selectedItem}
+        onClose={() => setSelectedItem(null)}
+        title={`${selectedItem?.name} - Fiyat Analizi`}
+        size="lg"
+      >
+        <div className="p-6">
+          <PriceTrendChart name={selectedItem?.name} sku={selectedItem?.sku} />
+        </div>
+      </Modal>
     </section>
   );
 }

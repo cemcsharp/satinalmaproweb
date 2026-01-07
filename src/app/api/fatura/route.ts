@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
 import { requirePermissionApi } from "@/lib/apiAuth";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
+import { logAuditWithRequest } from "@/lib/auditLogger";
 import * as bcrypt from "bcryptjs";
 
 // Generate random temporary password
@@ -16,6 +17,81 @@ function generateTempPassword(length = 12): string {
 }
 
 // Standardized invoice list
+/**
+ * @swagger
+ * /api/fatura:
+ *   get:
+ *     summary: Fatura listesini getirir
+ *     description: Filtreleme, sıralama ve sayfalama destekli fatura listesi. Birim bazlı veri izolasyonu içerir.
+ *     tags: [Fatura]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Fatura no veya Sipariş no içinde arama yapar
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Duruma göre filtreler (Örn. Bekliyor, Ödendi)
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: dueOnly
+ *         schema:
+ *           type: string
+ *           enum: ["1", "0"]
+ *         description: "1 ise sadece ödeme tarihi yaklaşanları (7 gün) getirir"
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [date, amount]
+ *       - in: query
+ *         name: sortDir
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Fatura listesi başarıyla getirildi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Invoice'
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 pageSize:
+ *                   type: integer
+ *       403:
+ *         description: Yetkisiz erişim
+ */
 export async function GET(req: NextRequest) {
   try {
     // Permission check: fatura:read required
@@ -118,6 +194,68 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * @swagger
+ * /api/fatura:
+ *   post:
+ *     summary: Yeni fatura oluşturur
+ *     description: Fatura oluşturur, ilgili sipariş durumunu günceller ve değerlendirme e-postası gönderir.
+ *     tags: [Fatura]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - number
+ *               - orderNo
+ *               - amount
+ *               - dueDate
+ *               - status
+ *             properties:
+ *               number:
+ *                 type: string
+ *                 description: Fatura numarası
+ *               orderNo:
+ *                 type: string
+ *                 description: Sipariş numarası
+ *               amount:
+ *                 type: number
+ *               dueDate:
+ *                 type: string
+ *                 format: date
+ *               status:
+ *                 type: string
+ *               bank:
+ *                 type: string
+ *               orderId:
+ *                 type: string
+ *               vatRate:
+ *                 type: number
+ *               withholdingCode:
+ *                 type: string
+ *               responsibleUserId:
+ *                 type: string
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name: { type: string }
+ *                     quantity: { type: number }
+ *                     unitPrice: { type: number }
+ *                     taxRate: { type: number }
+ *     responses:
+ *       201:
+ *         description: Fatura başarıyla oluşturuldu
+ *       400:
+ *         description: Geçersiz veri
+ *       409:
+ *         description: Mükerrer fatura numarası
+ */
 export async function POST(req: NextRequest) {
   try {
     // Permission check: fatura:create required
@@ -243,6 +381,15 @@ export async function POST(req: NextRequest) {
           console.error("Evaluation email failed:", emailErr);
         }
       }
+
+      // Audit log for invoice creation
+      await logAuditWithRequest(req, {
+        userId: user.id,
+        action: "CREATE",
+        entityType: "Invoice",
+        entityId: created.id,
+        newData: { number: created.number, orderNo: created.orderNo, amount: created.amount },
+      });
 
       return NextResponse.json(created, { status: 201 });
     } catch (e: any) {

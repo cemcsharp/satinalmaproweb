@@ -22,7 +22,6 @@
     "@react-pdf/renderer": "^4.3.2",
     "@sentry/nextjs": "^10.30.0",
     "bcryptjs": "^3.0.2",
-    "core-js": "^3.47.0",
     "emoji-picker-react": "^4.16.1",
     "html2canvas": "^1.4.1",
     "jsonwebtoken": "^9.0.2",

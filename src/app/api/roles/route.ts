@@ -73,6 +73,15 @@ export async function POST(req: NextRequest) {
             }
         });
 
+        const { logAuditWithRequest } = await import("@/lib/auditLogger");
+        await logAuditWithRequest(req, {
+            userId: user.id,
+            action: "CREATE",
+            entityType: "Role",
+            entityId: role.id,
+            newData: role
+        }).catch(() => { });
+
         return NextResponse.json(role, { status: 201 });
 
     } catch (e: any) {

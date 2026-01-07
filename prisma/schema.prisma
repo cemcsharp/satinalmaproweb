@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,66 +9,66 @@ datasource db {
 
 model Role {
   id          String   @id @default(cuid())
-  name        String   @unique
   key         String   @unique
+  name        String   @unique
+  permissions Json     @default("[]")
   description String?
-  permissions Json     @default("[]") // Array of permission strings like ["talep:read", "siparis:create"]
-  isSystem    Boolean  @default(false) // System roles cannot be deleted
-  active      Boolean  @default(true)
-  sortOrder   Int      @default(100)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  active      Boolean  @default(true)
+  isSystem    Boolean  @default(false)
+  sortOrder   Int      @default(100)
   users       User[]
 }
 
 model User {
-  id                    String                  @id @default(cuid())
-  username              String                  @unique
-  email                 String?                 @unique
-  passwordHash          String
-  role                  String                  @default("user")
-  roleId                String?
-  roleRef               Role?                   @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  unitId                String?
-  supplierId            String?
-  supplier              Supplier?               @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  isActive              Boolean                 @default(true)
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
-  // Relations
-  requestsOwned         Request[]               @relation("RequestOwner")
-  requestsResponsible   Request[]               @relation("RequestResponsible")
-  comments              Comment[]               @relation("UserComments")
-  notifications         Notification[]
-  notificationPref      NotificationPreference?
-  Order                 Order[]
-  Contract              Contract[]
-  Invoice               Invoice[]
-  unit                  OptionItem?             @relation("UserUnit", fields: [unitId], references: [id], onDelete: SetNull)
-  approvalRecords       ApprovalRecord[]        @relation("ApprovalRecordApprover")
-  deliveriesReceived    DeliveryReceipt[]
-  auditLogs             AuditLog[]
-  createdRfqs           Rfq[]
+  id                  String                  @id @default(cuid())
+  username            String                  @unique
+  passwordHash        String
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  email               String?                 @unique
+  role                String                  @default("user")
+  roleId              String?
+  unitId              String?
+  isActive            Boolean                 @default(true)
+  supplierId          String?
+  lastLoginAt         DateTime?
+  phoneNumber         String?
+  approvalRecords     ApprovalRecord[]        @relation("ApprovalRecordApprover")
+  auditLogs           AuditLog[]
+  comments            Comment[]               @relation("UserComments")
+  Contract            Contract[]
+  deliveriesReceived  DeliveryReceipt[]
+  Invoice             Invoice[]
+  notifications       Notification[]
+  notificationPref    NotificationPreference?
+  Order               Order[]
+  requestsOwned       Request[]               @relation("RequestOwner")
+  requestsResponsible Request[]               @relation("RequestResponsible")
+  createdRfqs         Rfq[]
+  roleRef             Role?                   @relation(fields: [roleId], references: [id])
+  supplier            Supplier?               @relation(fields: [supplierId], references: [id])
+  unit                OptionItem?             @relation("UserUnit", fields: [unitId], references: [id])
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action      String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, etc.
-  entityType  String   // User, Request, Order, etc.
-  entityId    String?
-  oldData     Json?
-  newData     Json?
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  oldData    Json?
+  newData    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([entityType, entityId])
   @@index([createdAt])
 }
-
 
 model OptionCategory {
   id    String       @id @default(cuid())
@@ -84,94 +78,82 @@ model OptionCategory {
 }
 
 model OptionItem {
-  id                      String         @id @default(cuid())
-  label                   String
-  active                  Boolean        @default(true)
-  sort                    Int            @default(1)
-  categoryId              String
-  category                OptionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  email                   String?
-  // Back-relations for named relations
-  requestsAsRelatedPerson Request[]      @relation("RequestRelatedPerson")
-  requestsAsUnit          Request[]      @relation("RequestUnit")
-  requestsAsStatus        Request[]      @relation("RequestStatus")
-  requestsAsCurrency      Request[]      @relation("RequestCurrency")
-  requestItemsAsUnit      RequestItem[]  @relation("RequestItemUnit")
-  ordersAsStatus          Order[]        @relation("OrderStatus")
-  ordersAsMethod          Order[]        @relation("OrderMethod")
-  ordersAsRegulation      Order[]        @relation("OrderRegulation")
-  ordersAsCurrency        Order[]        @relation("OrderCurrency")
-  usersAsUnit             User[]         @relation("UserUnit")
-  orderItemsAsUnit        OrderItem[]    
+  id                       String            @id @default(cuid())
+  label                    String
+  active                   Boolean           @default(true)
+  sort                     Int               @default(1)
+  categoryId               String
+  email                    String?
   deliveriesReceivedAsUnit DeliveryReceipt[] @relation("UnitDeliveries")
+  category                 OptionCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  ordersAsCurrency         Order[]           @relation("OrderCurrency")
+  ordersAsMethod           Order[]           @relation("OrderMethod")
+  ordersAsRegulation       Order[]           @relation("OrderRegulation")
+  ordersAsStatus           Order[]           @relation("OrderStatus")
+  orderItemsAsUnit         OrderItem[]
+  requestsAsCurrency       Request[]         @relation("RequestCurrency")
+  requestsAsRelatedPerson  Request[]         @relation("RequestRelatedPerson")
+  requestsAsStatus         Request[]         @relation("RequestStatus")
+  requestsAsUnit           Request[]         @relation("RequestUnit")
+  requestItemsAsUnit       RequestItem[]     @relation("RequestItemUnit")
+  usersAsUnit              User[]            @relation("UserUnit")
 }
 
 model Supplier {
   id                  String                      @id @default(cuid())
   name                String                      @unique
   active              Boolean                     @default(true)
-  // Essentials
-  taxId               String?                     @unique
-  contactName         String?
-  email               String?                     @unique
-  phone               String?
   address             String?                     @db.VarChar(500)
-  website             String?
-  notes               String?
+  contactName         String?
   createdAt           DateTime                    @default(now())
+  email               String?                     @unique
+  notes               String?
+  phone               String?
+  taxId               String?                     @unique
   updatedAt           DateTime                    @updatedAt
-  // Relations
+  website             String?
+  categoryId          String?
   orders              Order[]
-  // Supplier-related relations
-  evaluations         SupplierEvaluation[]
-  performanceMetrics  SupplierPerformanceMetric[] @relation("SupplierPerformanceMetrics")
-  evaluationSummaries SupplierEvaluationSummary[] @relation("SupplierEvaluationSummaries")
-  alerts              SupplierAlert[]             @relation("SupplierAlerts")
-  rfqParticipations   RfqSupplier[]
-  
-  // Ürün Kataloğu: Tercih edilen tedarikçi olarak bağlı ürünler
   productsPreferred   Product[]                   @relation("PreferredSupplier")
+  rfqParticipations   RfqSupplier[]
+  category            SupplierCategory?           @relation(fields: [categoryId], references: [id])
+  alerts              SupplierAlert[]             @relation("SupplierAlerts")
+  evaluations         SupplierEvaluation[]
+  evaluationSummaries SupplierEvaluationSummary[] @relation("SupplierEvaluationSummaries")
+  performanceMetrics  SupplierPerformanceMetric[] @relation("SupplierPerformanceMetrics")
+  users               User[]
 
   @@index([active])
-  
-  // Category Relation
-  categoryId          String?
-  category            SupplierCategory?           @relation(fields: [categoryId], references: [id])
-  
-  // Relation to users (for supplier portal)
-  users               User[]
 }
 
 model SupplierCategory {
   id        String             @id @default(cuid())
   name      String
   parentId  String?
-  parent    SupplierCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children  SupplierCategory[] @relation("CategoryHierarchy")
-  suppliers Supplier[]
-  rfqItems  RfqItem[]
-  
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
+  rfqItems  RfqItem[]
+  suppliers Supplier[]
+  parent    SupplierCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  SupplierCategory[] @relation("CategoryHierarchy")
 }
 
 model Company {
   id        String  @id @default(cuid())
   name      String  @unique
   active    Boolean @default(true)
-  taxId     String? @unique
   address   String? @db.VarChar(500)
-  taxOffice String? @db.VarChar(200)
-  phone     String? @db.VarChar(50)
+  taxId     String? @unique
   email     String? @db.VarChar(200)
+  phone     String? @db.VarChar(50)
+  taxOffice String? @db.VarChar(200)
   orders    Order[]
   rfqs      Rfq[]
 }
 
-// Teslimat Adresleri (Kurumun Farklı Lokasyonları)
 model DeliveryAddress {
   id            String   @id @default(cuid())
-  name          String   // "Merkez Kampüs", "Tuzla Kampüs"
+  name          String
   address       String   @db.VarChar(500)
   city          String?
   district      String?
@@ -191,42 +173,39 @@ model Request {
   barcode           String        @unique
   createdAt         DateTime      @default(now())
   subject           String        @db.VarChar(500)
-  justification     String?       @db.VarChar(2000)
   budget            Decimal       @db.Decimal(18, 2)
   relatedPersonId   String
   unitId            String
   statusId          String
   currencyId        String
-  unitEmail         String?
-  relatedPerson     OptionItem    @relation("RequestRelatedPerson", fields: [relatedPersonId], references: [id])
-  unit              OptionItem    @relation("RequestUnit", fields: [unitId], references: [id])
-  status            OptionItem    @relation("RequestStatus", fields: [statusId], references: [id])
-  currency          OptionItem    @relation("RequestCurrency", fields: [currencyId], references: [id])
-  items             RequestItem[]
-  orders            Order[]
-  // New: Owner and Responsible relations to User
   ownerUserId       String?
   responsibleUserId String?
-  owner             User?         @relation("RequestOwner", fields: [ownerUserId], references: [id])
-  responsible       User?         @relation("RequestResponsible", fields: [responsibleUserId], references: [id])
-  // New: Attachments & Comments
+  unitEmail         String?
+  justification     String?       @db.VarChar(2000)
+  rfqId             String?
   attachments       Attachment[]
   comments          Comment[]
-  // RFQ Relation
-  rfqId             String?
-  rfq               Rfq?          @relation(fields: [rfqId], references: [id], onDelete: SetNull)
+  orders            Order[]
+  currency          OptionItem    @relation("RequestCurrency", fields: [currencyId], references: [id])
+  owner             User?         @relation("RequestOwner", fields: [ownerUserId], references: [id])
+  relatedPerson     OptionItem    @relation("RequestRelatedPerson", fields: [relatedPersonId], references: [id])
+  responsible       User?         @relation("RequestResponsible", fields: [responsibleUserId], references: [id])
+  rfq               Rfq?          @relation(fields: [rfqId], references: [id])
+  status            OptionItem    @relation("RequestStatus", fields: [statusId], references: [id])
+  unit              OptionItem    @relation("RequestUnit", fields: [unitId], references: [id])
+  items             RequestItem[]
 }
 
 model Attachment {
-  id          String           @id @default(cuid())
-  requestId   String?
-  deliveryId  String?
-  fileName    String
-  url         String
-  type        String?
-  createdAt   DateTime         @default(now())
-  request     Request?         @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  delivery    DeliveryReceipt? @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  id         String           @id @default(cuid())
+  requestId  String?
+  fileName   String
+  url        String
+  type       String?
+  createdAt  DateTime         @default(now())
+  deliveryId String?
+  delivery   DeliveryReceipt? @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  request    Request?         @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }
 
 model Comment {
@@ -235,32 +214,28 @@ model Comment {
   text      String
   authorId  String
   createdAt DateTime @default(now())
-  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
   author    User     @relation("UserComments", fields: [authorId], references: [id])
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }
 
 model RequestItem {
   id        String     @id @default(cuid())
   requestId String
   name      String
-  sku       String?    // Ürün kodu (katalogdan seçildi ise)
   quantity  Decimal    @db.Decimal(18, 2)
-  unitPrice Decimal    @default(0) @db.Decimal(18, 2)
   unitId    String
-  unit      OptionItem @relation("RequestItemUnit", fields: [unitId], references: [id])
-  request   Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  
-  // Ürün Kataloğu Bağlantısı (Opsiyonel)
+  unitPrice Decimal    @default(0) @db.Decimal(18, 2)
   productId String?
-  product   Product?   @relation(fields: [productId], references: [id], onDelete: SetNull)
+  sku       String?
+  product   Product?   @relation(fields: [productId], references: [id])
+  request   Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  unit      OptionItem @relation("RequestItemUnit", fields: [unitId], references: [id])
 }
 
 model Order {
   id                String               @id @default(cuid())
   barcode           String               @unique
-  refNumber         String?              // Manuel/Dış Kaynaklı Sipariş No
   createdAt         DateTime             @default(now())
-  estimatedDelivery DateTime?
   requestId         String?
   statusId          String
   methodId          String
@@ -268,92 +243,81 @@ model Order {
   currencyId        String
   supplierId        String
   companyId         String
-  deliveryAddressId String?              // Teslimat Adresi
   realizedTotal     Decimal              @db.Decimal(18, 2)
   responsibleUserId String?
-  request           Request?             @relation(fields: [requestId], references: [id], onDelete: SetNull)
-  status            OptionItem           @relation("OrderStatus", fields: [statusId], references: [id])
+  estimatedDelivery DateTime?
+  deliveryAddressId String?
+  refNumber         String?
+  contracts         Contract[]
+  deliveries        DeliveryReceipt[]
+  deliveryTokens    DeliveryToken[]
+  invoices          Invoice[]
+  company           Company              @relation(fields: [companyId], references: [id])
+  currency          OptionItem           @relation("OrderCurrency", fields: [currencyId], references: [id])
+  deliveryAddress   DeliveryAddress?     @relation(fields: [deliveryAddressId], references: [id])
   method            OptionItem           @relation("OrderMethod", fields: [methodId], references: [id])
   regulation        OptionItem           @relation("OrderRegulation", fields: [regulationId], references: [id])
-  currency          OptionItem           @relation("OrderCurrency", fields: [currencyId], references: [id])
+  request           Request?             @relation(fields: [requestId], references: [id])
+  responsible       User?                @relation(fields: [responsibleUserId], references: [id])
+  status            OptionItem           @relation("OrderStatus", fields: [statusId], references: [id])
   supplier          Supplier             @relation(fields: [supplierId], references: [id])
-  company           Company              @relation(fields: [companyId], references: [id])
-  deliveryAddress   DeliveryAddress?     @relation(fields: [deliveryAddressId], references: [id])
   items             OrderItem[]
-  // existing relations...
-  contracts           Contract[]
-  invoices            Invoice[]
-  deliveries          DeliveryReceipt[]
-
-  // Supplier-related relations
-  evaluations         SupplierEvaluation[]
-  responsible         User?                @relation(fields: [responsibleUserId], references: [id])
-  deliveryTokens      DeliveryToken[]
+  evaluations       SupplierEvaluation[]
 }
 
 model DeliveryToken {
   id        String   @id @default(cuid())
   token     String   @unique
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model DeliveryReceipt {
-  id            String         @id @default(cuid())
-  code          String         @unique // İrsaliye No
-  date          DateTime       // İrsaliye Tarihi
-  deliveryDate  DateTime       @default(now()) // Fiili Teslim Tarihi
-  
-  orderId       String
-  order         Order          @relation(fields: [orderId], references: [id])
-  
-  receiverId    String?        // Made Optional for public
-  receiver      User?          @relation(fields: [receiverId], references: [id]) // Optional relation
-  
-  receiverName  String?        // Public user name
-  receiverUnitId String? // If they select a unit from dropdown
-  receiverUnit  OptionItem? @relation("UnitDeliveries", fields: [receiverUnitId], references: [id])
-  receiverEmail  String?     // For public delivery contact info
-
-  status        String         @default("pending") // pending, approved, rejected
-  notes         String?
-  
-  items         DeliveryItem[]
-  attachments   Attachment[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             String         @id @default(cuid())
+  code           String         @unique
+  date           DateTime
+  deliveryDate   DateTime       @default(now())
+  orderId        String
+  receiverId     String?
+  receiverName   String?
+  receiverUnitId String?
+  receiverEmail  String?
+  status         String         @default("pending")
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  attachments    Attachment[]
+  items          DeliveryItem[]
+  order          Order          @relation(fields: [orderId], references: [id])
+  receiver       User?          @relation(fields: [receiverId], references: [id])
+  receiverUnit   OptionItem?    @relation("UnitDeliveries", fields: [receiverUnitId], references: [id])
 }
 
 model DeliveryItem {
   id               String          @id @default(cuid())
   deliveryId       String
-  delivery         DeliveryReceipt @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  
   orderItemId      String
-  orderItem        OrderItem       @relation(fields: [orderItemId], references: [id])
-  
   quantity         Decimal         @db.Decimal(18, 2)
   approvedQuantity Decimal?        @db.Decimal(18, 2)
-  
   notes            String?
+  delivery         DeliveryReceipt @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  orderItem        OrderItem       @relation(fields: [orderItemId], references: [id])
 }
 
 model OrderItem {
-  id          String   @id @default(cuid())
-  orderId     String
-  name        String
-  sku         String?  // Ürün Kodu
-  quantity    Decimal  @db.Decimal(18, 2)
-  unitPrice   Decimal  @default(0) @db.Decimal(18, 2)
-  unitId      String?
-  unit        OptionItem? @relation(fields: [unitId], references: [id])
-  extraCosts  Decimal? @default(0) @db.Decimal(18, 2)
-  
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  // Back-relation for delivery items
-  deliveries  DeliveryItem[]
+  id         String         @id @default(cuid())
+  orderId    String
+  name       String
+  quantity   Decimal        @db.Decimal(18, 2)
+  unitPrice  Decimal        @default(0) @db.Decimal(18, 2)
+  extraCosts Decimal?       @default(0) @db.Decimal(18, 2)
+  sku        String?
+  unitId     String?
+  deliveries DeliveryItem[]
+  order      Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  unit       OptionItem?    @relation(fields: [unitId], references: [id])
 }
 
 model Contract {
@@ -363,21 +327,21 @@ model Contract {
   parties           String               @db.VarChar(500)
   startDate         DateTime
   endDate           DateTime?
-  status            String               @db.VarChar(50) // Taslak, Onaylanmış, Aktif, Sonlanmış
-  type              String?              @db.VarChar(50)
-  template          String?              @db.VarChar(50)
+  status            String               @db.VarChar(50)
   version           Int                  @default(1)
   createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  deletedAt         DateTime?
   orderId           String?
-  order             Order?               @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  deletedAt         DateTime?
+  updatedAt         DateTime             @updatedAt
+  template          String?              @db.VarChar(50)
+  type              String?              @db.VarChar(50)
   responsibleUserId String?
+  order             Order?               @relation(fields: [orderId], references: [id])
   responsible       User?                @relation(fields: [responsibleUserId], references: [id])
-  histories         ContractHistory[]
   attachments       ContractAttachment[]
-  revisions         ContractRevision[]
   events            ContractEvent[]
+  histories         ContractHistory[]
+  revisions         ContractRevision[]
 }
 
 model ContractHistory {
@@ -415,7 +379,7 @@ model ContractRevision {
 model ContractEvent {
   id         String   @id @default(cuid())
   contractId String
-  type       String   @db.VarChar(50) // ör: milestone, reminder, extension
+  type       String   @db.VarChar(50)
   date       DateTime
   note       String?  @db.VarChar(500)
   createdAt  DateTime @default(now())
@@ -428,16 +392,16 @@ model Invoice {
   orderNo           String        @db.VarChar(100)
   amount            Decimal       @db.Decimal(18, 2)
   dueDate           DateTime
-  status            String        @db.VarChar(50) // Beklemede, Ödenmiş, Gecikmiş
+  status            String        @db.VarChar(50)
   bank              String?       @db.VarChar(100)
   createdAt         DateTime      @default(now())
   orderId           String?
-  order             Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
   vatRate           Int?
   withholdingCode   String?
-  items             InvoiceItem[]
   responsibleUserId String?
+  order             Order?        @relation(fields: [orderId], references: [id])
   responsible       User?         @relation(fields: [responsibleUserId], references: [id])
+  items             InvoiceItem[]
 }
 
 model InvoiceItem {
@@ -450,106 +414,92 @@ model InvoiceItem {
   invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
-// Evaluation question and options (manageable dropdowns)
 model EvaluationQuestion {
   id            String                     @id @default(cuid())
   text          String
-  type          String // e.g., "dropdown" | "text" | "rating"
+  type          String
   active        Boolean                    @default(true)
   required      Boolean                    @default(false)
-  section       String?                    @db.VarChar(10) // A, B, C gibi
+  section       String?                    @db.VarChar(10)
   sort          Int                        @default(0)
-  // Yeni: puanlama tipi ilişkisi
-  scoringType   ScoringType?               @relation(fields: [scoringTypeId], references: [id], onDelete: SetNull)
   scoringTypeId String?
   options       EvaluationOption[]
+  scoringType   ScoringType?               @relation(fields: [scoringTypeId], references: [id])
   answers       SupplierEvaluationAnswer[]
 }
 
 model EvaluationOption {
   id         String             @id @default(cuid())
   label      String
-  question   EvaluationQuestion @relation(fields: [questionId], references: [id])
   questionId String
+  question   EvaluationQuestion @relation(fields: [questionId], references: [id])
 }
 
-// Skor ölçekleri (ör: 1-5, yıldız, yüzdelik)
 model ScoringType {
   id          String               @id @default(cuid())
-  code        String               @unique // kısa anahtar, ör: rating_1_5
+  code        String               @unique
   name        String
-  kind        String               @db.VarChar(50) // rating | stars | percentage | custom
+  kind        String               @db.VarChar(50)
   scaleMin    Int                  @default(1)
   scaleMax    Int                  @default(5)
   step        Int                  @default(1)
   active      Boolean              @default(true)
   createdAt   DateTime             @default(now())
   description String?
-  // Weights for calculation (A, B, C groups)
   weightA     Float                @default(0.40)
   weightB     Float                @default(0.30)
   weightC     Float                @default(0.30)
-  // İlişkiler
   questions   EvaluationQuestion[]
 }
 
-// Per-order supplier evaluation (ISO 9001)
 model SupplierEvaluation {
   id          String                     @id @default(cuid())
-  order       Order                      @relation(fields: [orderId], references: [id])
   orderId     String
-  supplier    Supplier                   @relation(fields: [supplierId], references: [id])
   supplierId  String
   submittedAt DateTime?
   totalScore  Decimal?                   @db.Decimal(18, 2)
+  order       Order                      @relation(fields: [orderId], references: [id])
+  supplier    Supplier                   @relation(fields: [supplierId], references: [id])
   answers     SupplierEvaluationAnswer[]
 }
 
 model SupplierEvaluationAnswer {
   id           String             @id @default(cuid())
-  evaluation   SupplierEvaluation @relation(fields: [evaluationId], references: [id])
   evaluationId String
-  question     EvaluationQuestion @relation(fields: [questionId], references: [id])
   questionId   String
-  value        String // stores selected option id or free text
+  value        String
+  evaluation   SupplierEvaluation @relation(fields: [evaluationId], references: [id])
+  question     EvaluationQuestion @relation(fields: [questionId], references: [id])
 }
 
-// User-defined reporting templates
 model ReportTemplate {
   id        String   @id @default(cuid())
   name      String   @unique
   config    Json
-  ownerId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  ownerId   String?
 }
 
-// --- Supplier Performance Automation Models ---
-
-// Raw performance metrics collected per supplier and period
 model SupplierPerformanceMetric {
   id           String   @id @default(cuid())
-  supplier     Supplier @relation("SupplierPerformanceMetrics", fields: [supplierId], references: [id])
   supplierId   String
-  period       String   @db.VarChar(20) // e.g., "2025-11" (YYYY-MM)
-  source       String   @db.VarChar(50) // ERP | QA | Purchasing | Manual | API
-  // Common KPIs
-  onTimeRate   Float? // 0..1
-  defectRate   Float? // 0..1 (lower is better)
-  avgLeadTime  Float? // days
-  priceIndex   Float? // relative cost index, 1.0 baseline; lower is better
-  serviceScore Float? // 0..1
-  // Additional metadata
+  period       String   @db.VarChar(20)
+  source       String   @db.VarChar(50)
+  onTimeRate   Float?
+  defectRate   Float?
+  avgLeadTime  Float?
+  priceIndex   Float?
+  serviceScore Float?
   createdAt    DateTime @default(now())
+  supplier     Supplier @relation("SupplierPerformanceMetrics", fields: [supplierId], references: [id])
 
   @@unique([supplierId, period, source])
   @@index([supplierId, period])
 }
 
-// Periodic evaluation summary per supplier
 model SupplierEvaluationSummary {
   id            String   @id @default(cuid())
-  supplier      Supplier @relation("SupplierEvaluationSummaries", fields: [supplierId], references: [id])
   supplierId    String
   period        String   @db.VarChar(20)
   qualityScore  Float
@@ -557,38 +507,36 @@ model SupplierEvaluationSummary {
   costScore     Float
   serviceScore  Float
   totalScore    Float
-  decision      String   @db.VarChar(50) // Onaylı | Şartlı | Yetersiz
+  decision      String   @db.VarChar(50)
   createdAt     DateTime @default(now())
+  supplier      Supplier @relation("SupplierEvaluationSummaries", fields: [supplierId], references: [id])
 
   @@unique([supplierId, period])
   @@index([period, totalScore])
 }
 
-// Generated reports (e.g., monthly batch)
 model SupplierReport {
   id        String   @id @default(cuid())
   period    String   @db.VarChar(20)
-  scope     String   @db.VarChar(50) // Global | Company | Category
+  scope     String   @db.VarChar(50)
   payload   Json
   createdAt DateTime @default(now())
 }
 
-// Alerts generated on performance drops or threshold breaches
 model SupplierAlert {
   id           String   @id @default(cuid())
-  supplier     Supplier @relation("SupplierAlerts", fields: [supplierId], references: [id])
   supplierId   String
   period       String   @db.VarChar(20)
-  type         String   @db.VarChar(50) // Drop | Threshold | MissingData
+  type         String   @db.VarChar(50)
   message      String   @db.VarChar(500)
-  severity     String   @db.VarChar(20) // info | warning | critical
+  severity     String   @db.VarChar(20)
   createdAt    DateTime @default(now())
   acknowledged Boolean  @default(false)
+  supplier     Supplier @relation("SupplierAlerts", fields: [supplierId], references: [id])
 
   @@index([supplierId, period])
 }
 
-// Login attempts logging for security auditing
 model LoginAttempt {
   id        String   @id @default(cuid())
   username  String?
@@ -606,7 +554,6 @@ model LoginAttempt {
   @@index([createdAt])
   @@index([success])
 }
-
 
 model WithholdingJobType {
   id        String   @id @default(cuid())
@@ -647,18 +594,18 @@ model NotificationPreference {
 
 model SmtpSetting {
   id        String   @id @default(cuid())
-  key       String   @unique
-  name      String?
   host      String
   port      Int
   secure    Boolean  @default(false)
   user      String
   pass      String
   from      String
-  active    Boolean  @default(true)
-  isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  active    Boolean  @default(true)
+  isDefault Boolean  @default(false)
+  key       String   @unique
+  name      String?
 }
 
 model EmailLog {
@@ -666,262 +613,182 @@ model EmailLog {
   to          String
   subject     String
   category    String?   @db.VarChar(50)
-  status      String    @db.VarChar(20) // deferred | sent | failed
+  status      String    @db.VarChar(20)
   attempts    Int       @default(0)
   lastError   String?   @db.VarChar(500)
   messageId   String?   @db.VarChar(200)
   previewUrl  String?
-  payloadHtml String?   @db.VarChar(20000)
   createdAt   DateTime  @default(now())
   sentAt      DateTime?
+  payloadHtml String?   @db.VarChar(20000)
 
   @@index([status, createdAt])
 }
 
-// Meeting models removed
-// User relations to Meeting have been removed in User model update below
-
-// ==========================================
-// APPROVAL WORKFLOW SYSTEM
-// ==========================================
-
-// Onay akış tanımları (Talep, Sipariş, vb. için)
 model ApprovalWorkflow {
   id          String         @id @default(cuid())
-  name        String         @unique // "request_approval", "order_approval"
-  displayName String         @db.VarChar(100) // "Talep Onay Akışı"
-  entityType  String         @db.VarChar(50) // "Request", "Order"
+  name        String         @unique
+  displayName String         @db.VarChar(100)
+  entityType  String         @db.VarChar(50)
   active      Boolean        @default(true)
-  steps       ApprovalStep[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+  steps       ApprovalStep[]
 }
 
-// Onay adımları (her workflow için sıralı adımlar)
 model ApprovalStep {
   id           String           @id @default(cuid())
   workflowId   String
-  workflow     ApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  stepOrder    Int              // 1, 2, 3...
-  name         String           @db.VarChar(100) // "Birim Yöneticisi Onayı"
+  stepOrder    Int
+  name         String           @db.VarChar(100)
   description  String?          @db.VarChar(500)
-  approverRole String?          @db.VarChar(50) // "unit_manager", "purchasing", "finance"
-  approverUnit String?          // Specific unit ID (optional)
+  approverRole String?          @db.VarChar(50)
+  approverUnit String?
   required     Boolean          @default(true)
-  autoApprove  Boolean          @default(false) // Bütçe limiti altındaysa otomatik onayla
-  budgetLimit  Decimal?         @db.Decimal(18, 2) // Otomatik onay için limit
+  autoApprove  Boolean          @default(false)
+  budgetLimit  Decimal?         @db.Decimal(18, 2)
   createdAt    DateTime         @default(now())
+  workflow     ApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   @@unique([workflowId, stepOrder])
   @@index([workflowId])
 }
 
-// Onay işlemleri geçmişi (her talep/sipariş için)
 model ApprovalRecord {
-  id           String    @id @default(cuid())
-  entityType   String    @db.VarChar(50) // "Request", "Order"
-  entityId     String    // Talep veya Sipariş ID
-  stepOrder    Int       // Hangi adım (1, 2, 3...)
-  stepName     String    @db.VarChar(100)
-  status       String    @db.VarChar(20) // "pending", "approved", "rejected", "skipped"
-  approverId   String?
-  approver     User?     @relation("ApprovalRecordApprover", fields: [approverId], references: [id], onDelete: SetNull)
-  comment      String?   @db.VarChar(1000)
-  createdAt    DateTime  @default(now())
-  processedAt  DateTime?
+  id          String    @id @default(cuid())
+  entityType  String    @db.VarChar(50)
+  entityId    String
+  stepOrder   Int
+  stepName    String    @db.VarChar(100)
+  status      String    @db.VarChar(20)
+  approverId  String?
+  comment     String?   @db.VarChar(1000)
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+  approver    User?     @relation("ApprovalRecordApprover", fields: [approverId], references: [id])
 
   @@index([entityType, entityId])
   @@index([status])
   @@index([approverId])
 }
 
-// Role model removed
-
-
-// ==========================================
-// RFQ (OFFER) MODULE
-// ==========================================
-
-// Teklif İsteme (RFQ) Ana Kaydı
 model Rfq {
-  id                String    @id @default(cuid())
-  rfxCode           String    @unique // Örn: RFQ-2025-001
+  id                String           @id @default(cuid())
+  rfxCode           String           @unique
   title             String
-  status            String    @default("ACTIVE") // DRAFT, ACTIVE, COMPLETED, CANCELLED
-  deadline          DateTime? // Son teklif verme tarihi
-  
-  // İlişkiler
+  status            String           @default("ACTIVE")
+  deadline          DateTime?
   createdById       String
-  createdBy         User      @relation(fields: [createdById], references: [id])
-  
-  // Fatura Carisi ve Teslimat Adresi
   companyId         String?
-  company           Company?  @relation(fields: [companyId], references: [id])
   deliveryAddressId String?
-  deliveryAddress   DeliveryAddress? @relation(fields: [deliveryAddressId], references: [id])
-  
-  // Hangi talepler için açıldı? (Birden fazla talep birleştirilebilir)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
   requests          Request[]
-  
-  // Hangi tedarikçilere gidildi?
-  suppliers         RfqSupplier[]
-  
+  company           Company?         @relation(fields: [companyId], references: [id])
+  createdBy         User             @relation(fields: [createdById], references: [id])
+  deliveryAddress   DeliveryAddress? @relation(fields: [deliveryAddressId], references: [id])
   items             RfqItem[]
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  suppliers         RfqSupplier[]
 }
 
-// RFQ Kalemleri (RequestItem'dan türetilir)
 model RfqItem {
-  id          String   @id @default(cuid())
-  rfqId       String
-  rfq         Rfq      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  
-  name        String
-  quantity    Decimal  @db.Decimal(18, 2)
-  unit        String
-  description String?
-  
-  // Hangi talep kalemine denk geliyor? (Opsiyonel link)
+  id            String            @id @default(cuid())
+  rfqId         String
+  name          String
+  quantity      Decimal           @db.Decimal(18, 2)
+  unit          String
+  description   String?
   requestItemId String?
-
-  // Kategori (Tedarikçi Eşleşmesi İçin)
   categoryId    String?
+  offers        OfferItem[]
   category      SupplierCategory? @relation(fields: [categoryId], references: [id])
-  
-  // Tedarikçi cevapları (OfferItem)
-  offers      OfferItem[]
+  rfq           Rfq               @relation(fields: [rfqId], references: [id], onDelete: Cascade)
 }
 
-// RFQ - Tedarikçi Eşleşmesi ve Erişim Token'ı
 model RfqSupplier {
   id          String    @id @default(cuid())
   rfqId       String
-  rfq         Rfq       @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  
-  supplierId  String?  // Sistemdeki tedarikçi (varsa)
-  supplier    Supplier? @relation(fields: [supplierId], references: [id])
-  
-  // Sistemde kayıtlı olmayan tedarikçiler için manuel giriş
+  supplierId  String?
   contactName String?
-  companyName String?  // Add company name for manual suppliers
+  companyName String?
   email       String
-  
-  // GÜVENLİK: Magic Link Token
-  token       String    @unique // URL-safe random string
+  token       String    @unique
   tokenExpiry DateTime
-  
-  // Durum
-  stage       String    @default("PENDING") // SENT, VIEWED, OFFERED, DECLINED
-  
-  // Verilen Teklif (Header)
-  offer       Offer? 
-  
+  stage       String    @default("PENDING")
   createdAt   DateTime  @default(now())
-  
-  @@unique([rfqId, email]) // Bir RFQ için aynı maile tek davet
+  offer       Offer?
+  rfq         Rfq       @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@unique([rfqId, email])
 }
 
-// Tedarikçinin Verdiği Teklif (Cevap)
 model Offer {
   id            String      @id @default(cuid())
   rfqSupplierId String      @unique
-  rfqSupplier   RfqSupplier @relation(fields: [rfqSupplierId], references: [id])
-  
-  // Teklif Detayları
   totalAmount   Decimal     @db.Decimal(18, 2)
-  currency      String      @default("TRY") // TRY, USD, EUR
-  validUntil    DateTime?   // Teklif geçerlilik tarihi
+  currency      String      @default("TRY")
+  validUntil    DateTime?
   notes         String?
-  attachments   String?     // Dosya URL (virgülle ayrılmış)
-  
-  items         OfferItem[]
-  
+  attachments   String?
   submittedAt   DateTime    @default(now())
-  isWinner      Boolean     @default(false) // Seçilen teklif mi?
+  isWinner      Boolean     @default(false)
+  rfqSupplier   RfqSupplier @relation(fields: [rfqSupplierId], references: [id])
+  items         OfferItem[]
 }
 
-// Teklif Kalem Detayları
 model OfferItem {
-  id          String    @id @default(cuid())
-  offerId     String
-  offer       Offer     @relation(fields: [offerId], references: [id], onDelete: Cascade)
-  
-  rfqItemId   String
-  rfqItem     RfqItem   @relation(fields: [rfqItemId], references: [id])
-  
-  quantity    Decimal   @db.Decimal(18, 2)
-  unitPrice   Decimal   @db.Decimal(18, 2)
-  vatRate     Int       @default(20)
-  totalPrice  Decimal   @db.Decimal(18, 2) // quantity * unitPrice
-  
-  deliveryDate DateTime? // Termin tarihi
-  brand       String?   // Marka/Model önerisi
-  notes       String?
+  id           String    @id @default(cuid())
+  offerId      String
+  rfqItemId    String
+  quantity     Decimal   @db.Decimal(18, 2)
+  unitPrice    Decimal   @db.Decimal(18, 2)
+  vatRate      Int       @default(20)
+  totalPrice   Decimal   @db.Decimal(18, 2)
+  deliveryDate DateTime?
+  brand        String?
+  notes        String?
+  offer        Offer     @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  rfqItem      RfqItem   @relation(fields: [rfqItemId], references: [id])
 }
 
-// =====================================================
-// ÜRÜN KATALOG MODÜLÜ
-// =====================================================
-
-// Ürün Kategorisi (Hiyerarşik - Kullanıcı Tanımlı)
 model ProductCategory {
-  id          String    @id @default(cuid())
+  id          String            @id @default(cuid())
   name        String
-  code        String    @unique // Kategori kodu (kullanıcı tanımlı)
+  code        String            @unique
   description String?
-  
-  // Hiyerarşi
   parentId    String?
-  parent      ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children    ProductCategory[] @relation("CategoryHierarchy")
-  
-  // Meta
-  active      Boolean   @default(true)
-  sortOrder   Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  // İlişkiler
+  active      Boolean           @default(true)
+  sortOrder   Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   products    Product[]
-  
+  parent      ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    ProductCategory[] @relation("CategoryHierarchy")
+
   @@index([parentId])
   @@index([active])
 }
 
-// Ürün Master Verisi
 model Product {
-  id            String    @id @default(cuid())
-  sku           String    @unique // Ürün Kodu (kullanıcı tanımlı)
-  name          String    // Standart ürün adı
-  description   String?
-  
-  // Kategori
-  categoryId    String?
-  category      ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  
-  // Birim ve Fiyat
-  defaultUnit   String?   // Varsayılan birim (Adet, Kg, vb.)
-  estimatedPrice Decimal?  @db.Decimal(18, 2) // Tahmini birim fiyat
-  currency      String    @default("TRY")
-  
-  // Tercih Edilen Tedarikçi
+  id                  String           @id @default(cuid())
+  sku                 String           @unique
+  name                String
+  description         String?
+  categoryId          String?
+  defaultUnit         String?
+  estimatedPrice      Decimal?         @db.Decimal(18, 2)
+  currency            String           @default("TRY")
   preferredSupplierId String?
-  preferredSupplier   Supplier? @relation("PreferredSupplier", fields: [preferredSupplierId], references: [id], onDelete: SetNull)
-  
-  // Stok Bilgileri (Opsiyonel)
-  minStock      Decimal?  @db.Decimal(18, 2)
-  leadTimeDays  Int?      // Tedarik süresi (gün)
-  
-  // Meta
-  active        Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // Talep İlişkileri
-  requestItems  RequestItem[]
-  
-  // Arama optimizasyonu için indeksler
+  minStock            Decimal?         @db.Decimal(18, 2)
+  leadTimeDays        Int?
+  active              Boolean          @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  category            ProductCategory? @relation(fields: [categoryId], references: [id])
+  preferredSupplier   Supplier?        @relation("PreferredSupplier", fields: [preferredSupplierId], references: [id])
+  requestItems        RequestItem[]
+
   @@index([categoryId])
   @@index([sku])
   @@index([name])
@@ -929,38 +796,29 @@ model Product {
   @@index([createdAt])
 }
 
-// =====================================================
-// SİSTEM AYARLARI (Feature Flags, Modül Yönetimi)
-// =====================================================
-
 model SystemSetting {
   id        String   @id @default(cuid())
-  key       String   @unique // Örn: "rfq_module_enabled", "product_catalog_enabled"
-  value     String   // "true" veya "false" veya JSON
-  type      String   @default("boolean") // boolean, string, json
-  label     String?  // UI'da görünen ad
-  group     String?  // Gruplandırma: "modules", "features", "general"
+  key       String   @unique
+  value     String
+  type      String   @default("boolean")
+  label     String?
+  group     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([key])
   @@index([group])
 }
 
-// Modül-Rol Erişim Kontrolü
 model ModuleAccess {
   id        String   @id @default(cuid())
-  moduleKey String   // rfq, talep, siparis, fatura, tedarikci, vb.
-  roleKey   String   // admin, satinalma_muduru, birim_muduru, vb.
-  enabled   Boolean  @default(true) // Bu rol bu modüle erişebilir mi?
+  moduleKey String
+  roleKey   String
+  enabled   Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@unique([moduleKey, roleKey])
   @@index([moduleKey])
   @@index([roleKey])
 }
-
-
-
-

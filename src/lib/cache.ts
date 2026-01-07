@@ -1,108 +1,73 @@
 /**
- * SWR-like fetch hook with caching and revalidation
- * Uses browser's Cache API for simple client-side caching
+ * Simple In-Memory Cache Utility
+ * Provides TTL-based caching for server-side operations.
  */
 
-type FetchState<T> = {
-    data: T | null;
-    error: Error | null;
-    isLoading: boolean;
-    isValidating: boolean;
+type CacheEntry<T> = {
+    value: T;
+    expiresAt: number;
 };
 
-type UseFetchOptions = {
-    revalidateOnFocus?: boolean;
-    revalidateOnReconnect?: boolean;
-    refreshInterval?: number;
-    dedupingInterval?: number;
-};
+class SimpleCache {
+    private cache: Map<string, CacheEntry<any>> = new Map();
+    private defaultTtl: number;
 
-// In-memory cache for deduplication
-const cache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 5000; // 5 seconds
-
-/**
- * Simple fetch wrapper with caching
- */
-export async function cachedFetch<T>(
-    url: string,
-    options?: RequestInit,
-    cacheDuration = CACHE_DURATION
-): Promise<T> {
-    const cacheKey = `${options?.method || 'GET'}:${url}`;
-    const now = Date.now();
-
-    // Check cache
-    const cached = cache.get(cacheKey);
-    if (cached && now - cached.timestamp < cacheDuration) {
-        return cached.data as T;
+    constructor(defaultTtlSeconds: number = 300) {
+        this.defaultTtl = defaultTtlSeconds * 1000;
     }
 
-    // Fetch fresh data
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options?.headers,
-        },
-    });
+    /**
+     * Get a value from the cache
+     */
+    get<T>(key: string): T | null {
+        const entry = this.cache.get(key);
+        if (!entry) return null;
 
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (Date.now() > entry.expiresAt) {
+            this.cache.delete(key);
+            return null;
+        }
+
+        return entry.value as T;
     }
 
-    const data = await response.json();
-
-    // Update cache
-    cache.set(cacheKey, { data, timestamp: now });
-
-    return data as T;
-}
-
-/**
- * Invalidate cache for a specific URL pattern
- */
-export function invalidateCache(urlPattern?: string) {
-    if (!urlPattern) {
-        cache.clear();
-        return;
+    /**
+     * Set a value in the cache
+     */
+    set<T>(key: string, value: T, ttlSeconds?: number): void {
+        const ttl = (ttlSeconds !== undefined ? ttlSeconds * 1000 : this.defaultTtl);
+        this.cache.set(key, {
+            value,
+            expiresAt: Date.now() + ttl,
+        });
     }
 
-    for (const key of cache.keys()) {
-        if (key.includes(urlPattern)) {
-            cache.delete(key);
+    /**
+     * Remove a value from the cache
+     */
+    delete(key: string): void {
+        this.cache.delete(key);
+    }
+
+    /**
+     * Clear all values that match a prefix
+     */
+    invalidatePrefix(prefix: string): void {
+        for (const key of this.cache.keys()) {
+            if (key.startsWith(prefix)) {
+                this.cache.delete(key);
+            }
         }
     }
-}
 
-/**
- * Prefetch and cache data
- */
-export async function prefetch<T>(url: string): Promise<void> {
-    try {
-        await cachedFetch<T>(url);
-    } catch {
-        // Silently fail prefetch
+    /**
+     * Clear the entire cache
+     */
+    clear(): void {
+        this.cache.clear();
     }
 }
 
-/**
- * Batch multiple fetches with deduplication
- */
-export async function batchFetch<T extends Record<string, string>>(
-    urls: T
-): Promise<{ [K in keyof T]: any }> {
-    const results: Partial<{ [K in keyof T]: any }> = {};
-
-    await Promise.all(
-        Object.entries(urls).map(async ([key, url]) => {
-            try {
-                results[key as keyof T] = await cachedFetch(url);
-            } catch (error) {
-                results[key as keyof T] = null;
-            }
-        })
-    );
-
-    return results as { [K in keyof T]: any };
-}
+// Global instance for the application
+// In Next.js dev mode, this might be recreated on HMR, but in production it persists.
+export const apiCache = new SimpleCache(600); // Default 10 minutes

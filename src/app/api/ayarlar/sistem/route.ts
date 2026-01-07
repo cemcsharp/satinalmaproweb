@@ -68,6 +68,8 @@ export async function POST(req: NextRequest) {
             return jsonError(400, "missing_key");
         }
 
+        const before = await prisma.systemSetting.findUnique({ where: { key } });
+
         const setting = await prisma.systemSetting.upsert({
             where: { key },
             update: {
@@ -84,6 +86,16 @@ export async function POST(req: NextRequest) {
                 group: group || null
             }
         });
+
+        const { logAuditWithRequest } = await import("@/lib/auditLogger");
+        await logAuditWithRequest(req, {
+            userId: user.id,
+            action: before ? "UPDATE" : "CREATE",
+            entityType: "System",
+            entityId: key,
+            oldData: before,
+            newData: setting
+        }).catch(() => { });
 
         return NextResponse.json(setting);
 
@@ -111,7 +123,19 @@ export async function DELETE(req: NextRequest) {
             return jsonError(400, "missing_key");
         }
 
+        const before = await prisma.systemSetting.findUnique({ where: { key } });
+
         await prisma.systemSetting.delete({ where: { key } });
+
+        const { logAuditWithRequest } = await import("@/lib/auditLogger");
+        await logAuditWithRequest(req, {
+            userId: user.id,
+            action: "DELETE",
+            entityType: "System",
+            entityId: key,
+            oldData: before,
+            newData: null
+        }).catch(() => { });
 
         return NextResponse.json({ ok: true });
 

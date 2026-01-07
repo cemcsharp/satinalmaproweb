@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rateLimiter } from '@/lib/rateLimiter';
+import { loginLimiter } from '@/lib/rateLimit';
 import { jsonError } from '@/lib/apiError';
 
 export async function POST(request: NextRequest) {
@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if currently blocked
-    if (rateLimiter.isBlocked(identifier)) {
-      const blockTimeRemaining = rateLimiter.getBlockTimeRemaining(identifier);
+    if (loginLimiter.isBlocked(identifier)) {
+      const blockTimeRemaining = loginLimiter.getBlockTimeRemaining(identifier);
       return NextResponse.json({
         blocked: true,
         remainingAttempts: 0,
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // If this is just a check (no success parameter), return current status
     if (success === undefined) {
-      const remainingAttempts = rateLimiter.getRemainingAttempts(identifier);
+      const remainingAttempts = loginLimiter.getRemainingAttempts(identifier);
       return NextResponse.json({
         blocked: false,
         remainingAttempts
@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Record the attempt
-    const result = rateLimiter.recordAttempt(identifier, success === true);
-    
+    const result = loginLimiter.recordAttempt(identifier, success === true);
+
     return NextResponse.json({
       blocked: result.blocked,
       remainingAttempts: result.remainingAttempts,

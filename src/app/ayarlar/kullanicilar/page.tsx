@@ -70,7 +70,7 @@ export default function UsersPage() {
 
   const loadRoles = useCallback(async () => {
     try {
-      const res = await fetch("/api/roller");
+      const res = await fetch("/api/roles");
       if (res.ok) {
         const json = await res.json();
         setRoles((json.items || []).map((r: any) => ({ id: r.id, key: r.key, name: r.name })));

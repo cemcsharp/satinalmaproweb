@@ -71,6 +71,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             data
         });
 
+        const { logAuditWithRequest } = await import("@/lib/auditLogger");
+        await logAuditWithRequest(req, {
+            userId: user.id,
+            action: "UPDATE",
+            entityType: "Role",
+            entityId: id,
+            oldData: existing,
+            newData: role
+        }).catch(() => { });
+
         return NextResponse.json(role);
 
     } catch (e: any) {
@@ -114,10 +124,20 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         }
 
         // Soft delete
-        await prisma.role.update({
+        const role = await prisma.role.update({
             where: { id },
             data: { active: false }
         });
+
+        const { logAuditWithRequest } = await import("@/lib/auditLogger");
+        await logAuditWithRequest(req, {
+            userId: user.id,
+            action: "DELETE",
+            entityType: "Role",
+            entityId: id,
+            oldData: existing,
+            newData: role
+        }).catch(() => { });
 
         return NextResponse.json({ ok: true });
 

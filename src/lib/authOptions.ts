@@ -3,7 +3,7 @@ import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { verifyPassword } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { rateLimiter } from "@/lib/rateLimiter";
+import { loginLimiter } from "@/lib/rateLimit";
 import { headers } from "next/headers";
 
 // Email-based authentication with rate limiting and LoginAttempt tracking
@@ -31,7 +31,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Brute-force protection
-        if (rateLimiter.isBlocked(email)) {
+        if (loginLimiter.isBlocked(email)) {
           console.warn(`[Auth] Blocked: ${email}`);
           return null;
         }
@@ -53,7 +53,7 @@ export const authOptions: NextAuthOptions = {
 
         if (!user) {
           // Record failed attempt - user not found
-          rateLimiter.recordAttempt(email, false);
+          loginLimiter.recordAttempt(email, false);
           try {
             await prisma.loginAttempt.create({
               data: {
@@ -77,7 +77,7 @@ export const authOptions: NextAuthOptions = {
         if (!ok) {
           console.log('[Auth Debug] FAIL: Invalid password');
           // Record failed attempt - invalid password
-          rateLimiter.recordAttempt(email, false);
+          loginLimiter.recordAttempt(email, false);
           try {
             await prisma.loginAttempt.create({
               data: {
@@ -95,19 +95,25 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Successful login: reset limiter and log
-        rateLimiter.recordAttempt(email, true);
+        loginLimiter.recordAttempt(email, true);
         try {
-          await prisma.loginAttempt.create({
-            data: {
-              email,
-              ip,
-              userAgent,
-              success: true,
-              reason: null
-            }
-          });
+          await Promise.all([
+            prisma.loginAttempt.create({
+              data: {
+                email,
+                ip,
+                userAgent,
+                success: true,
+                reason: null
+              }
+            }),
+            prisma.user.update({
+              where: { id: user.id },
+              data: { lastLoginAt: new Date() }
+            })
+          ]);
         } catch (err) {
-          console.error('[Auth] LoginAttempt log error:', err);
+          console.error('[Auth] Login success update error:', err);
         }
         return { id: user.id, email: user.email ?? null };
       }

@@ -4,6 +4,7 @@ import { notify } from "@/lib/notification-service";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 import { jsonError } from "@/lib/apiError";
 import { getUserWithPermissions } from "@/lib/apiAuth"; // Import auth helper
+import { logAuditWithRequest, computeChanges } from "@/lib/auditLogger";
 
 // Get single order detail by id, including supplier info for autofill
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -76,6 +77,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
         ? order.items.map((it: any) => ({
           id: it.id,
           name: it.name,
+          sku: it.sku || null,
           quantity:
             typeof it.quantity?.toNumber === "function" ? it.quantity.toNumber() : Number(it.quantity as any),
           unitPrice:
@@ -303,6 +305,23 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       }
     } catch { }
 
+    // Audit log for order update
+    try {
+      const changes = computeChanges(before || {}, result || {});
+      if (changes) {
+        await logAuditWithRequest(req, {
+          userId: user.id,
+          action: "UPDATE",
+          entityType: "Order",
+          entityId: result.id,
+          oldData: changes.old,
+          newData: changes.new,
+        });
+      }
+    } catch (auditErr) {
+      console.error("[AuditLog] Failed to log order update:", auditErr);
+    }
+
     return NextResponse.json({ ok: true, id: result.id });
   } catch (e: any) {
     const code = e?.code === "P2025" ? "not_found" : "server_error";
@@ -357,6 +376,15 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
       // 6) Finally delete order
       await tx.order.delete({ where: { id: orderId } });
     });
+    // Audit log for order deletion
+    await logAuditWithRequest(req, {
+      userId: user.id,
+      action: "DELETE",
+      entityType: "Order",
+      entityId: orderId,
+      oldData: { barcode: (await prisma.order.findUnique({ where: { id: orderId }, select: { barcode: true } }))?.barcode || orderId },
+    });
+
     return NextResponse.json({ ok: true, id: orderId });
   } catch (e: any) {
     const code = e?.code === "P2025" ? "not_found" : "server_error";

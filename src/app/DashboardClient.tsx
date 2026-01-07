@@ -21,6 +21,8 @@ export default function DashboardPage() {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
 
   // Update time every minute
   useEffect(() => {
@@ -69,6 +71,24 @@ export default function DashboardPage() {
     loadStats();
   }, []);
 
+  // Fetch Recent Activities
+  useEffect(() => {
+    async function loadActivities() {
+      try {
+        const res = await fetch("/api/audit?limit=5");
+        if (res.ok) {
+          const data = await res.json();
+          setActivities(data.items || []);
+        }
+      } catch (err) {
+        console.error("Activities load failed", err);
+      } finally {
+        setActivitiesLoading(false);
+      }
+    }
+    loadActivities();
+  }, [userPermissions]); // Reload when permissions (and thus potential access level) change
+
   // Fetch Currency Rates
   const [dashboardRates, setDashboardRates] = useState<any>(null);
   useEffect(() => {
@@ -105,6 +125,29 @@ export default function DashboardPage() {
     if (hour < 11) return "Günaydın";
     if (hour < 18) return "İyi Günler";
     return "İyi Akşamlar";
+  };
+
+  const formatTimeAgo = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "Az önce";
+    if (diffMins < 60) return `${diffMins} dk önce`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} sa önce`;
+    return date.toLocaleDateString("tr-TR");
+  };
+
+  const getLogColor = (action: string) => {
+    switch (action) {
+      case "CREATE": return "bg-green-500";
+      case "UPDATE": return "bg-blue-500";
+      case "DELETE": return "bg-rose-500";
+      case "APPROVE": return "bg-emerald-500";
+      case "REJECT": return "bg-amber-500";
+      default: return "bg-slate-400";
+    }
   };
 
   return (
@@ -169,7 +212,7 @@ export default function DashboardPage() {
           <StatCard
             title="Toplam Talep"
             value={loading ? "-" : stats?.requests || 0}
-            change="%12"
+            change={null}
             trend="up"
             variant="primary"
             icon={
@@ -184,7 +227,7 @@ export default function DashboardPage() {
           <StatCard
             title="Aktif Siparişler"
             value={loading ? "-" : stats?.orders || 0}
-            change="%8"
+            change={null}
             trend="up"
             variant="success"
             icon={
@@ -199,7 +242,7 @@ export default function DashboardPage() {
           <StatCard
             title="Sözleşmeler"
             value={loading ? "-" : stats?.contracts || 0}
-            change="%15"
+            change={null}
             trend="up"
             variant="info"
             icon={
@@ -214,7 +257,7 @@ export default function DashboardPage() {
           <StatCard
             title="Tedarikçiler"
             value={loading ? "-" : stats?.suppliers || 0}
-            change="%5"
+            change={null}
             trend="up"
             variant="warning"
             icon={
@@ -268,20 +311,28 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-4">
-            {[
-              { type: "talep", text: "Yeni talep oluşturuldu", time: "2 dk önce", color: "bg-blue-500" },
-              { type: "siparis", text: "Sipariş onaylandı", time: "15 dk önce", color: "bg-green-500" },
-              { type: "fatura", text: "Fatura ödendi", time: "1 saat önce", color: "bg-amber-500" },
-              { type: "sozlesme", text: "Sözleşme imzalandı", time: "3 saat önce", color: "bg-purple-500" },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
-                <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-700">{item.text}</p>
-                </div>
-                <span className="text-xs text-slate-400">{item.time}</span>
+            {activitiesLoading ? (
+              <div className="flex flex-col gap-3">
+                {[1, 2, 3].map(i => <div key={i} className="h-16 bg-slate-100 animate-pulse rounded-xl" />)}
               </div>
-            ))}
+            ) : activities.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">Son aktivite bulunamadı.</div>
+            ) : (
+              activities.map((log) => (
+                <div key={log.id} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors group">
+                  <div className={`w-2 h-2 rounded-full ring-4 ring-white shrink-0 ${getLogColor(log.action)}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-700 truncate">
+                      {log.actionLabel} - {log.entityTypeLabel}
+                    </p>
+                    <p className="text-xs text-slate-500 truncate">
+                      {log.username} tarafından gerçekleştirildi
+                    </p>
+                  </div>
+                  <span className="text-xs text-slate-400 whitespace-nowrap">{formatTimeAgo(log.createdAt)}</span>
+                </div>
+              ))
+            )}
           </div>
         </div >
 

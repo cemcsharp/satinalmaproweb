@@ -63,9 +63,11 @@ export async function GET() {
             id: user.id,
             username: user.username,
             email: user.email,
+            phoneNumber: (user as any).phoneNumber || null,
             role: roleKey,
-            roleName: roleKey, // Simplified, can be mapped to label if needed
+            roleName: roleKey,
             createdAt: user.createdAt,
+            lastLoginAt: (user as any).lastLoginAt || null,
             unitId: user.unitId,
             unitLabel: user.unit?.label || null,
             permissions,
@@ -83,24 +85,29 @@ export async function PUT(req: NextRequest) {
         const userId = (session?.user as any)?.id;
 
         if (!userId) {
-            return NextResponse.json({ error: "unauthorized", debug: { hasSession: !!session, user: session?.user } }, { status: 401 });
+            return NextResponse.json({ error: "unauthorized" }, { status: 401 });
         }
 
         const body = await req.json().catch(() => ({}));
 
-        const { username } = body;
+        const { username, phoneNumber } = body;
 
-        if (!username || typeof username !== "string" || !username.trim()) {
-            return NextResponse.json({ error: "username_required" }, { status: 400 });
+        const data: any = {};
+        if (username !== undefined) data.username = username.trim();
+        if (phoneNumber !== undefined) data.phoneNumber = phoneNumber.trim();
+
+        if (Object.keys(data).length === 0) {
+            return NextResponse.json({ error: "no_data_provided" }, { status: 400 });
         }
 
         const user = await prisma.user.update({
             where: { id: userId },
-            data: { username: username.trim() },
+            data,
             select: {
                 id: true,
                 username: true,
                 email: true,
+                phoneNumber: true,
                 role: true,
             },
         });

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
-import { requireAuthApi } from "@/lib/apiAuth";
 import { renderEmailTemplate, dispatchEmail } from "@/lib/mailer";
+import { requirePermissionApi } from "@/lib/apiAuth";
+import { logAuditWithRequest, computeChanges } from "@/lib/auditLogger";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -51,8 +52,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await requireAuthApi(req);
-    if (!auth) return jsonError(401, "unauthorized");
+    const user = await requirePermissionApi(req, "sozlesme:edit");
+    if (!user) return jsonError(403, "forbidden");
     const { id } = await params;
     const url = new URL(req.url);
     const confirm = url.searchParams.get("confirm") === "true";
@@ -60,6 +61,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const existing = await prisma.contract.findUnique({ where: { id } });
     if (!existing) return jsonError(404, "not_found");
+    const before = existing;
 
     const patch: any = {};
     const allowed = ["title", "parties", "startDate", "endDate", "status", "type", "template"] as const;
@@ -132,6 +134,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         await dispatchEmail({ to, subject, html, category: "contract_status" });
       }
     } catch { }
+
+    // Audit log
+    const changes = computeChanges(before || {}, updated || {});
+    if (changes) {
+      await logAuditWithRequest(req, {
+        userId: user.id, // user is from requirePermissionApi
+        action: "UPDATE",
+        entityType: "Contract",
+        entityId: id,
+        oldData: changes.old,
+        newData: changes.new,
+      });
+    }
+
     return NextResponse.json(updated);
   } catch (e: any) {
     return jsonError(500, "update_failed", { message: e?.message });
@@ -140,13 +156,23 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const auth = await requireAuthApi(req);
-    if (!auth) return jsonError(401, "unauthorized");
+    const user = await requirePermissionApi(req, "sozlesme:delete");
+    if (!user) return jsonError(403, "forbidden");
     const { id } = await params;
     const existing = await prisma.contract.findUnique({ where: { id } });
     if (!existing) return jsonError(404, "not_found");
     if (existing.deletedAt) return NextResponse.json({ status: "already_deleted" });
     const deleted = await prisma.contract.update({ where: { id }, data: { deletedAt: new Date() } });
+
+    // Audit log
+    await logAuditWithRequest(req, {
+      userId: user.id,
+      action: "DELETE",
+      entityType: "Contract",
+      entityId: id,
+      oldData: { number: (existing as any).number, title: (existing as any).title },
+    });
+
     return NextResponse.json(deleted);
   } catch (e: any) {
     return jsonError(500, "delete_failed", { message: e?.message });

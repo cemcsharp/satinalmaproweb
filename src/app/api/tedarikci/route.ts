@@ -3,7 +3,88 @@ import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
 import { requirePermissionApi } from "@/lib/apiAuth";
 
-// Standardized supplier list with filtering, sorting, and pagination
+/**
+ * @swagger
+ * /api/tedarikci:
+ *   get:
+ *     summary: Tedarikçi listesini getirir
+ *     description: Filtreleme, sıralama ve sayfalama destekli tedarikçi listesi.
+ *     tags: [Tedarikçi]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: İsim, Vergi No, E-posta veya Telefon içinde arama yapar
+ *       - in: query
+ *         name: active
+ *         schema:
+ *           type: string
+ *           enum: [true, false]
+ *         description: Aktif/Pasif durumuna göre filtreler
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Başlangıç tarihi
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Bitiş tarihi
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [name, date]
+ *         description: Sıralama alanı
+ *       - in: query
+ *         name: sortDir
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *         description: Sıralama yönü
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Sayfa numarası
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Sayfa başına kayıt sayısı
+ *     responses:
+ *       200:
+ *         description: Tedarikçi listesi başarıyla getirildi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Supplier'
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 pageSize:
+ *                   type: integer
+ *       403:
+ *         description: Yetkisiz erişim
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 export async function GET(req: NextRequest) {
   // Permission check: tedarikci:read required
   const user = await requirePermissionApi(req, "tedarikci:read");
@@ -66,6 +147,61 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * @swagger
+ * /api/tedarikci:
+ *   post:
+ *     summary: Yeni tedarikçi oluşturur
+ *     tags: [Tedarikçi]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Tedarikçi adı
+ *               taxId:
+ *                 type: string
+ *                 description: Vergi numarası
+ *               contactName:
+ *                 type: string
+ *                 description: İlgili kişi adı
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phone:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               website:
+ *                 type: string
+ *               notes:
+ *                 type: string
+ *               categoryId:
+ *                 type: string
+ *                 description: Tedarikçi kategorisi ID'si
+ *               active:
+ *                 type: boolean
+ *                 default: true
+ *     responses:
+ *       201:
+ *         description: Tedarikçi başarıyla oluşturuldu
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Supplier'
+ *       400:
+ *         description: Geçersiz veri girişi
+ *       409:
+ *         description: Çakışan veri (Örn. Aynı isim veya Vergi No)
+ */
 export async function POST(req: NextRequest) {
   try {
     // Permission check: tedarikci:create required

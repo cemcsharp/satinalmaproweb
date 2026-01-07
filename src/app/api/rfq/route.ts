@@ -4,14 +4,11 @@ import { jsonError } from "@/lib/apiError";
 import { requirePermissionApi } from "@/lib/apiAuth";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 
+import crypto from "crypto";
+
 // Helper for token generation
 function generateToken() {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let token = "";
-    for (let i = 0; i < 32; i++) {
-        token += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return token;
+    return crypto.randomBytes(32).toString('hex');
 }
 
 export async function POST(req: NextRequest) {

@@ -4,6 +4,7 @@ import { parseDecimalFlexible } from "@/lib/format";
 import { jsonError } from "@/lib/apiError";
 import { requirePermissionApi } from "@/lib/apiAuth";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
+import { logAuditWithRequest } from "@/lib/auditLogger";
 
 type CreateOrderBody = {
   barcode: string;
@@ -19,6 +20,61 @@ type CreateOrderBody = {
   items: { name: string; quantity: number | string; unitPrice: number | string; unitId?: string; extraCosts?: number | string }[];
 };
 
+/**
+ * @swagger
+ * /api/siparis:
+ *   post:
+ *     summary: Yeni satın alma siparişi oluştur
+ *     description: Talebe istinaden veya bağımsız olarak yeni bir sipariş oluşturur. Birim ataması ve kalem detaylarını içerir.
+ *     tags:
+ *       - Order
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - barcode
+ *               - statusId
+ *               - methodId
+ *               - regulationId
+ *               - currencyId
+ *               - supplierId
+ *             properties:
+ *               barcode: { type: 'string', description: 'Benzersiz sipariş barkodu' }
+ *               statusId: { type: 'string', description: 'Durum ID' }
+ *               methodId: { type: 'string', description: 'Satınalma yöntemi ID' }
+ *               regulationId: { type: 'string', description: 'Mevzuat ID' }
+ *               currencyId: { type: 'string', description: 'Para birimi ID' }
+ *               supplierId: { type: 'string', description: 'Tedarikçi ID' }
+ *               companyId: { type: 'string', description: 'Şirket ID' }
+ *               requestBarcode: { type: 'string', description: 'İlgili talep barkodu (isteğe bağlı)' }
+ *               responsibleUserId: { type: 'string', description: 'Sorumlu kullanıcı ID' }
+ *               estimatedDelivery: { type: 'string', format: 'date-time', description: 'Tahmini teslimat tarihi' }
+ *               items:
+ *                 type: 'array',
+ *                 items:
+ *                   type: 'object',
+ *                   required: [name, quantity, unitPrice]
+ *                   properties:
+ *                     name: { type: 'string' }
+ *                     quantity: { type: 'number' }
+ *                     unitPrice: { type: 'number' }
+ *                     unitId: { type: 'string' }
+ *                     extraCosts: { type: 'number' }
+ *     responses:
+ *       201:
+ *         description: Sipariş başarıyla oluşturuldu
+ *       400:
+ *         description: Geçersiz veri veya eksik alanlar
+ *       403:
+ *         description: Yetkisiz erişim
+ *       409:
+ *         description: Barkod çakışması
+ */
 export async function POST(req: NextRequest) {
   try {
     // Permission check: siparis:create required
@@ -135,6 +191,15 @@ export async function POST(req: NextRequest) {
       }
     } catch { }
 
+    // Audit log for order creation
+    await logAuditWithRequest(req, {
+      userId: user.id,
+      action: "CREATE",
+      entityType: "Order",
+      entityId: created.id,
+      newData: { barcode: created.barcode, supplierId: body.supplierId, total },
+    });
+
     return NextResponse.json({ ok: true, id: created.id, barcode: created.barcode }, { status: 201 });
   } catch (e: any) {
     if (e?.message === "invalid_number_format") {
@@ -145,6 +210,67 @@ export async function POST(req: NextRequest) {
   }
 }
 
+/**
+ * @swagger
+ * /api/siparis:
+ *   get:
+ *     summary: Siparişleri listele
+ *     description: Yetki dahilindeki siparişleri filtreleme ve sıralama seçenekleriyle listeler.
+ *     tags:
+ *       - Order
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema: { type: 'string' }
+ *         description: Barkod veya referans numarasında arama
+ *       - in: query
+ *         name: status
+ *         schema: { type: 'string' }
+ *         description: Durum etiketine göre filtrele
+ *       - in: query
+ *         name: method
+ *         schema: { type: 'string' }
+ *         description: Yöntem etiketine göre filtrele
+ *       - in: query
+ *         name: dateFrom
+ *         schema: { type: 'string', format: 'date' }
+ *       - in: query
+ *         name: dateTo
+ *         schema: { type: 'string', format: 'date' }
+ *       - in: query
+ *         name: sortBy
+ *         schema: { type: 'string', enum: [date, total], default: date }
+ *       - in: query
+ *         name: sortDir
+ *         schema: { type: 'string', enum: [asc, desc], default: desc }
+ *       - in: query
+ *         name: page
+ *         schema: { type: 'integer', default: 1 }
+ *       - in: query
+ *         name: pageSize
+ *         schema: { type: 'integer', default: 20 }
+ *       - in: query
+ *         name: mode
+ *         schema: { type: 'string', enum: [pending-delivery] }
+ *         description: Özel görünüm modları
+ *     responses:
+ *       200:
+ *         description: Sipariş listesi başarıyla döndürüldü
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items:
+ *                   type: 'array'
+ *                   items: { $ref: '#/components/schemas/Order' }
+ *                 total: { type: 'integer' }
+ *                 page: { type: 'integer' }
+ *                 pageSize: { type: 'integer' }
+ *                 totalPages: { type: 'integer' }
+ */
 export async function GET(req: NextRequest) {
   try {
     // Permission check: siparis:read required
@@ -182,7 +308,7 @@ export async function GET(req: NextRequest) {
         select: { id: true }
       });
       if (statusItems.length > 0) {
-        statusFilter = { statusId: { in: statusItems.map(s => s.id) } };
+        statusFilter = { statusId: { in: statusItems.map((s: any) => s.id) } };
       }
     }
     // Only apply status filter if we have one
@@ -251,7 +377,7 @@ export async function GET(req: NextRequest) {
       take: pageSize,
     });
 
-    const mapped = rows.map((o) => ({
+    const mapped = rows.map((o: any) => ({
       id: o.id,
       barcode: o.barcode,
       refNumber: o.refNumber || "", // Include user ref no
