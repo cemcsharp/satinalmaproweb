@@ -14,19 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
   ]),
   {
-    files: ["src/app/api/**"],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-    },
-  },
-  {
-    files: ["src/app/**"],
-    rules: {
-      "react-hooks/exhaustive-deps": "warn",
-    },
-  },
-  {
-    files: ["src/**/*.ts", "src/**/*.tsx"],
+    files: ["**/*.{js,mjs,ts,tsx}"],
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": [
@@ -37,6 +25,14 @@ const eslintConfig = defineConfig([
           caughtErrors: "none",
         },
       ],
+      "react-hooks/exhaustive-deps": "warn",
+      "react/no-unescaped-entities": "warn",
+      "@typescript-eslint/no-require-imports": "warn",
+      "react/jsx-key": "warn",
+      "@typescript-eslint/ban-ts-comment": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+      "@next/next/no-html-link-for-pages": "warn",
+      "@next/next/no-img-element": "warn",
     },
   },
 ]);

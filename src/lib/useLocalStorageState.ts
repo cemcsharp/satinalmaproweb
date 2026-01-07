@@ -18,7 +18,7 @@ export default function useLocalStorageState<T>(key: string, initialValue: T) {
     } catch {
       // ignore read errors
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [key]);
 
   useEffect(() => {

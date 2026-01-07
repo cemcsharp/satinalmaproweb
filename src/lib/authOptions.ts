@@ -136,7 +136,7 @@ export const authOptions: NextAuthOptions = {
           tok.userId = uid;
 
           // Prioritize roleRef.key, fallback to flat role field
-          let role = me?.roleRef?.key || me?.role || "user";
+          const role = me?.roleRef?.key || me?.role || "user";
           tok.role = role;
         } catch (err) {
           console.error('[Auth JWT] Sync error:', err);

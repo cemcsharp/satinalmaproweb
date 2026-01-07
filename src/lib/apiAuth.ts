@@ -22,7 +22,7 @@ export async function requireAuthApi(req: NextRequest): Promise<ApiAuth> {
 
 export async function getSessionUser(): Promise<{ id: string; role: Role } | null> {
   const session = await getServerSession(authOptions);
-  let userId = (session as any)?.user?.id || (session as any)?.userId || null;
+  const userId = (session as any)?.user?.id || (session as any)?.userId || null;
 
   if (!userId) {
     return null;

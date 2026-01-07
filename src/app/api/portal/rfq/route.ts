@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
 
             // 1. Check if Supplier exists by Email
             let supplierId: string;
-            let existingSupplier = await prisma.supplier.findUnique({
+            const existingSupplier = await prisma.supplier.findUnique({
                 where: { email: rfqSupplier.email }
             });
 

@@ -30,7 +30,7 @@ export async function GET() {
         }
 
         // Determine actual role strictly from user record
-        let roleKey: string = user.role || "user";
+        const roleKey: string = user.role || "user";
 
         let permissions: string[] = [];
 

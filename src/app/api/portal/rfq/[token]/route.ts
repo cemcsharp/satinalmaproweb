@@ -19,7 +19,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
             const ip = req.headers.get("x-forwarded-for") || "unknown";
             await prisma.loginAttempt.create({
                 data: {
-                    identifier: `PORTAL_TOKEN_${token.substring(0, 8)}...`,
+                    reason: `PORTAL_TOKEN_${token.substring(0, 8)}...`,
                     ip,
                     success: false,
                     userAgent: req.headers.get("user-agent") || "unknown"

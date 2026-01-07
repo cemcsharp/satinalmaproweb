@@ -96,7 +96,7 @@ export function handleError(error: unknown): NextResponse<ApiErrorResponse> {
 
     // Generic error
     let errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.INTERNAL;
-    let errorCode = 'INTERNAL_ERROR';
+    const errorCode = 'INTERNAL_ERROR';
 
     // In production, log error to monitoring service (Sentry) and MASK the message
     if (process.env.NODE_ENV === 'production') {

@@ -212,7 +212,6 @@ export default function DashboardPage() {
           <StatCard
             title="Toplam Talep"
             value={loading ? "-" : stats?.requests || 0}
-            change={null}
             trend="up"
             variant="primary"
             icon={
@@ -227,7 +226,6 @@ export default function DashboardPage() {
           <StatCard
             title="Aktif Siparişler"
             value={loading ? "-" : stats?.orders || 0}
-            change={null}
             trend="up"
             variant="success"
             icon={
@@ -242,7 +240,6 @@ export default function DashboardPage() {
           <StatCard
             title="Sözleşmeler"
             value={loading ? "-" : stats?.contracts || 0}
-            change={null}
             trend="up"
             variant="info"
             icon={
@@ -257,7 +254,6 @@ export default function DashboardPage() {
           <StatCard
             title="Tedarikçiler"
             value={loading ? "-" : stats?.suppliers || 0}
-            change={null}
             trend="up"
             variant="warning"
             icon={

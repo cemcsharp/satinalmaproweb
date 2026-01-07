@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const username = String(body?.username || "").trim();
     const email = String(body?.email || "").trim().toLowerCase();
     const password = String(body?.password || "").trim();
-    let roleId = body?.roleId || null;
+    const roleId = body?.roleId || null;
     let roleString = body?.role || "user";
     const unitId = body?.unitId || null;
     const isActive = body?.isActive !== undefined ? body.isActive : true;

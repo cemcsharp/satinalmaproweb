@@ -15,8 +15,8 @@ import {
 import useSWR from 'swr';
 
 type Props = {
-    name?: string;
-    sku?: string;
+    name?: string | null;
+    sku?: string | null;
 };
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());

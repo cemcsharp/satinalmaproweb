@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
             if (del < total) allDelivered = false;
         }
 
-        let nextStatus = order.statusId;
+        const nextStatus = order.statusId;
         const statusLabel = allDelivered ? "Teslim Alındı" : (anyDelivered ? "Kısmi Teslimat" : null);
 
         if (statusLabel) {

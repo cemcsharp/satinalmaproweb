@@ -42,7 +42,7 @@ export default function SupplierReportsPage() {
     }
   };
 
-  useEffect(() => { refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [period]);
+  useEffect(() => { refresh();   }, [period]);
 
   const getDecisionBadge = (decision: string) => {
     switch (decision?.toLowerCase()) {
