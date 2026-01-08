@@ -5,13 +5,15 @@ import Link from "next/link";
 
 type ProfileMenuProps = {
     expanded: boolean;
+    profileLink?: string;
+    settingsLink?: string;
 };
 
 /**
  * ProfileMenu - User profile dropdown menu in sidebar
  * Shows user info, profile link, settings, and logout button
  */
-export default function ProfileMenu({ expanded }: ProfileMenuProps) {
+export default function ProfileMenu({ expanded, profileLink = "/profile", settingsLink = "/ayarlar" }: ProfileMenuProps) {
     const [open, setOpen] = useState(false);
     const { data: session } = useSession();
     const [userName, setUserName] = useState<string>("Kullanıcı");
@@ -80,7 +82,7 @@ export default function ProfileMenu({ expanded }: ProfileMenuProps) {
             {open && (
                 <div className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-slate-700 bg-slate-800 shadow-xl overflow-hidden">
                     <Link
-                        href="/profile"
+                        href={profileLink}
                         onClick={() => setOpen(false)}
                         className="flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
                     >
@@ -90,7 +92,7 @@ export default function ProfileMenu({ expanded }: ProfileMenuProps) {
                         Profil
                     </Link>
                     <Link
-                        href="/ayarlar"
+                        href={settingsLink}
                         onClick={() => setOpen(false)}
                         className="flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors border-t border-slate-700"
                     >

@@ -37,17 +37,18 @@ export default function TalepDetayPage() {
   const [error, setError] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSatinalma, setIsSatinalma] = useState(false);
 
   useEffect(() => {
     // Fetch Permissions
     fetch("/api/profile").then(r => r.json()).then(p => {
       setIsAdmin(p.isAdmin || p.role === "admin");
-      // Flatten permissions object to array of keys if needed, or assume p.permissions is the map.
-      // Usually /api/profile returns { user: ..., permissions: [...] } or just user with permissions?
-      // Let's check api/profile. Usually it returns user object. 
-      // My previous code in siparis/detay/page.tsx used: setPermissions(u.permissions || []);
-      // Let's assume standardized profile response.
-      if (p.permissions) setPermissions(p.permissions); // keys array
+
+      const unitLabelClean = (p.unitLabel || "").toLocaleLowerCase("tr-TR").replace(/\s/g, "");
+      const satinalma = unitLabelClean.includes("satınalma") || unitLabelClean.includes("satinlama");
+      setIsSatinalma(satinalma);
+
+      if (p.permissions) setPermissions(p.permissions);
     }).catch(() => { });
 
     if (!id) return;
@@ -93,31 +94,34 @@ export default function TalepDetayPage() {
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push("/talep/liste")}>Listeye Dön</Button>
-            <Button variant="gradient" onClick={() => router.push(`/talep/duzenle/${data.id}`)}>Düzenle</Button>
-            {/* Actions */}
-            <div className="flex flex-wrap gap-3">
-              {(isAdmin || permissions.includes("siparis:create") || true) && (data.status?.toLowerCase().includes("onay") || true) && (
-                <>
-                  <Button
-                    variant="gradient"
-                    onClick={() => router.push(`/siparis/olustur?requestId=${data.id}`)}
-                    className="shadow-lg shadow-blue-500/20"
-                  >
-                    Sipariş Oluştur
-                  </Button>
 
-                  {/* RFQ Button - Feature Flag Controlled (Using isAdmin for demo or checking a configured prop) */}
-                  {/* Temporarily enabled for everyone to test visibility */}
-                  <Button
-                    variant="secondary"
-                    onClick={() => router.push(`/rfq/olustur?requestId=${data.id}`)}
-                    className="bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200"
-                    title="Bu talep için tedarikçilerden teklif topla"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                    Teklif Topla (RFQ)
-                  </Button>
-                </>
+            {/* Düzenle: Sadece Taslak durumunda ve yetkisi varsa */}
+            {(isAdmin || permissions.includes("talep:edit")) && data.status?.toLowerCase().includes("taslak") && (
+              <Button variant="gradient" onClick={() => router.push(`/talep/duzenle/${data.id}`)}>Düzenle</Button>
+            )}
+
+            {/* Sipariş ve RFQ İşlemleri: Sadece Onaylı taleplerde */}
+            <div className="flex flex-wrap gap-3">
+              {(isAdmin || isSatinalma || permissions.includes("siparis:create")) && data.status?.toLowerCase().includes("onay") && (
+                <Button
+                  variant="gradient"
+                  onClick={() => router.push(`/siparis/olustur?requestId=${data.id}`)}
+                  className="shadow-lg shadow-blue-500/20"
+                >
+                  Sipariş Oluştur
+                </Button>
+              )}
+
+              {(isAdmin || isSatinalma || permissions.includes("rfq:create")) && data.status?.toLowerCase().includes("onay") && (
+                <Button
+                  variant="secondary"
+                  onClick={() => router.push(`/rfq/olustur?requestId=${data.id}`)}
+                  className="bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200"
+                  title="Bu talep için tedarikçilerden teklif topla"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                  Teklif Topla (RFQ)
+                </Button>
               )}
 
 

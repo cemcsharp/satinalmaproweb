@@ -35,8 +35,9 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     if (!item) return jsonError(404, "not_found");
 
     // Security Check: Isolation
-    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
-    const isAdmin = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+    const unitLabelClean = (user.unitLabel || "").toLocaleLowerCase("tr-TR").replace(/\s/g, "");
+    const isSatinalma = unitLabelClean.includes("satınalma") || unitLabelClean.includes("satinlama");
+    const isAdmin = user.isAdmin || isSatinalma;
     const isOwner = item.ownerUserId === user.id;
     const isResponsible = item.responsibleUserId === user.id;
     const isSameUnit = item.unitId === user.unitId;
@@ -129,8 +130,9 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     if (!existingReq) return jsonError(404, "not_found");
 
     // Security Check
-    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
-    const isAdmin = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+    const unitLabelClean = (user.unitLabel || "").toLocaleLowerCase("tr-TR").replace(/\s/g, "");
+    const isSatinalma = unitLabelClean.includes("satınalma") || unitLabelClean.includes("satinlama");
+    const isAdmin = user.isAdmin || isSatinalma;
     const isOwner = existingReq.ownerUserId === user.id;
     const isResponsible = existingReq.responsibleUserId === user.id;
     // const canEditUnit = existingReq.unitId === user.unitId && user.permissions.includes("talep:edit"); // Simplified
@@ -326,8 +328,9 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     if (!existingReq) return jsonError(404, "not_found");
 
     // Security Check
-    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
-    const isAdmin = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+    const unitLabelClean = (user.unitLabel || "").toLocaleLowerCase("tr-TR").replace(/\s/g, "");
+    const isSatinalma = unitLabelClean.includes("satınalma") || unitLabelClean.includes("satinlama");
+    const isAdmin = user.isAdmin || isSatinalma;
     const isOwner = existingReq.ownerUserId === user.id;
 
     if (!isAdmin && !isOwner) {

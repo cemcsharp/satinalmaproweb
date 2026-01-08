@@ -19,6 +19,14 @@ export default function SupplierCreatePage() {
   const [notes, setNotes] = useState("");
   const [active, setActive] = useState(true);
   const [categoryId, setCategoryId] = useState("");
+  const [taxOffice, setTaxOffice] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankBranch, setBankBranch] = useState("");
+  const [bankIban, setBankIban] = useState("");
+  const [bankAccountNo, setBankAccountNo] = useState("");
+  const [bankCurrency, setBankCurrency] = useState("TRY");
+  const [commercialRegistrationNo, setCommercialRegistrationNo] = useState("");
+  const [mersisNo, setMersisNo] = useState("");
   const [categories, setCategories] = useState<any[]>([]);
   const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string; taxId?: string }>({});
 
@@ -69,6 +77,14 @@ export default function SupplierCreatePage() {
           address: address || undefined,
           website: website || undefined,
           notes: notes || undefined,
+          taxOffice: taxOffice || undefined,
+          bankName: bankName || undefined,
+          bankBranch: bankBranch || undefined,
+          bankIban: bankIban || undefined,
+          bankAccountNo: bankAccountNo || undefined,
+          bankCurrency: bankCurrency || undefined,
+          commercialRegistrationNo: commercialRegistrationNo || undefined,
+          mersisNo: mersisNo || undefined,
           active,
         }),
       });
@@ -93,6 +109,14 @@ export default function SupplierCreatePage() {
     setAddress("");
     setWebsite("");
     setNotes("");
+    setTaxOffice("");
+    setBankName("");
+    setBankBranch("");
+    setBankIban("");
+    setBankAccountNo("");
+    setBankCurrency("TRY");
+    setCommercialRegistrationNo("");
+    setMersisNo("");
     setActive(true);
     setErrors({});
   };
@@ -143,6 +167,73 @@ export default function SupplierCreatePage() {
                 onChange={(e) => setTaxId(e.target.value)}
                 error={errors.taxId}
               />
+              <Input
+                label="Vergi Dairesi"
+                placeholder="Bağlı olduğu vergi dairesi"
+                value={taxOffice}
+                onChange={(e) => setTaxOffice(e.target.value)}
+              />
+              <Input
+                label="MERSİS No"
+                placeholder="16 haneli MERSİS no"
+                value={mersisNo}
+                onChange={(e) => setMersisNo(e.target.value)}
+              />
+              <Input
+                label="Ticaret Sicil No"
+                placeholder="Ticaret sicil numarası"
+                value={commercialRegistrationNo}
+                onChange={(e) => setCommercialRegistrationNo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Banka Bilgileri */}
+          <div className="col-span-1 md:col-span-2 space-y-4 pt-4">
+            <h3 className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2 mb-4 flex items-center gap-2">
+              <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
+              Banka ve Ödeme Bilgileri
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <Input
+                  label="IBAN"
+                  placeholder="TR..."
+                  value={bankIban}
+                  onChange={(e) => setBankIban(e.target.value.toUpperCase().replace(/\s/g, ''))}
+                  description="Boşluksuz ve TR ile başlayan format"
+                />
+              </div>
+              <Input
+                label="Banka Adı"
+                placeholder="Örn: Garanti BBVA"
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+              />
+              <Input
+                label="Şube"
+                placeholder="Banka şubesi"
+                value={bankBranch}
+                onChange={(e) => setBankBranch(e.target.value)}
+              />
+              <Input
+                label="Hesap No"
+                placeholder="Hesap numarası"
+                value={bankAccountNo}
+                onChange={(e) => setBankAccountNo(e.target.value)}
+              />
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-700">Para Birimi</label>
+                <select
+                  className="w-full h-10 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 bg-white"
+                  value={bankCurrency}
+                  onChange={(e) => setBankCurrency(e.target.value)}
+                >
+                  <option value="TRY">TRY - Türk Lirası</option>
+                  <option value="USD">USD - Amerikan Doları</option>
+                  <option value="EUR">EUR - Euro</option>
+                </select>
+              </div>
             </div>
           </div>
 

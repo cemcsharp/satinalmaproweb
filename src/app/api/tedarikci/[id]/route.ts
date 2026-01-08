@@ -38,12 +38,20 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       active: supplier.active,
       taxId: (supplier as any).taxId ?? null,
       contactName: (supplier as any).contactName ?? null,
-      email: (supplier as any).email ?? null,
-      phone: (supplier as any).phone ?? null,
-      address: (supplier as any).address ?? null,
-      website: (supplier as any).website ?? null,
-      notes: (supplier as any).notes ?? null,
-      createdAt: (supplier as any).createdAt?.toISOString?.() ?? null,
+      email: supplier.email,
+      phone: supplier.phone,
+      address: supplier.address,
+      website: supplier.website,
+      taxOffice: (supplier as any).taxOffice,
+      bankName: (supplier as any).bankName,
+      bankBranch: (supplier as any).bankBranch,
+      bankIban: (supplier as any).bankIban,
+      bankAccountNo: (supplier as any).bankAccountNo,
+      bankCurrency: (supplier as any).bankCurrency,
+      commercialRegistrationNo: (supplier as any).commercialRegistrationNo,
+      mersisNo: (supplier as any).mersisNo,
+      notes: supplier.notes,
+      createdAt: supplier.createdAt?.toISOString?.() ?? null,
       aggregates: {
         recentOrders,
 
@@ -78,7 +86,11 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
   }
 }
 
-// Minimal PATCH to update supplier core fields with validation
+// Minimal PATCH/PUT to update supplier core fields with validation
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  return PATCH(req, context);
+}
+
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   const safeId = String(id || "").trim();
@@ -109,6 +121,14 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     setStr("address");
     setStr("website");
     setStr("notes");
+    setStr("taxOffice");
+    setStr("bankName");
+    setStr("bankBranch");
+    setStr("bankIban");
+    setStr("bankAccountNo");
+    setStr("bankCurrency");
+    setStr("commercialRegistrationNo");
+    setStr("mersisNo");
     if (body.active !== undefined) data.active = Boolean(body.active);
 
     if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.push("invalid_email");

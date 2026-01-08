@@ -219,6 +219,14 @@ export async function POST(req: NextRequest) {
     const website = body?.website ? String(body.website).trim() : null;
     const notes = body?.notes ? String(body.notes).trim() : null;
     const categoryId = body?.categoryId ? String(body.categoryId).trim() : null;
+    const taxOffice = body?.taxOffice ? String(body.taxOffice).trim() : null;
+    const bankName = body?.bankName ? String(body.bankName).trim() : null;
+    const bankBranch = body?.bankBranch ? String(body.bankBranch).trim() : null;
+    const bankIban = body?.bankIban ? String(body.bankIban).trim() : null;
+    const bankAccountNo = body?.bankAccountNo ? String(body.bankAccountNo).trim() : null;
+    const bankCurrency = body?.bankCurrency ? String(body.bankCurrency).trim() : "TRY";
+    const commercialRegistrationNo = body?.commercialRegistrationNo ? String(body.commercialRegistrationNo).trim() : null;
+    const mersisNo = body?.mersisNo ? String(body.mersisNo).trim() : null;
 
     const errors: string[] = [];
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("invalid_email");
@@ -237,6 +245,14 @@ export async function POST(req: NextRequest) {
         website,
         notes,
         categoryId,
+        taxOffice,
+        bankName,
+        bankBranch,
+        bankIban,
+        bankAccountNo,
+        bankCurrency,
+        commercialRegistrationNo,
+        mersisNo
       },
     });
     return NextResponse.json(created, { status: 201 });

@@ -4,6 +4,15 @@ import { useParams } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import Button from "@/components/ui/Button";
 import { formatNumberTR } from "@/lib/format";
+import { signIn, useSession } from "next-auth/react";
+import PageHeader from "@/components/ui/PageHeader";
+import Card from "@/components/ui/Card";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
+import Textarea from "@/components/ui/Textarea";
+import Badge from "@/components/ui/Badge";
+import Alert from "@/components/ui/Alert";
+import { Table, TableContainer, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 
 type RfqPublicDetail = {
     ok: boolean;
@@ -20,11 +29,26 @@ type RfqPublicDetail = {
         }>;
     };
     supplier: {
+        id?: string;
         name: string;
         email: string;
         companyName?: string;
+        taxId?: string;
+        taxOffice?: string;
+        contactName?: string;
+        phone?: string;
+        address?: string;
+        website?: string;
+        bankName?: string;
+        bankBranch?: string;
+        bankIban?: string;
+        bankAccountNo?: string;
+        bankCurrency?: string;
+        commercialRegistrationNo?: string;
+        mersisNo?: string;
     };
     needsOnboarding?: boolean;
+    isRegistered?: boolean;
     existingOffer?: any;
 };
 
@@ -32,6 +56,7 @@ export default function SupplierPortalRfqPage() {
     const params = useParams();
     const token = String((params as any)?.token || "");
     const { show } = useToast();
+    const { data: session, status: authStatus } = useSession();
 
     const [data, setData] = useState<RfqPublicDetail | null>(null);
     const [loading, setLoading] = useState(true);
@@ -50,15 +75,24 @@ export default function SupplierPortalRfqPage() {
     const [attachments, setAttachments] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
 
-    const [step, setStep] = useState<"loading" | "onboard" | "offer">("loading");
+    const [step, setStep] = useState<"loading" | "landing" | "onboard" | "offer" | "login_required" | "error">("loading");
     const [onboardData, setOnboardData] = useState({
         name: "",
         taxId: "",
+        taxOffice: "",
         contactName: "",
         phone: "",
         address: "",
         website: "",
-        notes: ""
+        notes: "",
+        bankName: "",
+        bankBranch: "",
+        bankIban: "",
+        bankAccountNo: "",
+        bankCurrency: "TRY",
+        commercialRegistrationNo: "",
+        mersisNo: "",
+        password: ""
     });
 
     // Calculate totals grouped by currency
@@ -97,9 +131,36 @@ export default function SupplierPortalRfqPage() {
             })
             .then((val: RfqPublicDetail) => {
                 setData(val);
-                if (val.needsOnboarding && !val.existingOffer) {
+
+                // Corporate 2.0 Flow: Always show landing if not logged in
+                if (authStatus !== "authenticated") {
+                    setStep("landing");
+                }
+                else if (session?.user?.email !== val.supplier.email) {
+                    // Logged in as someone else? Show landing (which will show login/switch account)
+                    setStep("landing");
+                }
+                else if (val.needsOnboarding && !val.existingOffer) {
                     setStep("onboard");
-                    setOnboardData(prev => ({ ...prev, contactName: val.supplier.name || "", name: val.supplier.companyName || "" }));
+                    // Pre-fill existing supplier info
+                    setOnboardData(prev => ({
+                        ...prev,
+                        name: val.supplier.name || val.supplier.companyName || "",
+                        taxId: val.supplier.taxId || "",
+                        taxOffice: val.supplier.taxOffice || "",
+                        contactName: val.supplier.contactName || val.supplier.name || "",
+                        email: val.supplier.email || "",
+                        phone: val.supplier.phone || "",
+                        address: val.supplier.address || "",
+                        website: val.supplier.website || "",
+                        bankName: val.supplier.bankName || "",
+                        bankBranch: val.supplier.bankBranch || "",
+                        bankIban: val.supplier.bankIban || "",
+                        bankAccountNo: val.supplier.bankAccountNo || "",
+                        bankCurrency: val.supplier.bankCurrency || "TRY",
+                        commercialRegistrationNo: val.supplier.commercialRegistrationNo || "",
+                        mersisNo: val.supplier.mersisNo || ""
+                    }));
                 } else {
                     setStep("offer");
                 }
@@ -123,11 +184,15 @@ export default function SupplierPortalRfqPage() {
             })
             .catch(e => setError(e.message))
             .finally(() => setLoading(false));
-    }, [token]);
+    }, [token, authStatus, session]);
 
     const handleOnboardSubmit = async () => {
         if (!onboardData.name || onboardData.name.length < 2) {
             show({ title: "Hata", description: "Firma adı zorunludur.", variant: "error" });
+            return;
+        }
+        if (!onboardData.password || onboardData.password.length < 6) {
+            show({ title: "Hata", description: "Kurumsal hesap güvenliği için en az 6 karakterli bir şifre belirlemelisiniz.", variant: "error" });
             return;
         }
         setSubmitting(true);
@@ -208,30 +273,28 @@ export default function SupplierPortalRfqPage() {
         }
     };
 
-    // Loading
     if (loading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="flex items-center justify-center py-20">
                 <div className="text-center">
                     <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-slate-600"></div>
-                    <p className="mt-4 text-slate-500">Yükleniyor...</p>
+                    <p className="mt-4 text-slate-500 font-medium">Teklif formu yükleniyor...</p>
                 </div>
             </div>
         );
     }
 
-    // Error
     if (error) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+            <div className="flex items-center justify-center p-4 py-20">
                 <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md border border-slate-200">
                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                     </div>
-                    <h1 className="text-xl font-bold text-slate-800 mb-2">Davetiye Bulunamadı</h1>
-                    <p className="text-slate-500">{error}</p>
+                    <h1 className="text-xl font-bold text-slate-800 mb-2">Erişim Hatası</h1>
+                    <p className="text-slate-500 font-medium">{error}</p>
                 </div>
             </div>
         );
@@ -239,311 +302,506 @@ export default function SupplierPortalRfqPage() {
 
     if (!data) return null;
 
-    // ONBOARDING
-    if (step === "onboard") {
+    // LANDING PAGE (NEW CORPORATE ENTRY)
+    if (step === "landing") {
         return (
-            <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-                {/* Header */}
-                <header className="bg-white border-b border-slate-200 shadow-sm">
-                    <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-3">
-                        <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center">
-                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 className="font-bold text-slate-800">Tedarikçi Portalı</h1>
-                            <p className="text-xs text-slate-500">Firma Kayıt Formu</p>
-                        </div>
-                    </div>
-                </header>
-
-                <div className="max-w-3xl mx-auto px-4 py-10">
-                    <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-                        <div className="bg-slate-800 px-8 py-6 text-center">
-                            <h2 className="text-xl font-bold text-white">Hoş Geldiniz!</h2>
-                            <p className="text-slate-300 text-sm mt-1">Teklif vermeden önce firmanızı tanıtın.</p>
+            <div className="flex items-center justify-center p-4 py-12 min-h-[60vh]">
+                <Card className="max-w-2xl w-full overflow-hidden border-none shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 rounded-[3rem]">
+                    <div className="p-8 md:p-14 text-center">
+                        <div className="flex justify-center mb-10">
+                            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-blue-200 ring-8 ring-blue-50 transform hover:rotate-6 transition-transform">
+                                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                            </div>
                         </div>
 
-                        <div className="p-8 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">Firma Adı / Unvanı <span className="text-red-500">*</span></label>
-                                    <input
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all"
-                                        placeholder="Örn: ABC A.Ş."
-                                        value={onboardData.name}
-                                        onChange={(e) => setOnboardData({ ...onboardData, name: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">Vergi No / TCKN</label>
-                                    <input
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all"
-                                        placeholder="Vergi numaranız"
-                                        value={onboardData.taxId}
-                                        onChange={(e) => setOnboardData({ ...onboardData, taxId: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">Yetkili Kişi</label>
-                                    <input
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all"
-                                        placeholder="Ad Soyad"
-                                        value={onboardData.contactName}
-                                        onChange={(e) => setOnboardData({ ...onboardData, contactName: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">Telefon</label>
-                                    <input
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all"
-                                        placeholder="05..."
-                                        value={onboardData.phone}
-                                        onChange={(e) => setOnboardData({ ...onboardData, phone: e.target.value })}
-                                    />
-                                </div>
+                        <div className="mb-12">
+                            <h1 className="text-4xl font-black text-slate-900 mb-6 tracking-tighter">SatınalmaPRO Portal</h1>
+                            <div className="flex justify-center mb-6">
+                                <Badge variant="primary" className="px-6 py-2 rounded-2xl text-sm font-black uppercase tracking-widest shadow-sm">
+                                    {data.rfq.rfxCode}
+                                </Badge>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Adres</label>
-                                <textarea
-                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all resize-none"
-                                    rows={2}
-                                    placeholder="Açık adresiniz"
-                                    value={onboardData.address}
-                                    onChange={(e) => setOnboardData({ ...onboardData, address: e.target.value })}
-                                />
-                            </div>
-                            <div className="pt-4 border-t border-slate-200">
+                            <p className="text-2xl font-semibold text-slate-500 max-w-lg mx-auto leading-tight italic">
+                                "{data.rfq.title}"
+                            </p>
+                        </div>
+
+                        <div className="space-y-6 max-w-sm mx-auto">
+                            <Button
+                                onClick={() => signIn(undefined, { callbackUrl: window.location.href })}
+                                className="w-full h-20 rounded-[1.5rem] shadow-[0_20px_40px_-15px_rgba(37,99,235,0.4)] text-xl font-black !gap-4"
+                                variant="primary"
+                            >
+                                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                                </svg>
+                                Kurumsal Giriş Yap
+                            </Button>
+
+                            {data.isRegistered ? (
+                                <div className="pt-6">
+                                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full border border-blue-100 mb-2">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                        <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">Hesap Tanımlı</span>
+                                    </div>
+                                    <p className="text-sm text-slate-400 font-bold">Lütfen mail adresiniz ve şifrenizle devam edin.</p>
+                                </div>
+                            ) : (
                                 <Button
-                                    onClick={handleOnboardSubmit}
-                                    disabled={submitting}
-                                    variant="gradient"
-                                    size="lg"
-                                    className="w-full"
+                                    onClick={() => setStep("onboard")}
+                                    variant="outline"
+                                    className="w-full h-20 rounded-[1.5rem] border-[3px] text-xl font-black shadow-lg shadow-slate-100/50"
                                 >
-                                    {submitting ? "Kaydediliyor..." : "Kaydet ve Devam Et →"}
+                                    Yeni Firma Aktivasyonu
                                 </Button>
+                            )}
+                        </div>
+
+                        <div className="mt-16 pt-10 border-t border-slate-100/60 flex items-center justify-center gap-12">
+                            <div className="text-center">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Veri Güvenliği</p>
+                                <p className="text-sm font-black text-slate-800">Uçtan Uca</p>
+                            </div>
+                            <div className="w-px h-8 bg-slate-100 rotate-12"></div>
+                            <div className="text-center">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Standart</p>
+                                <p className="text-sm font-black text-slate-800">ISO 27001</p>
                             </div>
                         </div>
                     </div>
-                </div>
+                </Card>
             </div>
         );
     }
 
-    // OFFER FORM
-    return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-            {/* Header */}
-            <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-10">
-                <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center">
-                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 className="font-bold text-slate-800">{data.rfq.rfxCode}</h1>
-                            <p className="text-xs text-slate-500">Fiyat Teklifi Formu</p>
-                        </div>
-                    </div>
-                    {deadlineInfo && (
-                        <div className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${deadlineInfo.isUrgent ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Son: {deadlineInfo.date}
-                        </div>
-                    )}
-                </div>
-            </header>
-
-            <div className="max-w-5xl mx-auto px-4 py-8">
-                {/* Success */}
-                {submitted && (
-                    <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-center gap-4">
-                        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-emerald-800">Teklifiniz Alındı!</h3>
-                            <p className="text-sm text-emerald-600">Güncelleme yapmak isterseniz formu düzenleyebilirsiniz.</p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Request Info Card */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-                    <div>
-                        <h2 className="text-xl font-bold text-slate-800">{data.rfq.title}</h2>
-                        <p className="text-slate-500 mt-1">
-                            Sayın <span className="font-medium text-slate-700">{data.supplier.name}</span>, lütfen teklifinizi aşağıya giriniz.
-                        </p>
-                    </div>
-                </div>
-
-                {/* KDV Warning */}
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 mb-6">
-                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    // LOGIN REQUIRED
+    if (step === "login_required") {
+        return (
+            <div className="flex items-center justify-center p-4 py-20 min-h-[60vh]">
+                <Card className="p-12 text-center max-w-lg border-none shadow-2xl animate-in fade-in zoom-in duration-500 rounded-[3rem]">
+                    <div className="w-24 h-24 bg-blue-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-inner ring-1 ring-blue-100">
+                        <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                     </div>
-                    <div>
-                        <h4 className="font-semibold text-amber-800">ÖNEMLİ: Tüm Fiyatlar KDV HARİÇ Girilmelidir</h4>
-                        <p className="text-sm text-amber-700 mt-1">Kurumumuz tüm teklifleri KDV hariç değerlendirmektedir.</p>
+                    <h1 className="text-3xl font-black text-slate-900 mb-6 tracking-tight">Erişim İçin Oturum Açın</h1>
+                    <p className="text-slate-500 font-semibold leading-relaxed mb-12 text-lg">
+                        Bu satın alma süreci için sistemimizde tanımlı bir kurumsal hesabınız bulunmaktadır. Güvenliğiniz için lütfen giriş yapınız.
+                    </p>
+                    <div className="space-y-6">
+                        <Button
+                            onClick={() => signIn(undefined, { callbackUrl: window.location.href })}
+                            className="w-full h-18 rounded-2xl text-xl font-black shadow-xl"
+                            variant="primary"
+                        >
+                            Giriş Yap ve Devam Et
+                        </Button>
+                        <div className="pt-6 border-t border-slate-50 flex items-center justify-center gap-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hesap Email:</span>
+                            <span className="text-sm font-black text-blue-600 tracking-tight">{data?.supplier.email}</span>
+                        </div>
                     </div>
-                </div>
+                </Card>
+            </div>
+        );
+    }
 
-                {/* Products Table */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200">
-                                <th className="text-left px-5 py-4 text-sm font-semibold text-slate-600">Ürün / Hizmet</th>
-                                <th className="text-left px-5 py-4 text-sm font-semibold text-slate-600">Miktar</th>
-                                <th className="text-left px-5 py-4 text-sm font-semibold text-slate-600">Marka/Not</th>
-                                <th className="text-right px-5 py-4 text-sm font-semibold text-slate-600">Birim Fiyat <span className="text-amber-600">(KDV HARİÇ)</span></th>
-                                <th className="text-center px-5 py-4 text-sm font-semibold text-slate-600">Para Birimi</th>
-                                <th className="text-right px-5 py-4 text-sm font-semibold text-slate-600">Toplam</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {data.rfq.items.map((item) => {
-                                const price = prices[item.id] || 0;
-                                const curr = itemCurrencies[item.id] || "TRY";
-                                const total = item.quantity * price;
-                                return (
-                                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-5 py-4">
-                                            <div className="font-medium text-slate-800">{item.name}</div>
-                                            {item.description && <div className="text-xs text-slate-400 mt-0.5">{item.description}</div>}
-                                        </td>
-                                        <td className="px-5 py-4">
-                                            <span className="font-medium text-slate-700">{formatNumberTR(item.quantity)}</span>
-                                            <span className="text-slate-400 text-sm ml-1">{item.unit}</span>
-                                        </td>
-                                        <td className="px-5 py-4">
-                                            <input
-                                                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-transparent"
-                                                placeholder="Marka veya not..."
-                                                value={notes[item.id] || brands[item.id] || ""}
-                                                onChange={e => setNotes({ ...notes, [item.id]: e.target.value })}
-                                            />
-                                        </td>
-                                        <td className="px-5 py-4">
-                                            <input
-                                                type="number"
-                                                className="w-28 ml-auto px-3 py-2 border border-slate-200 rounded-lg text-slate-700 text-right font-mono focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-transparent"
-                                                placeholder="0,00"
-                                                value={prices[item.id] || ""}
-                                                onChange={e => setPrices({ ...prices, [item.id]: Number(e.target.value) })}
-                                            />
-                                        </td>
-                                        <td className="px-5 py-4 text-center">
-                                            <select
-                                                className="px-3 py-2 border border-slate-200 rounded-lg text-slate-700 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-                                                value={curr}
-                                                onChange={e => setItemCurrencies({ ...itemCurrencies, [item.id]: e.target.value })}
-                                            >
-                                                {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                            </select>
-                                        </td>
-                                        <td className="px-5 py-4 text-right">
-                                            <span className="font-bold text-slate-800 font-mono">{formatNumberTR(total)}</span>
-                                            <span className="text-slate-400 text-sm ml-1">{curr}</span>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                        <tfoot>
-                            <tr className="bg-slate-800">
-                                <td colSpan={5} className="px-5 py-4 text-right text-white font-semibold">
-                                    GENEL TOPLAM <span className="text-amber-400">(KDV HARİÇ)</span>:
-                                </td>
-                                <td className="px-5 py-4 text-right">
-                                    <div className="space-y-1">
-                                        {Object.entries(currencyTotals).filter(([_, v]) => v > 0).map(([curr, total]) => (
-                                            <div key={curr} className="text-white">
-                                                <span className="text-xl font-bold">{formatNumberTR(total)}</span>
-                                                <span className="text-slate-300 ml-2">{curr}</span>
-                                            </div>
-                                        ))}
+    // ONBOARDING
+    if (step === "onboard") {
+        return (
+            <div className="max-w-4xl mx-auto py-12 px-4">
+                <Card className="border-none shadow-2xl overflow-hidden rounded-[3rem]">
+                    <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 px-12 py-12 text-center relative">
+                        <div className="absolute top-0 right-0 p-10 opacity-10">
+                            <svg className="w-40 h-40 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                        </div>
+                        <h2 className="text-4xl font-black text-white tracking-tighter relative z-10 mb-4 text-shadow-sm">Firma Aktivasyonu</h2>
+                        <p className="text-blue-100 text-xl font-medium opacity-90 relative z-10 max-w-lg mx-auto leading-relaxed">Süreci başlatmak için kurumsal bilgilerinizi doğrulayınız ve porta giriş şifrenizi belirleyiniz.</p>
+                    </div>
+
+                    <div className="p-10 md:p-14 space-y-12 bg-white">
+                        {/* Section 1: Firma Kimlik */}
+                        <div className="space-y-8">
+                            <h3 className="text-xs font-black text-blue-600 uppercase tracking-[0.3em] flex items-center gap-4 before:h-px before:flex-1 before:bg-slate-100 after:h-px after:flex-1 after:bg-slate-100">
+                                01. FİRMA KİMLİK BİLGİLERİ
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="md:col-span-2">
+                                    <Input
+                                        label="Resmi Firma Ünvanı"
+                                        required
+                                        placeholder="Ticaret sicilindeki tam ünvan"
+                                        value={onboardData.name}
+                                        onChange={(e) => setOnboardData({ ...onboardData, name: e.target.value })}
+                                        className="text-lg font-bold"
+                                    />
+                                </div>
+                                <Input
+                                    label="Vergi Numarası / TC Kimlik"
+                                    required
+                                    placeholder="0000000000"
+                                    value={onboardData.taxId}
+                                    onChange={(e) => setOnboardData({ ...onboardData, taxId: e.target.value })}
+                                    className="text-lg font-bold"
+                                />
+                                <Input
+                                    label="Vergi Dairesi"
+                                    required
+                                    placeholder="Daire adı"
+                                    value={onboardData.taxOffice}
+                                    onChange={(e) => setOnboardData({ ...onboardData, taxOffice: e.target.value })}
+                                    className="text-lg font-bold"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Section 2: İletişim */}
+                        <div className="space-y-8">
+                            <h3 className="text-xs font-black text-blue-600 uppercase tracking-[0.3em] flex items-center gap-4 before:h-px before:flex-1 before:bg-slate-100 after:h-px after:flex-1 after:bg-slate-100">
+                                02. İLETİŞİM VE ADRES
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <Input
+                                    label="Yetkili Ad Soyad"
+                                    required
+                                    placeholder="İrtibat kişisi"
+                                    value={onboardData.contactName}
+                                    onChange={(e) => setOnboardData({ ...onboardData, contactName: e.target.value })}
+                                    className="text-lg font-bold"
+                                />
+                                <Input
+                                    label="Kurumsal Telefon"
+                                    required
+                                    placeholder="+90 000 000 00 00"
+                                    value={onboardData.phone}
+                                    onChange={(e) => setOnboardData({ ...onboardData, phone: e.target.value })}
+                                    className="text-lg font-bold"
+                                />
+                                <div className="md:col-span-2">
+                                    <Textarea
+                                        label="Merkez Adresi"
+                                        required
+                                        placeholder="Tam adres bilgisi"
+                                        value={onboardData.address}
+                                        onChange={(e) => setOnboardData({ ...onboardData, address: e.target.value })}
+                                        className="text-lg font-bold h-24"
+                                    />
+                                </div>
+                                <Input
+                                    label="Kurumsal Web Adresi"
+                                    placeholder="www.firma.com"
+                                    value={onboardData.website}
+                                    onChange={(e) => setOnboardData({ ...onboardData, website: e.target.value })}
+                                    className="text-lg font-bold"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Section 3: Banka */}
+                        <div className="space-y-8">
+                            <h3 className="text-xs font-black text-blue-600 uppercase tracking-[0.3em] flex items-center gap-4 before:h-px before:flex-1 before:bg-slate-100 after:h-px after:flex-1 after:bg-slate-100">
+                                03. BANKA HESAP BİLGİLERİ
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
+                                <Input
+                                    label="Banka Adı"
+                                    placeholder="Örn: Garanti BBVA"
+                                    value={onboardData.bankName}
+                                    onChange={(e) => setOnboardData({ ...onboardData, bankName: e.target.value })}
+                                    className="bg-white text-lg font-bold"
+                                />
+                                <Select
+                                    label="Hesap Para Birimi"
+                                    options={CURRENCIES.map(c => ({ label: c, value: c }))}
+                                    value={onboardData.bankCurrency}
+                                    onChange={(e) => setOnboardData({ ...onboardData, bankCurrency: e.target.value })}
+                                    className="bg-white text-lg font-bold"
+                                />
+                                <div className="md:col-span-2">
+                                    <Input
+                                        label="IBAN Numarası"
+                                        placeholder="TR00 0000 0000 0000 0000 0000 00"
+                                        value={onboardData.bankIban}
+                                        onChange={(e) => setOnboardData({ ...onboardData, bankIban: e.target.value })}
+                                        className="bg-white text-xl font-mono font-black tracking-tighter"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section 4: Güvenlik */}
+                        <div className="pt-8">
+                            <Card className="bg-blue-600 p-10 border-none shadow-2xl shadow-blue-200 rounded-[2.5rem] relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-8 opacity-5 scale-150 rotate-12 group-hover:rotate-0 transition-transform duration-700">
+                                    <svg className="w-32 h-32 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-black text-white uppercase tracking-widest mb-8 flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
                                     </div>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                                    Portal Hesap Güvenliği
+                                </h3>
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-sm font-black text-blue-100 uppercase tracking-widest mb-3">Yeni Şifreniz <span className="text-red-300">*</span></label>
+                                        <input
+                                            type="password"
+                                            className="w-full h-18 px-8 bg-white/10 border-2 border-white/20 rounded-2xl text-white text-2xl font-black placeholder-white/30 focus:outline-none focus:ring-4 focus:ring-white/20 focus:bg-white/20 transition-all shadow-inner"
+                                            placeholder="••••••••"
+                                            value={onboardData.password}
+                                            onChange={(e) => setOnboardData({ ...onboardData, password: e.target.value })}
+                                        />
+                                    </div>
+                                    <p className="text-sm text-blue-50 font-semibold opacity-80 leading-relaxed max-w-md">
+                                        Tedarikçi portalına erişmek ve tekliflerinizi yönetmek için kullanacağınız güvenli giriş şifresidir.
+                                    </p>
+                                </div>
+                            </Card>
+                        </div>
 
-                {/* Notes & Attachments */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                            <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Genel Notlar
-                        </h3>
-                        <textarea
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-transparent resize-none h-32"
-                            placeholder="Teslimat koşulları, ödeme vadesi vb..."
-                            value={generalNote}
-                            onChange={e => setGeneralNote(e.target.value)}
-                        />
+                        <div className="pt-12">
+                            <Button
+                                onClick={handleOnboardSubmit}
+                                loading={submitting}
+                                className="w-full h-24 rounded-[2rem] text-2xl font-black shadow-2xl shadow-blue-200 tracking-tighter !gap-6 group"
+                                variant="primary"
+                            >
+                                {submitting ? "Bilgiler Kaydediliyor..." : "Aktivasyonu Tamamla ve Giriş Yap"}
+                                <svg className="w-8 h-8 group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </Button>
+                            <div className="mt-8 flex items-center justify-center gap-4">
+                                <span className="w-12 h-px bg-slate-100"></span>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Kurumsal Tedarik Ağı Standartları</p>
+                                <span className="w-12 h-px bg-slate-100"></span>
+                            </div>
+                        </div>
                     </div>
+                </Card>
+            </div>
+        );
+    }
 
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                            <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                            </svg>
-                            Dosya Ekle
-                        </h3>
-                        <label className={`flex flex-col items-center justify-center py-8 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                            <svg className="w-10 h-10 text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                            <span className="text-slate-500 text-sm">{uploading ? "Yükleniyor..." : "Teklif, katalog, vb. yükleyin"}</span>
-                            <input type="file" className="hidden" multiple onChange={handleFileUpload} disabled={uploading} />
-                        </label>
-                        {attachments.length > 0 && (
-                            <ul className="mt-4 space-y-2">
-                                {attachments.map((url, idx) => (
-                                    <li key={idx} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
-                                        <a href={url} target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-slate-800 text-sm truncate max-w-[180px]">
-                                            📎 {url.split('/').pop()}
-                                        </a>
-                                        <button onClick={() => removeAttachment(url)} className="text-red-500 hover:text-red-700 p-1">✕</button>
-                                    </li>
-                                ))}
-                            </ul>
+    // DEFAULT: OFFER FORM
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <PageHeader
+                title={data.rfq.title}
+                description={`Sayın ${data.supplier.name}, bu süreç için kurumsal teklifinizi aşağıda detaylandırabilirsiniz.`}
+                icon={
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                }
+                actions={
+                    <div className="flex items-center gap-3">
+                        <Badge variant="primary" className="px-4 py-1.5 rounded-xl font-black">{data.rfq.rfxCode}</Badge>
+                        {deadlineInfo && (
+                            <Badge
+                                variant={deadlineInfo.isUrgent ? "error" : "success"}
+                                className="px-4 py-1.5 rounded-xl font-black"
+                            >
+                                {deadlineInfo.date}
+                            </Badge>
+                        )}
+                    </div>
+                }
+            />
+
+            {submitted && (
+                <Alert
+                    variant="success"
+                    title="Teklif Başarıyla Gönderildi"
+                    dismissible={true}
+                    onDismiss={() => setSubmitted(false)}
+                >
+                    Teklifiniz sisteme kaydedilmiştir. Süreç bitimine kadar dilediğiniz zaman güncelleyebilirsiniz.
+                </Alert>
+            )}
+
+            <Alert
+                variant="info"
+                title="Birim Fiyatlandırma Esasları"
+            >
+                Tüm birim fiyatlar KDV HARİÇ olarak girilmelidir. Sistem, değerlendirmeleri kurumsal vergi standartlarına göre otomatik yapacaktır.
+            </Alert>
+
+            <TableContainer>
+                <Table>
+                    <THead>
+                        <TR>
+                            <TH className="w-[30%]">Ürün / Hizmet</TH>
+                            <TH className="w-[10%] text-center" align="center">Miktar</TH>
+                            <TH className="w-[25%]">Marka & Spesifikasyon</TH>
+                            <TH className="w-[15%] text-right" align="right">Birim Fiyat</TH>
+                            <TH className="w-[10%] text-center" align="center">Döviz</TH>
+                            <TH className="w-[10%] text-right" align="right">Toplam</TH>
+                        </TR>
+                    </THead>
+                    <TBody>
+                        {data.rfq.items.map((item) => {
+                            const price = prices[item.id] || 0;
+                            const curr = itemCurrencies[item.id] || "TRY";
+                            const total = item.quantity * price;
+                            return (
+                                <TR key={item.id}>
+                                    <TD>
+                                        <div className="font-bold text-slate-800 text-lg">{item.name}</div>
+                                        {item.description && <div className="text-xs text-slate-400 mt-1 line-clamp-1">{item.description}</div>}
+                                    </TD>
+                                    <TD align="center">
+                                        <Badge variant="info" className="font-bold">
+                                            {formatNumberTR(item.quantity)} {item.unit}
+                                        </Badge>
+                                    </TD>
+                                    <TD>
+                                        <Input
+                                            placeholder="Marka/Model..."
+                                            size="sm"
+                                            value={notes[item.id] || brands[item.id] || ""}
+                                            onChange={e => setNotes({ ...notes, [item.id]: e.target.value })}
+                                            className="bg-slate-50 border-none focus:bg-white transition-all shadow-none"
+                                        />
+                                    </TD>
+                                    <TD align="right">
+                                        <Input
+                                            type="number"
+                                            placeholder="0.00"
+                                            size="sm"
+                                            value={prices[item.id] || ""}
+                                            onChange={e => setPrices({ ...prices, [item.id]: Number(e.target.value) })}
+                                            className="w-28 ml-auto font-black text-blue-600 bg-slate-50 border-none focus:bg-white transition-all shadow-none text-right"
+                                        />
+                                    </TD>
+                                    <TD align="center">
+                                        <Select
+                                            size="sm"
+                                            options={CURRENCIES.map(c => ({ label: c, value: c }))}
+                                            value={curr}
+                                            onChange={e => setItemCurrencies({ ...itemCurrencies, [item.id]: e.target.value })}
+                                            className="bg-slate-50 border-none focus:bg-white transition-all shadow-none font-bold"
+                                        />
+                                    </TD>
+                                    <TD align="right">
+                                        <span className="font-black text-slate-900 font-mono text-base">{formatNumberTR(total)}</span>
+                                        <span className="text-[10px] font-black text-slate-400 ml-1.5">{curr}</span>
+                                    </TD>
+                                </TR>
+                            );
+                        })}
+                    </TBody>
+                </Table>
+
+                {/* Table Footer - Totals summary */}
+                <div className="bg-slate-900 p-8 flex flex-col md:flex-row items-center justify-between gap-6 border-t-[8px] border-blue-600">
+                    <div className="text-center md:text-left">
+                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mb-1">Hesaplanan Teklif Özeti</p>
+                        <h3 className="text-xl font-black text-white">GENEL TOPLAM <span className="text-blue-500/60 font-medium ml-2">(KDV HARİÇ)</span></h3>
+                    </div>
+                    <div className="flex flex-wrap justify-center md:justify-end gap-6 border-l border-white/10 pl-8">
+                        {Object.keys(currencyTotals).length === 0 || Object.values(currencyTotals).every(v => v === 0) ? (
+                            <div className="text-white/20 text-3xl font-black italic tracking-tighter">0,00 TRY</div>
+                        ) : (
+                            Object.entries(currencyTotals).filter(([_, v]) => v > 0).map(([curr, total]) => (
+                                <div key={curr} className="text-right">
+                                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-0.5">{curr} Bazında</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-3xl font-black text-white tracking-tighter">{formatNumberTR(total)}</span>
+                                        <span className="text-blue-500 text-sm font-black italic">{curr}</span>
+                                    </div>
+                                </div>
+                            ))
                         )}
                     </div>
                 </div>
+            </TableContainer>
 
-                {/* Submit */}
-                <div className="flex justify-end mb-12">
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={submitting}
-                        variant="gradient"
-                        size="lg"
-                        className="px-10 shadow-lg"
-                    >
-                        {submitting ? "Gönderiliyor..." : submitted ? "Teklifi Güncelle" : "Teklifi Gönder"}
-                    </Button>
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <Card className="p-8 border-none shadow-xl rounded-[2.5rem]">
+                    <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </div>
+                        Ek Kurumsal Notlarınız
+                    </h3>
+                    <Textarea
+                        placeholder="Ödeme vadesi, teslimat süresi veya diğer kurumsal notlarınızı buraya ekleyebilirsiniz..."
+                        value={generalNote}
+                        onChange={e => setGeneralNote(e.target.value)}
+                        className="bg-slate-50 border-none focus:bg-white h-44 text-lg font-bold p-6 rounded-3xl transition-all"
+                    />
+                </Card>
 
-                {/* Footer */}
-                <div className="text-center text-slate-400 text-sm pb-8">
-                    © {new Date().getFullYear()} Satınalma Pro • Tedarikçi Portalı
-                </div>
+                <Card className="p-8 border-none shadow-xl rounded-[2.5rem]">
+                    <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                        </div>
+                        Dosya Ekleri (PDF, XLSX)
+                    </h3>
+                    <label className={`flex flex-col items-center justify-center py-12 border-4 border-dashed border-slate-100 rounded-[2.5rem] cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all group ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
+                            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                        </div>
+                        <span className="text-slate-500 text-xs font-black uppercase tracking-[0.2em]">{uploading ? "Sistem Yüklüyor..." : "Dosya Seçin veya Sürükleyin"}</span>
+                        <input type="file" className="hidden" multiple onChange={handleFileUpload} disabled={uploading} />
+                    </label>
+                    {attachments.length > 0 && (
+                        <div className="mt-8 space-y-3">
+                            {attachments.map((url, idx) => (
+                                <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-100/50 rounded-2xl px-6 py-4 group hover:bg-white hover:shadow-lg hover:border-blue-200 transition-all">
+                                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-slate-700 font-black text-sm truncate flex items-center gap-3">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                        {url.split('/').pop()}
+                                    </a>
+                                    <button onClick={() => removeAttachment(url)} className="text-slate-300 hover:text-red-600 transition-colors p-2 bg-white rounded-lg shadow-sm border border-slate-100">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </Card>
+            </div>
+
+            <div className="flex justify-end pt-12 pb-24">
+                <Button
+                    onClick={handleSubmit}
+                    loading={submitting}
+                    className="h-28 px-16 rounded-[2.5rem] shadow-[0_25px_50px_-12px_rgba(37,99,235,0.5)] text-3xl font-black italic tracking-tighter transform hover:-translate-y-2 active:scale-95 transition-all !gap-10 group"
+                    variant="primary"
+                >
+                    <div>
+                        <span className="block text-3xl leading-none">Teklifi Tamamla</span>
+                        <span className="block text-[10px] font-black uppercase tracking-[0.4em] text-blue-100 mt-2 opacity-60">Sistem Kaydı İçin Onaylayın</span>
+                    </div>
+                    <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-blue-600 shadow-xl group-hover:rotate-12 transition-transform">
+                        {submitting ? (
+                            <div className="w-8 h-8 border-[6px] border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                            <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                        )}
+                    </div>
+                </Button>
             </div>
         </div>
     );

@@ -149,16 +149,19 @@ export async function POST(req: NextRequest) {
                 for (const invite of result.supplierInvites) {
                     const link = `${origin}/portal/rfq/${invite.token}`;
                     const html = renderEmailTemplate("generic", {
-                        title: `Fiyat Teklifi İsteği: ${result.rfq.rfxCode}`,
+                        title: `Tedarikçi Kaydı ve Teklif İsteği: ${result.rfq.rfxCode}`,
                         body: `<p>Sayın ${invite.contactName},</p>
-                   <p><strong>${title}</strong> için fiyat teklifinizi bekliyoruz.</p>
-                   <p style="background-color:#fffbeb; border:1px solid #fcd34d; padding:12px; border-radius:6px; margin:16px 0;">
-                     <strong style="color:#b45309;">⚠️ ÖNEMLİ:</strong> <span style="color:#92400e;">Tüm fiyatlar <strong>KDV HARİÇ</strong> olarak girilmelidir. Kurumumuz teklif değerlendirmelerini KDV hariç fiyatlar üzerinden yapmaktadır.</span>
+                   <p>Kurumumuzun <strong>${title}</strong> konulu satın alma süreci için sizi sistemimize davet ediyoruz.</p>
+                   <p style="background-color:#f0f9ff; border:1px solid #bae6fd; padding:12px; border-radius:6px; margin:16px 0; color:#0369a1;">
+                     <strong>📝 KAYIT GEREKLİ:</strong> Teklif verme aşamasına geçebilmek için öncelikle firma iletişim, vergi ve banka bilgilerinizi (cari açılışı için) bir defaya mahsus sisteme girmeniz gerekmektedir.
                    </p>
-                   <p>Aşağıdaki bağlantıya tıklayarak teklifinizi doğrudan sisteme girebilirsiniz:</p>
+                   <p style="background-color:#fffbeb; border:1px solid #fcd34d; padding:12px; border-radius:6px; margin:16px 0;">
+                     <strong style="color:#b45309;">⚠️ TEKLİF NOTU:</strong> <span style="color:#92400e;">Tüm fiyatlar <strong>KDV HARİÇ</strong> olarak girilmelidir.</span>
+                   </p>
+                   <p>Aşağıdaki bağlantıya tıklayarak kayıt işlemlerinizi tamamlayabilir ve teklifinizi doğrudan sisteme iletebilirsiniz:</p>
                    <p>Son Teklif Tarihi: ${deadlineDate ? deadlineDate.toLocaleDateString("tr-TR") : "Belirtilmedi"}</p>`,
                         actionUrl: link,
-                        actionText: "Teklif Ver"
+                        actionText: "Kaydol ve Teklif Ver"
                     });
                     await dispatchEmail({
                         to: invite.email,

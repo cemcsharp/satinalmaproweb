@@ -18,6 +18,14 @@ export async function GET(req: NextRequest) {
             return jsonError(403, "supplier_access_denied", { message: "Bu hesap bir tedarikçi ile iliştirilmemiş." });
         }
 
+        // Fetch summary totals
+        const [rfqCount, offerCount, orderCount, contractCount] = await Promise.all([
+            prisma.rfqSupplier.count({ where: { supplierId: user.supplierId } }),
+            prisma.offer.count({ where: { rfqSupplier: { supplierId: user.supplierId } } }),
+            prisma.order.count({ where: { supplierId: user.supplierId } }),
+            prisma.contract.count({ where: { order: { supplierId: user.supplierId } } })
+        ]);
+
         // Fetch RFQs assigned to this supplier via RfqSupplier junction
         const participations = await prisma.rfqSupplier.findMany({
             where: { supplierId: user.supplierId },
@@ -41,6 +49,7 @@ export async function GET(req: NextRequest) {
                     }
                 }
             },
+            take: 10,
             orderBy: { rfq: { createdAt: "desc" } }
         });
 
@@ -61,7 +70,14 @@ export async function GET(req: NextRequest) {
             } : null
         }));
 
-        return NextResponse.json({ items });
+        const totals = {
+            rfqs: rfqCount,
+            offers: offerCount,
+            orders: orderCount,
+            contracts: contractCount
+        };
+
+        return NextResponse.json({ totals, items });
     } catch (e: any) {
         console.error("[Portal Dashboard API Error]", e);
         return jsonError(500, "server_error", { message: e.message });

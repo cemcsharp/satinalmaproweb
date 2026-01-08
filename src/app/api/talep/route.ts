@@ -103,7 +103,8 @@ export async function POST(req: NextRequest) {
     // Enforce Unit Isolation: User can only create requests for their own unit
     // Exception: Admins AND Satinalma unit can create for any unit
     const targetUnitId = body.unitId;
-    const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
+    const unitLabelClean = (user.unitLabel || "").toLocaleLowerCase("tr-TR").replace(/\s/g, "");
+    const isSatinalma = unitLabelClean.includes("satınalma") || unitLabelClean.includes("satinlama");
     const isOwnerOrAdmin = user.isAdmin || isSatinalma;
 
     if (!isOwnerOrAdmin) {
@@ -359,14 +360,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Unit-based data isolation - Users only see their unit's data
-    // Admin users see all data
-    if (user.isAdmin) {
-      // Admin sees all - apply manual filter if requested
+    // Admin users and Satınalma unit see all data
+    const unitLabelClean = (user.unitLabel || "").toLocaleLowerCase("tr-TR").replace(/\s/g, "");
+    const isSatinalma = unitLabelClean.includes("satınalma") || unitLabelClean.includes("satinlama");
+    const seeAll = user.isAdmin || isSatinalma;
+
+    if (seeAll) {
+      // Admin/Satinalma sees all - apply manual filter if requested
       if (unit) {
         where.unit = { is: { label: unit } };
       }
     } else if (user.unitId) {
-      // Non-admin users only see their unit's requests
+      // Non-privileged users only see their unit's requests
       where.unitId = user.unitId;
     } else {
       // User has no unit assigned - show nothing

@@ -45,8 +45,14 @@ export default function ExportButtons({ data, columns, fileName, title }: Export
             const fontUrl = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf";
             const fontRes = await fetch(fontUrl);
             const fontBuffer = await fontRes.arrayBuffer();
-            // Convert to base64
-            const base64Font = Buffer.from(fontBuffer).toString("base64");
+
+            // Convert ArrayBuffer to base64 (browser compatible)
+            let binary = "";
+            const bytes = new Uint8Array(fontBuffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            const base64Font = window.btoa(binary);
 
             doc.addFileToVFS("Roboto.ttf", base64Font);
             doc.addFont("Roboto.ttf", "Roboto", "normal");

@@ -38,6 +38,32 @@ export async function GET(req: NextRequest) {
             });
         }
 
+        // Determine if onboarding is needed (no linked supplier OR missing critical info like IBAN)
+        let needsOnboarding = false;
+        let supplierData = null;
+        let isRegistered = false;
+
+        if (rfqSupplier.supplierId) {
+            supplierData = await prisma.supplier.findUnique({
+                where: { id: rfqSupplier.supplierId }
+            });
+            if (!supplierData || !supplierData.bankIban || !supplierData.taxOffice) {
+                needsOnboarding = true;
+            }
+        } else {
+            // Check if supplier exists by email even if not linked yet
+            supplierData = await prisma.supplier.findUnique({
+                where: { email: rfqSupplier.email }
+            });
+            needsOnboarding = true;
+        }
+
+        // Check if a User account actually exists for this email
+        const userAccount = await prisma.user.findUnique({
+            where: { email: rfqSupplier.email || "" }
+        });
+        isRegistered = !!userAccount;
+
         // Return limited data (public safe)
         return NextResponse.json({
             ok: true,
@@ -53,12 +79,31 @@ export async function GET(req: NextRequest) {
                     description: i.description
                 }))
             },
-            supplier: {
+            supplier: supplierData ? {
+                id: supplierData.id,
+                name: supplierData.name,
+                email: supplierData.email,
+                taxId: supplierData.taxId,
+                taxOffice: supplierData.taxOffice,
+                contactName: supplierData.contactName,
+                phone: supplierData.phone,
+                address: supplierData.address,
+                website: supplierData.website,
+                notes: supplierData.notes,
+                bankName: supplierData.bankName,
+                bankBranch: supplierData.bankBranch,
+                bankIban: supplierData.bankIban,
+                bankAccountNo: supplierData.bankAccountNo,
+                bankCurrency: supplierData.bankCurrency,
+                commercialRegistrationNo: supplierData.commercialRegistrationNo,
+                mersisNo: supplierData.mersisNo
+            } : {
                 name: rfqSupplier.contactName,
                 email: rfqSupplier.email,
                 companyName: rfqSupplier.companyName
             },
-            needsOnboarding: !rfqSupplier.supplierId, // If no linked supplier, we need onboarding
+            needsOnboarding,
+            isRegistered,
             existingOffer: rfqSupplier.offer // If they already submitted, return it (so they can edit possibly, or just view)
         });
 
@@ -92,7 +137,11 @@ export async function POST(req: NextRequest) {
 
         if (action === "onboard") {
             // --- ONBOARDING FLOW ---
-            const { name, taxId, contactName, phone, address, website, notes } = await req.json();
+            const {
+                name, taxId, taxOffice, contactName, phone, address, website, notes,
+                bankName, bankBranch, bankIban, bankAccountNo, bankCurrency,
+                commercialRegistrationNo, mersisNo, password
+            } = await req.json();
 
             // 1. Check if Supplier exists by Email
             let supplierId: string;
@@ -119,35 +168,38 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: "Bu 'Vergi No' ile kayıtlı başka bir tedarikçi zaten var." }, { status: 400 });
             }
 
+            const supplierData = {
+                name,
+                taxId,
+                taxOffice,
+                contactName,
+                phone,
+                address,
+                website,
+                notes,
+                bankName,
+                bankBranch,
+                bankIban,
+                bankAccountNo,
+                bankCurrency,
+                commercialRegistrationNo,
+                mersisNo,
+                active: true
+            };
+
             if (existingSupplier) {
                 // Update existing
                 const updated = await prisma.supplier.update({
                     where: { id: existingSupplier.id },
-                    data: {
-                        name: name,
-                        taxId,
-                        contactName,
-                        phone,
-                        address,
-                        website,
-                        notes: notes,
-                        active: true
-                    }
+                    data: supplierData
                 });
                 supplierId = updated.id;
             } else {
                 // Create new
                 const newSupplier = await prisma.supplier.create({
                     data: {
-                        name: name,
-                        taxId,
-                        contactName,
-                        email: rfqSupplier.email,
-                        phone,
-                        address,
-                        website,
-                        notes: notes,
-                        active: true
+                        ...supplierData,
+                        email: rfqSupplier.email
                     }
                 });
                 supplierId = newSupplier.id;
@@ -161,6 +213,29 @@ export async function POST(req: NextRequest) {
                     companyName: name
                 }
             });
+
+            // 3. Create/Update User Account (Corporate Account System)
+            if (password && password.length >= 6) {
+                const { hashPassword } = await import("@/lib/auth");
+                const hashedPassword = await hashPassword(password);
+
+                await prisma.user.upsert({
+                    where: { email: rfqSupplier.email || "" },
+                    update: {
+                        passwordHash: hashedPassword,
+                        supplierId: supplierId,
+                        role: "supplier"
+                    },
+                    create: {
+                        username: rfqSupplier.email || `sup_${supplierId.slice(-6)}`,
+                        email: rfqSupplier.email,
+                        passwordHash: hashedPassword,
+                        supplierId: supplierId,
+                        role: "supplier",
+                        isActive: true
+                    }
+                });
+            }
 
             return NextResponse.json({ ok: true, supplierId: supplierId });
         }

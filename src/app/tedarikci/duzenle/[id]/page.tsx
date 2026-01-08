@@ -20,6 +20,16 @@ type SupplierDetail = {
   email?: string;
   phone?: string;
   address?: string;
+  website?: string;
+  taxOffice?: string;
+  bankName?: string;
+  bankBranch?: string;
+  bankIban?: string;
+  bankAccountNo?: string;
+  bankCurrency?: string;
+  commercialRegistrationNo?: string;
+  mersisNo?: string;
+  notes?: string;
 }
 
 export default function TedarikciDuzenlePage() {
@@ -37,6 +47,16 @@ export default function TedarikciDuzenlePage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [website, setWebsite] = useState("");
+  const [taxOffice, setTaxOffice] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankBranch, setBankBranch] = useState("");
+  const [bankIban, setBankIban] = useState("");
+  const [bankAccountNo, setBankAccountNo] = useState("");
+  const [bankCurrency, setBankCurrency] = useState("TRY");
+  const [commercialRegistrationNo, setCommercialRegistrationNo] = useState("");
+  const [mersisNo, setMersisNo] = useState("");
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -53,6 +73,16 @@ export default function TedarikciDuzenlePage() {
         setEmail(data.email || "");
         setPhone(data.phone || "");
         setAddress(data.address || "");
+        setWebsite(data.website || "");
+        setTaxOffice(data.taxOffice || "");
+        setBankName(data.bankName || "");
+        setBankBranch(data.bankBranch || "");
+        setBankIban(data.bankIban || "");
+        setBankAccountNo(data.bankAccountNo || "");
+        setBankCurrency(data.bankCurrency || "TRY");
+        setCommercialRegistrationNo(data.commercialRegistrationNo || "");
+        setMersisNo(data.mersisNo || "");
+        setNotes(data.notes || "");
       } catch (e: any) {
         show({ title: "Hata", description: "Tedarikçi bilgileri yüklenemedi", variant: "error" });
       } finally {
@@ -77,7 +107,17 @@ export default function TedarikciDuzenlePage() {
         contactName: contactName || null,
         email: email || null,
         phone: phone || null,
-        address: address || null
+        address: address || null,
+        website: website || null,
+        taxOffice: taxOffice || null,
+        bankName: bankName || null,
+        bankBranch: bankBranch || null,
+        bankIban: bankIban || null,
+        bankAccountNo: bankAccountNo || null,
+        bankCurrency: bankCurrency || "TRY",
+        commercialRegistrationNo: commercialRegistrationNo || null,
+        mersisNo: mersisNo || null,
+        notes: notes || null
       };
 
       await fetchJsonWithRetry(`/api/tedarikci/${id}`, {
@@ -138,6 +178,65 @@ export default function TedarikciDuzenlePage() {
                 onChange={(e) => setTaxId(e.target.value)}
               />
             </div>
+            <div>
+              <Input
+                label="Vergi Dairesi"
+                value={taxOffice}
+                onChange={(e) => setTaxOffice(e.target.value)}
+              />
+            </div>
+            <div>
+              <Input
+                label="MERSİS No"
+                value={mersisNo}
+                onChange={(e) => setMersisNo(e.target.value)}
+              />
+            </div>
+            <div>
+              <Input
+                label="Ticaret Sicil No"
+                value={commercialRegistrationNo}
+                onChange={(e) => setCommercialRegistrationNo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-6">
+            <h3 className="text-sm font-semibold text-slate-800 mb-4">Banka ve Ödeme Bilgileri</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <Input
+                  label="IBAN"
+                  value={bankIban}
+                  onChange={(e) => setBankIban(e.target.value.toUpperCase().replace(/\s/g, ''))}
+                  placeholder="TR..."
+                />
+              </div>
+              <Input
+                label="Banka Adı"
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+              />
+              <Input
+                label="Şube"
+                value={bankBranch}
+                onChange={(e) => setBankBranch(e.target.value)}
+              />
+              <Input
+                label="Hesap No"
+                value={bankAccountNo}
+                onChange={(e) => setBankAccountNo(e.target.value)}
+              />
+              <Select
+                label="Para Birimi"
+                value={bankCurrency}
+                onChange={(e) => setBankCurrency(e.target.value)}
+              >
+                <option value="TRY">TRY</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </Select>
+            </div>
           </div>
 
           <div className="border-t border-slate-100 pt-6">
@@ -166,12 +265,29 @@ export default function TedarikciDuzenlePage() {
                   onChange={(e) => setPhone(e.target.value)}
                 />
               </div>
+              <div>
+                <Input
+                  label="Web Sitesi"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
               <div className="md:col-span-2">
                 <Textarea
                   label="Adres"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  rows={3}
+                  rows={2}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Textarea
+                  label="Notlar"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Firma hakkında ek bilgiler..."
                 />
               </div>
             </div>
