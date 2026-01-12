@@ -41,3 +41,10 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Sensitive scripts
+setup-smtp*.mjs
+setup-gmail*.mjs
+update-smtp*.mjs
+check-emails*.mjs
+*-smtp*.mjs
