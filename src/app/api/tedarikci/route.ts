@@ -125,6 +125,17 @@ export async function GET(req: NextRequest) {
       ],
     };
 
+    // MULTI-TENANT: Filter by Tenant-Supplier relation if not Super Admin
+    if (!user.isSuperAdmin && user.tenantId) {
+      where.AND.push({
+        supplierLinks: {
+          some: {
+            tenantId: user.tenantId
+          }
+        }
+      });
+    }
+
     const orderBy =
       sortBy === "date"
         ? ({ createdAt: sortDir } as any)
@@ -136,7 +147,12 @@ export async function GET(req: NextRequest) {
         orderBy,
         skip: (page - 1) * pageSize,
         take: pageSize,
-        include: { category: true }
+        include: {
+          category: true,
+          supplierLinks: user.tenantId ? {
+            where: { tenantId: user.tenantId }
+          } : false
+        } as any
       }),
       prisma.supplier.count({ where }),
     ]);
@@ -252,8 +268,17 @@ export async function POST(req: NextRequest) {
         bankAccountNo,
         bankCurrency,
         commercialRegistrationNo,
-        mersisNo
-      },
+        mersisNo,
+        // If created by a tenant user, automatically link to their tenant
+        ...(user.tenantId ? {
+          supplierLinks: {
+            create: {
+              tenantId: user.tenantId,
+              status: "approved", // User-created suppliers are approved by default for their tenant
+            }
+          }
+        } : {})
+      } as any,
     });
     return NextResponse.json(created, { status: 201 });
   } catch (e: any) {

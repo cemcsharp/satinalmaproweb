@@ -26,21 +26,40 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     });
     if (!supplier) return jsonError(404, "not_found");
 
-    // Latest evaluation summary (by period desc)
+    const { getUserWithPermissions } = await import("@/lib/apiAuth");
+    const user = await getUserWithPermissions(_req);
+    if (!user) return jsonError(401, "unauthorized");
+
+    // Latest evaluation summary (by period desc) - Filtered by Tenant
     const latestSummary = await prisma.supplierEvaluationSummary.findFirst({
-      where: { supplierId: safeId },
+      where: {
+        supplierId: safeId,
+        tenantId: user.isSuperAdmin ? undefined : user.tenantId
+      },
       orderBy: { period: "desc" },
     });
 
-    // Metrics for the same latest period if exists
+    // Metrics for the same latest period if exists - Filtered by Tenant
     const latestMetrics = latestSummary
-      ? await prisma.supplierPerformanceMetric.findMany({ where: { supplierId: safeId, period: latestSummary.period } })
+      ? await prisma.supplierPerformanceMetric.findMany({
+        where: {
+          supplierId: safeId,
+          period: latestSummary.period,
+          tenantId: user.isSuperAdmin ? undefined : user.tenantId
+        }
+      })
       : [];
 
-    // Recent orders count (last 6 months)
+    // Recent orders count (last 6 months) - Filtered by Tenant
     const since = new Date();
     since.setMonth(since.getMonth() - 6);
-    const recentOrders = await prisma.order.count({ where: { supplierId: safeId, createdAt: { gte: since } } });
+    const recentOrders = await prisma.order.count({
+      where: {
+        supplierId: safeId,
+        createdAt: { gte: since },
+        tenantId: user.isSuperAdmin ? undefined : user.tenantId
+      }
+    });
 
 
 
@@ -110,8 +129,16 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   const safeId = String(id || "").trim();
   if (!safeId) return jsonError(404, "not_found");
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return jsonError(401, "unauthorized");
+    const { getUserWithPermissions } = await import("@/lib/apiAuth");
+    const user = await getUserWithPermissions(req);
+    if (!user) return jsonError(401, "unauthorized");
+
+    // Security: Only SuperAdmin or Platform Admin can global edit? 
+    // Or regular firm admin can edit? Usually firm admin should only edit their TenantSupplier link.
+    // Core supplier info editing should be restricted to superadmins or platform-approved editors.
+    if (!user.isSuperAdmin && user.role !== "admin") {
+      return jsonError(403, "forbidden", { message: "Tedarikçi bilgilerini düzenleme yetkiniz yok." });
+    }
 
     const body = await req.json().catch(() => ({}));
     const data: any = {};

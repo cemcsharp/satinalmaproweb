@@ -20,6 +20,11 @@ export async function GET(req: NextRequest) {
         // Build where clause
         const where: any = {};
 
+        // MULTI-TENANT: Apply enterprise/firm isolation
+        if (!user.isSuperAdmin) {
+            where.tenantId = user.tenantId;
+        }
+
         if (search) {
             where.OR = [
                 { sku: { contains: search, mode: "insensitive" } },
@@ -102,8 +107,9 @@ export async function POST(req: NextRequest) {
                 preferredSupplierId: preferredSupplierId || null,
                 minStock: minStock ? Number(minStock) : null,
                 leadTimeDays: leadTimeDays ? Number(leadTimeDays) : null,
+                tenantId: user.tenantId, // Multi-tenant
                 active: true
-            },
+            } as any,
             include: {
                 category: { select: { id: true, name: true, code: true } }
             }
@@ -164,8 +170,9 @@ export async function PUT(req: NextRequest) {
                             defaultUnit: p.defaultUnit,
                             estimatedPrice: p.estimatedPrice ? Number(p.estimatedPrice) : null,
                             currency: p.currency || "TRY",
+                            tenantId: user.tenantId, // Multi-tenant
                             active: p.active !== false
-                        }
+                        } as any
                     });
                     results.updated++;
                 } else {
@@ -178,8 +185,9 @@ export async function PUT(req: NextRequest) {
                             defaultUnit: p.defaultUnit,
                             estimatedPrice: p.estimatedPrice ? Number(p.estimatedPrice) : null,
                             currency: p.currency || "TRY",
+                            tenantId: user.tenantId, // Multi-tenant
                             active: true
-                        }
+                        } as any
                     });
                     results.created++;
                 }

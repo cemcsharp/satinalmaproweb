@@ -15,7 +15,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     setSidebarOpen(false);
   }, [pathname]);
 
-  const isAuthPage = ["/", "/login", "/register"].includes(pathname) || pathname.startsWith("/portal");
+  const isAuthPage = ["/", "/login", "/register"].includes(pathname) || pathname.startsWith("/portal") || pathname.startsWith("/admin");
   // Public detail logic removed per request
   const userName = session?.user?.name || "Kullanıcı";
 

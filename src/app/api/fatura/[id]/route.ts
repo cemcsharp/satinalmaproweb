@@ -9,8 +9,14 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   if (!user) return jsonError(403, "forbidden");
   const { id } = await context.params;
   try {
-    const before = await prisma.invoice.findUnique({ where: { id } });
-    const body = await req.json();
+    const existing = await prisma.invoice.findUnique({ where: { id } });
+    if (!existing) return jsonError(404, "not_found");
+
+    // Multi-tenant Isolation
+    if (!user.isSuperAdmin && (existing as any).tenantId !== user.tenantId) {
+      return jsonError(403, "tenant_mismatch", { message: "Bu veriyi düzenleme yetkiniz yok." });
+    }
+
     const { status } = body as { status: string };
     const updated = await prisma.invoice.update({
       where: { id },
@@ -49,6 +55,18 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
         },
       },
     });
+
+    if (!inv) return jsonError(404, "not_found");
+
+    // Multi-tenant Isolation
+    const { getUserWithPermissions } = await import("@/lib/apiAuth");
+    const user = await getUserWithPermissions(req);
+    if (!user) return jsonError(401, "unauthorized");
+
+    if (!user.isSuperAdmin && (inv as any).tenantId !== user.tenantId) {
+      return jsonError(403, "tenant_mismatch", { message: "Bu veriye erişim yetkiniz yok." });
+    }
+
     return NextResponse.json(inv);
   } catch (e: any) {
     return jsonError(500, "server_error", { message: e?.message });
@@ -61,7 +79,14 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   if (!user) return jsonError(403, "forbidden");
   const { id } = await context.params;
   try {
-    const before = await prisma.invoice.findUnique({ where: { id } });
+    const existing = await prisma.invoice.findUnique({ where: { id } });
+    if (!existing) return jsonError(404, "not_found");
+
+    // Multi-tenant Isolation
+    if (!user.isSuperAdmin && (existing as any).tenantId !== user.tenantId) {
+      return jsonError(403, "tenant_mismatch", { message: "Bu veriyi düzenleme yetkiniz yok." });
+    }
+
     const body = await req.json().catch(() => ({}));
     const status = typeof body.status === "string" ? String(body.status) : undefined;
     const dueDateRaw = body?.dueDate;
@@ -109,6 +134,12 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
   try {
     const before = await prisma.invoice.findUnique({ where: { id } });
     if (!before) return jsonError(404, "not_found");
+
+    // Multi-tenant Isolation
+    if (!user.isSuperAdmin && (before as any).tenantId !== user.tenantId) {
+      return jsonError(403, "tenant_mismatch", { message: "Bu veriyi silme yetkiniz yok." });
+    }
+
     await prisma.invoice.delete({ where: { id } });
     // Audit log
     await logAuditWithRequest(req, {

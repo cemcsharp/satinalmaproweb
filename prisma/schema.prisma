@@ -21,6 +21,60 @@ model Role {
   users       User[]
 }
 
+// Multi-tenant: Alıcı Firma (Tenant)
+model Tenant {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  slug          String    @unique
+  taxId         String?   @unique
+  email         String
+  phone         String?
+  address       String?   @db.VarChar(500)
+  logo          String?
+  
+  // Abonelik bilgileri
+  plan          String    @default("free")  // free, pro, enterprise
+  planExpiresAt DateTime?
+  isActive      Boolean   @default(true)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // İlişkiler
+  users         User[]
+  requests      Request[]
+  orders        Order[]
+  rfqs          Rfq[]
+  contracts     Contract[]
+  invoices      Invoice[]
+  deliveries    DeliveryReceipt[]
+  supplierLinks TenantSupplier[]
+  
+  @@index([slug])
+  @@index([isActive])
+}
+
+// Tenant-Supplier İlişkisi (Onay durumu ile)
+model TenantSupplier {
+  id           String    @id @default(cuid())
+  tenantId     String
+  supplierId   String
+  status       String    @default("pending")  // pending, approved, rejected, blocked
+  approvedAt   DateTime?
+  approvedById String?
+  notes        String?   @db.VarChar(500)
+  createdAt    DateTime  @default(now())
+  
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier     Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  approvedBy   User?     @relation("TenantSupplierApprover", fields: [approvedById], references: [id])
+  
+  @@unique([tenantId, supplierId])
+  @@index([tenantId])
+  @@index([supplierId])
+  @@index([status])
+}
+
 model User {
   id                  String                  @id @default(cuid())
   username            String                  @unique
@@ -35,6 +89,11 @@ model User {
   supplierId          String?
   lastLoginAt         DateTime?
   phoneNumber         String?
+  
+  // Multi-tenant alanları
+  tenantId            String?
+  isSuperAdmin        Boolean                 @default(false)
+  
   approvalRecords     ApprovalRecord[]        @relation("ApprovalRecordApprover")
   auditLogs           AuditLog[]
   comments            Comment[]               @relation("UserComments")
@@ -52,6 +111,11 @@ model User {
   unit                OptionItem?             @relation("UserUnit", fields: [unitId], references: [id])
   approvedSuppliers   Supplier[]              @relation("ApprovedSuppliers")
   rfqMessages         RfqMessage[]
+  tenant              Tenant?                 @relation(fields: [tenantId], references: [id])
+  tenantSupplierApprovals TenantSupplier[]    @relation("TenantSupplierApprover")
+  
+  @@index([tenantId])
+  @@index([isSuperAdmin])
 }
 
 model AuditLog {
@@ -131,6 +195,10 @@ model Supplier {
   approvedById        String?
   approvedBy          User?                       @relation("ApprovedSuppliers", fields: [approvedById], references: [id])
   
+  // Platform seviyesi onay (multi-tenant)
+  platformApproved    Boolean                     @default(false)
+  platformApprovedAt  DateTime?
+  
   orders              Order[]
   productsPreferred   Product[]                   @relation("PreferredSupplier")
   rfqParticipations   RfqSupplier[]
@@ -142,9 +210,11 @@ model Supplier {
   performanceMetrics  SupplierPerformanceMetric[] @relation("SupplierPerformanceMetrics")
   supportTickets      SupportTicket[]
   users               User[]
+  tenantLinks         TenantSupplier[]
 
   @@index([active])
   @@index([registrationStatus])
+  @@index([platformApproved])
 }
 
 // Many-to-many mapping for Supplier <-> Category
@@ -219,6 +289,7 @@ model Request {
   unitEmail         String?
   justification     String?       @db.VarChar(2000)
   rfqId             String?
+  tenantId          String?
   attachments       Attachment[]
   comments          Comment[]
   orders            Order[]
@@ -230,6 +301,9 @@ model Request {
   status            OptionItem    @relation("RequestStatus", fields: [statusId], references: [id])
   unit              OptionItem    @relation("RequestUnit", fields: [unitId], references: [id])
   items             RequestItem[]
+  tenant            Tenant?       @relation(fields: [tenantId], references: [id])
+  
+  @@index([tenantId])
 }
 
 model Attachment {
@@ -284,6 +358,7 @@ model Order {
   estimatedDelivery DateTime?
   deliveryAddressId String?
   refNumber         String?
+  tenantId          String?
   contracts         Contract[]
   deliveries        DeliveryReceipt[]
   deliveryTokens    DeliveryToken[]
@@ -299,6 +374,9 @@ model Order {
   supplier          Supplier             @relation(fields: [supplierId], references: [id])
   items             OrderItem[]
   evaluations       SupplierEvaluation[]
+  tenant            Tenant?              @relation(fields: [tenantId], references: [id])
+  
+  @@index([tenantId])
 }
 
 model DeliveryToken {
@@ -324,11 +402,15 @@ model DeliveryReceipt {
   notes          String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  tenantId       String?
   attachments    Attachment[]
   items          DeliveryItem[]
   order          Order          @relation(fields: [orderId], references: [id])
   receiver       User?          @relation(fields: [receiverId], references: [id])
   receiverUnit   OptionItem?    @relation("UnitDeliveries", fields: [receiverUnitId], references: [id])
+  tenant         Tenant?        @relation(fields: [tenantId], references: [id])
+  
+  @@index([tenantId])
 }
 
 model DeliveryItem {
@@ -372,12 +454,16 @@ model Contract {
   template          String?              @db.VarChar(50)
   type              String?              @db.VarChar(50)
   responsibleUserId String?
+  tenantId          String?
   order             Order?               @relation(fields: [orderId], references: [id])
   responsible       User?                @relation(fields: [responsibleUserId], references: [id])
   attachments       ContractAttachment[]
   events            ContractEvent[]
   histories         ContractHistory[]
   revisions         ContractRevision[]
+  tenant            Tenant?              @relation(fields: [tenantId], references: [id])
+  
+  @@index([tenantId])
 }
 
 model ContractHistory {
@@ -435,9 +521,13 @@ model Invoice {
   vatRate           Int?
   withholdingCode   String?
   responsibleUserId String?
+  tenantId          String?
   order             Order?        @relation(fields: [orderId], references: [id])
   responsible       User?         @relation(fields: [responsibleUserId], references: [id])
   items             InvoiceItem[]
+  tenant            Tenant?       @relation(fields: [tenantId], references: [id])
+  
+  @@index([tenantId])
 }
 
 model InvoiceItem {
@@ -719,6 +809,7 @@ model Rfq {
   deliveryAddressId String?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
+  tenantId          String?
   requests          Request[]
   company           Company?         @relation(fields: [companyId], references: [id])
   createdBy         User             @relation(fields: [createdById], references: [id])
@@ -726,6 +817,9 @@ model Rfq {
   items             RfqItem[]
   suppliers         RfqSupplier[]
   messages          RfqMessage[]
+  tenant            Tenant?          @relation(fields: [tenantId], references: [id])
+  
+  @@index([tenantId])
 }
 
 model RfqItem {

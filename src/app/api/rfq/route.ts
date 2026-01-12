@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
                     title,
                     deadline: deadlineDate,
                     createdById: user.id,
+                    tenantId: user.tenantId, // Multi-tenant
                     companyId: companyId || null,
                     deliveryAddressId: deliveryAddressId || null,
                     items: {
@@ -114,7 +115,7 @@ export async function POST(req: NextRequest) {
                     requests: {
                         connect: requestIds.map(id => ({ id }))
                     }
-                }
+                } as any
             });
 
             // Create Suppliers and Tokens
@@ -212,6 +213,11 @@ export async function GET(req: NextRequest) {
                     }
                 }
             };
+        }
+
+        // MULTI-TENANT: Apply enterprise/firm isolation
+        if (!user.isSuperAdmin) {
+            whereClause.tenantId = user.tenantId;
         }
 
         const [items, total] = await Promise.all([

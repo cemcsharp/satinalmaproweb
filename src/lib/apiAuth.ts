@@ -20,7 +20,7 @@ export async function requireAuthApi(req: NextRequest): Promise<ApiAuth> {
   return { userId: String(userId) };
 }
 
-export async function getSessionUser(): Promise<{ id: string; role: Role } | null> {
+export async function getSessionUser(): Promise<{ id: string; role: Role; tenantId: string | null; isSuperAdmin: boolean } | null> {
   const session = await getServerSession(authOptions);
   const userId = (session as any)?.user?.id || (session as any)?.userId || null;
 
@@ -39,7 +39,7 @@ export async function getSessionUser(): Promise<{ id: string; role: Role } | nul
   // Prioritize roleRef.key, fallback to user.role string
   const role = (user.roleRef?.key || user.role || "user") as Role;
 
-  return { id: user.id, role };
+  return { id: user.id, role, tenantId: (user as any).tenantId, isSuperAdmin: !!(user as any).isSuperAdmin };
 }
 
 export async function ensureRole(required: Role | Role[]): Promise<{ id: string; role: Role } | null> {
@@ -112,12 +112,17 @@ export type UserWithPermissions = {
   unitId: string | null;
   unitLabel: string | null;
   isAdmin: boolean;
+  tenantId: string | null;
+  supplierId: string | null;
+  isSuperAdmin: boolean;
 };
 
 export async function getUserWithPermissions(req: NextRequest): Promise<UserWithPermissions | null> {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token) return null;
-  const userId = (token as any)?.userId || (token as any)?.sub || null;
+
+  const tok = token as any;
+  const userId = tok.userId || tok.sub || null;
   if (!userId) return null;
 
   // Fetch user with unit and roleRef
@@ -125,53 +130,24 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
     where: { id: String(userId) },
     include: {
       unit: true,
-      roleRef: true // Include role relation
+      roleRef: true
     }
   });
   if (!user) return null;
 
   let roleKey: Role = (user.role as Role) || "user";
-
-  // Try to get permissions from Role table first
   let permissions: string[] = [];
 
   if (user.roleRef && user.roleRef.permissions) {
-    // Database-driven permissions from Role table
     const rolePerms = user.roleRef.permissions;
     if (Array.isArray(rolePerms)) {
       permissions = rolePerms as string[];
     } else if (typeof rolePerms === 'object') {
-      // Legacy JSON object format - extract keys
       permissions = Object.keys(rolePerms).filter(k => (rolePerms as any)[k]);
     }
-    // Use role key from Role table if available
     if (user.roleRef.key) {
       roleKey = user.roleRef.key as Role;
     }
-  } else if (roleKey) {
-    // FALLBACK: If roleId is not linked, fetch the role by its key
-    try {
-      const roleRecord = await prisma.role.findUnique({
-        where: { key: roleKey }
-      });
-      if (roleRecord && roleRecord.permissions) {
-        const rolePerms = roleRecord.permissions;
-        if (Array.isArray(rolePerms)) {
-          permissions = rolePerms as string[];
-        } else if (typeof rolePerms === 'object') {
-          permissions = Object.keys(rolePerms).filter(k => (rolePerms as any)[k]);
-        }
-      }
-    } catch (err) {
-      console.error(`[apiAuth] Fallback role fetch failed for ${roleKey}:`, err);
-    }
-  }
-
-  // No fallback to hardcoded permissions. If it's not in DB, it doesn't exist.
-  if (permissions.length === 0 && roleKey !== "admin") {
-    console.warn(`[apiAuth Debug] NO PERMS for user ${userId} (Role: ${roleKey}). Found Role Record?`);
-  } else {
-    console.log(`[apiAuth Debug] User ${userId} has perms:`, permissions);
   }
 
   // Admin always gets all permissions
@@ -186,7 +162,10 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
     permissions,
     unitId: user.unitId,
     unitLabel: user.unit?.label || null,
-    isAdmin: roleKey === "admin"
+    isAdmin: roleKey === "admin",
+    tenantId: (user as any).tenantId,
+    supplierId: (user as any).supplierId,
+    isSuperAdmin: !!(user as any).isSuperAdmin
   };
 }
 

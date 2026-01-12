@@ -29,6 +29,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
         if (!rfq) return jsonError(404, "not_found");
 
+        // Multi-tenant Isolation: User must belong to the same tenant as the RFQ
+        if (!user.isSuperAdmin && (rfq as any).tenantId !== user.tenantId) {
+            return jsonError(403, "tenant_mismatch", { message: "Bu veriye erişim yetkiniz yok (Firma uyuşmazlığı)." });
+        }
+
         // Authorization check (unit isolation if needed, for now simplified)
 
         // Transform Decimal to Number for UI

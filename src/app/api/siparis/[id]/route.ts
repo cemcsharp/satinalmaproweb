@@ -29,9 +29,14 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     });
     if (!order) return jsonError(404, "not_found");
 
-    // Security Check
+    // Multi-tenant Isolation: User must belong to the same tenant as the order
+    if (!user.isSuperAdmin && (order as any).tenantId !== user.tenantId) {
+      return jsonError(403, "tenant_mismatch", { message: "Bu veriye erişim yetkiniz yok (Firma uyuşmazlığı)." });
+    }
+
+    // Secondary Security Check
     const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
-    const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+    const hasFullAccess = user.isSuperAdmin || user.isAdmin || (user as any).role === "admin" || isSatinalma;
     // Check if user has access: Full Access OR Order belongs to user's unit (via request)
     const isSameUnit = order.request?.unitId === user.unitId;
 
@@ -101,9 +106,16 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   const orderId = String(id || "").trim();
   if (!orderId) return jsonError(404, "not_found");
 
+  // Multi-tenant Isolation
+  const existingOrder = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!existingOrder) return jsonError(404, "not_found");
+  if (!user.isSuperAdmin && (existingOrder as any).tenantId !== user.tenantId) {
+    return jsonError(403, "tenant_mismatch", { message: "Bu veriyi düzenleme yetkiniz yok." });
+  }
+
   // Security Check: Only Admin or Satinalma can update orders
   const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
-  const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+  const hasFullAccess = user.isSuperAdmin || user.isAdmin || (user as any).role === "admin" || isSatinalma;
 
   if (!hasFullAccess) {
     return jsonError(403, "forbidden_edit", { message: "Sipariş güncelleme yetkiniz yok. Sadece Satınalma birimi yapabilir." });
@@ -338,9 +350,16 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
   const orderId = String(id || "").trim();
   if (!orderId) return jsonError(404, "not_found");
 
+  // Multi-tenant Isolation
+  const existingOrder = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!existingOrder) return jsonError(404, "not_found");
+  if (!user.isSuperAdmin && (existingOrder as any).tenantId !== user.tenantId) {
+    return jsonError(403, "tenant_mismatch", { message: "Bu veriyi silme yetkiniz yok." });
+  }
+
   // Security Check: Only Admin or Satinalma can delete orders
   const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
-  const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
+  const hasFullAccess = user.isSuperAdmin || user.isAdmin || (user as any).role === "admin" || isSatinalma;
 
   if (!hasFullAccess) {
     return jsonError(403, "forbidden_delete", { message: "Sipariş silme yetkiniz yok." });

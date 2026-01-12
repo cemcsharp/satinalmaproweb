@@ -130,10 +130,11 @@ export async function POST(req: NextRequest) {
           unitEmail: unitEmail || null,
           justification: body.justification?.trim() || null,
           ownerUserId: String(user.id),
+          tenantId: user.tenantId, // Multi-tenant: associate request with user's tenant
           items: body.items && body.items.length > 0 ? {
             create: body.items.map((i) => ({ name: i.name.trim(), quantity: i.quantity, unitId: i.unitId, unitPrice: Number(i.unitPrice ?? 0) }))
           } : undefined,
-        },
+        } as any,
         select: { id: true, barcode: true }
       });
     } catch (err: any) {
@@ -151,10 +152,11 @@ export async function POST(req: NextRequest) {
             currencyId: body.currencyId,
             unitEmail: unitEmail || null,
             ownerUserId: String(user.id),
+            tenantId: user.tenantId,
             items: body.items && body.items.length > 0 ? {
               create: body.items.map((i) => ({ name: i.name.trim(), quantity: i.quantity, unitId: i.unitId }))
             } : undefined,
-          },
+          } as any,
           select: { id: true, barcode: true }
         });
       } else {
@@ -380,6 +382,13 @@ export async function GET(req: NextRequest) {
 
     if (status) {
       where.status = { is: { label: status } };
+    }
+
+    // MULTI-TENANT: Apply enterprise/firm isolation
+    // If user is super admin, they see everything. 
+    // Otherwise, they only see data matching their tenantId.
+    if (!user.isSuperAdmin) {
+      where.tenantId = user.tenantId;
     }
 
     const include = {

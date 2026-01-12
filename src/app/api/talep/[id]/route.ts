@@ -34,19 +34,19 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     }
     if (!item) return jsonError(404, "not_found");
 
-    // Security Check: Isolation
+    // Multi-tenant Isolation: User must belong to the same tenant as the request
+    if (!user.isSuperAdmin && item.tenantId !== user.tenantId) {
+      return jsonError(403, "tenant_mismatch", { message: "Bu veriye erişim yetkiniz yok (Firma uyuşmazlığı)." });
+    }
+
+    // Secondary Security Check: Unit/Role Isolation
     const unitLabelClean = (user.unitLabel || "").toLocaleLowerCase("tr-TR").replace(/\s/g, "");
     const isSatinalma = unitLabelClean.includes("satınalma") || unitLabelClean.includes("satinlama");
-    const isAdmin = user.isAdmin || isSatinalma;
+    const isAdmin = user.isSuperAdmin || user.isAdmin || isSatinalma;
     const isOwner = item.ownerUserId === user.id;
     const isResponsible = item.responsibleUserId === user.id;
     const isSameUnit = item.unitId === user.unitId;
 
-    // Access Rules:
-    // 1. Admin/Satinalma -> OK
-    // 2. Owner or Responsible -> OK
-    // 3. Same Unit -> OK (if they have read permission, verified by generic list API usually)
-    // 4. Otherwise -> FORBIDDEN
     if (!isAdmin && !isOwner && !isResponsible && !isSameUnit) {
       return jsonError(403, "forbidden_access", { message: "Bu talebi görüntüleme yetkiniz yok." });
     }
@@ -129,13 +129,17 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     const existingReq = await prisma.request.findUnique({ where: { id: safeId } });
     if (!existingReq) return jsonError(404, "not_found");
 
+    // Multi-tenant Isolation
+    if (!user.isSuperAdmin && (existingReq as any).tenantId !== user.tenantId) {
+      return jsonError(403, "tenant_mismatch", { message: "Bu veriyi düzenleme yetkiniz yok." });
+    }
+
     // Security Check
     const unitLabelClean = (user.unitLabel || "").toLocaleLowerCase("tr-TR").replace(/\s/g, "");
     const isSatinalma = unitLabelClean.includes("satınalma") || unitLabelClean.includes("satinlama");
-    const isAdmin = user.isAdmin || isSatinalma;
+    const isAdmin = user.isSuperAdmin || user.isAdmin || isSatinalma;
     const isOwner = existingReq.ownerUserId === user.id;
     const isResponsible = existingReq.responsibleUserId === user.id;
-    // const canEditUnit = existingReq.unitId === user.unitId && user.permissions.includes("talep:edit"); // Simplified
 
     // Strict Edit Rules: Only Admin, Owner, or Responsible can edit
     if (!isAdmin && !isOwner && !isResponsible) {
@@ -327,10 +331,15 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     const existingReq = await prisma.request.findUnique({ where: { id: safeId } });
     if (!existingReq) return jsonError(404, "not_found");
 
+    // Multi-tenant Isolation
+    if (!user.isSuperAdmin && (existingReq as any).tenantId !== user.tenantId) {
+      return jsonError(403, "tenant_mismatch", { message: "Bu veriyi silme yetkiniz yok." });
+    }
+
     // Security Check
     const unitLabelClean = (user.unitLabel || "").toLocaleLowerCase("tr-TR").replace(/\s/g, "");
     const isSatinalma = unitLabelClean.includes("satınalma") || unitLabelClean.includes("satinlama");
-    const isAdmin = user.isAdmin || isSatinalma;
+    const isAdmin = user.isSuperAdmin || user.isAdmin || isSatinalma;
     const isOwner = existingReq.ownerUserId === user.id;
 
     if (!isAdmin && !isOwner) {

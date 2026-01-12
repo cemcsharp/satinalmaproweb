@@ -128,6 +128,11 @@ export async function GET(req: NextRequest) {
       })(),
     ];
 
+    // MULTI-TENANT: Apply enterprise/firm isolation
+    if (!user.isSuperAdmin) {
+      baseFilters.push({ tenantId: user.tenantId });
+    }
+
     // Unit-based data isolation
     if (!user.isAdmin && user.unitId) {
       // Contracts are linked to orders, orders to requests, requests to units
@@ -301,6 +306,7 @@ export async function POST(req: NextRequest) {
       startDate: startDate as Date,
       status,
       orderId,
+      tenantId: user.tenantId, // Multi-tenant
     };
     if (endDate) data.endDate = endDate as Date;
     if (responsibleUserId) data.responsible = { connect: { id: responsibleUserId } };

@@ -24,6 +24,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
         if (!delivery) return jsonError(404, "delivery_not_found");
 
+        // Multi-tenant Isolation
+        if (!user.isSuperAdmin && (delivery as any).tenantId !== user.tenantId) {
+            return jsonError(403, "tenant_mismatch", { message: "Bu veriye erişim yetkiniz yok." });
+        }
+
         // Security Check: Isolation
         const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
         const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;
@@ -52,6 +57,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         // Fetch to verify ownership/permission
         const delivery = await prisma.deliveryReceipt.findUnique({ where: { id } });
         if (!delivery) return jsonError(404, "not_found");
+
+        // Multi-tenant Isolation
+        if (!user.isSuperAdmin && (delivery as any).tenantId !== user.tenantId) {
+            return jsonError(403, "tenant_mismatch", { message: "Bu veriyi düzenleme yetkiniz yok." });
+        }
 
         const isSatinalma = user.unitLabel?.toLocaleLowerCase("tr-TR").includes("satınalma") || user.unitLabel?.toLowerCase().includes("satinlama");
         const hasFullAccess = user.isAdmin || (user as any).role === "admin" || isSatinalma;

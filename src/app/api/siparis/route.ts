@@ -139,12 +139,13 @@ export async function POST(req: NextRequest) {
         companyId,
         realizedTotal: total,
         requestId,
+        tenantId: user.tenantId, // Multi-tenant
         estimatedDelivery: (typeof body.estimatedDelivery === "string" && body.estimatedDelivery) ? new Date(body.estimatedDelivery) : undefined,
         ...(body.responsibleUserId ? { responsibleUserId: String(body.responsibleUserId) } : {}),
         items: parsedItems.length > 0 ? {
           create: parsedItems.map((i) => ({ name: i.name.trim(), quantity: i.quantity, unitPrice: i.unitPrice }))
         } : undefined,
-      },
+      } as any,
       select: { id: true, barcode: true }
     });
     // Email: Yeni Sipariş Oluşturuldu
@@ -332,6 +333,11 @@ export async function GET(req: NextRequest) {
     }
     if (method) {
       where.method = { is: { label: method } };
+    }
+
+    // MULTI-TENANT: Apply enterprise/firm isolation
+    if (!user.isSuperAdmin) {
+      where.tenantId = user.tenantId;
     }
 
     // Unit-based data isolation: non-admin users only see their unit's data

@@ -11,17 +11,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const p = await params;
     const id = String(p?.id || "").trim() || url.pathname.split("/").filter(Boolean).pop() || "";
     if (!id) return jsonError(400, "bad_request", { message: "Geçersiz sözleşme ID" });
-    const contract = await prisma.contract.findUnique({
-      where: { id },
-      include: {
-        attachments: true,
-        histories: { orderBy: { date: "desc" } },
-        revisions: { orderBy: { createdAt: "desc" }, take: 10 },
-        events: { orderBy: { date: "asc" } },
-        order: { include: { request: { include: { unit: true } } } },
-      },
-    });
     if (!contract) return jsonError(404, "not_found");
+
+    // Multi-tenant Isolation
+    const { getUserWithPermissions } = await import("@/lib/apiAuth");
+    const user = await getUserWithPermissions(req);
+    if (!user) return jsonError(401, "unauthorized");
+
+    if (!user.isSuperAdmin && (contract as any).tenantId !== user.tenantId) {
+      return jsonError(403, "tenant_mismatch", { message: "Bu veriye erişim yetkiniz yok." });
+    }
     const payload: any = {
       id: contract.id,
       number: (contract as any).number ?? null,
@@ -61,6 +60,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const existing = await prisma.contract.findUnique({ where: { id } });
     if (!existing) return jsonError(404, "not_found");
+
+    // Multi-tenant Isolation
+    if (!user.isSuperAdmin && (existing as any).tenantId !== user.tenantId) {
+      return jsonError(403, "tenant_mismatch", { message: "Bu veriyi düzenleme yetkiniz yok." });
+    }
+
     const before = existing;
 
     const patch: any = {};
@@ -161,6 +166,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id } = await params;
     const existing = await prisma.contract.findUnique({ where: { id } });
     if (!existing) return jsonError(404, "not_found");
+
+    // Multi-tenant Isolation
+    if (!user.isSuperAdmin && (existing as any).tenantId !== user.tenantId) {
+      return jsonError(403, "tenant_mismatch", { message: "Bu veriyi silme yetkiniz yok." });
+    }
     if (existing.deletedAt) return NextResponse.json({ status: "already_deleted" });
     const deleted = await prisma.contract.update({ where: { id }, data: { deletedAt: new Date() } });
 

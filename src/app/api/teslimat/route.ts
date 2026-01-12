@@ -143,10 +143,11 @@ export async function POST(req: NextRequest) {
                 receiverId: user.id,
                 receiverUnitId: targetUnitId, // Assigned to Request Unit
                 status: "pending", // Wait for Unit Approval
+                tenantId: user.tenantId, // Multi-tenant
                 items: {
                     create: deliveryItemsData
                 }
-            }
+            } as any
         });
 
         // Send Email to Request Owner / Unit
@@ -256,6 +257,11 @@ export async function GET(req: NextRequest) {
             where.date = {};
             if (dateFrom) where.date.gte = new Date(dateFrom);
             if (dateTo) where.date.lte = new Date(dateTo);
+        }
+
+        // MULTI-TENANT: Apply enterprise/firm isolation
+        if (!user.isSuperAdmin) {
+            where.tenantId = user.tenantId;
         }
 
         // Birim bazlı filtreleme:

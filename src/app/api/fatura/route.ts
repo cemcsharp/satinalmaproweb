@@ -141,6 +141,11 @@ export async function GET(req: NextRequest) {
       ],
     };
 
+    // MULTI-TENANT: Apply enterprise/firm isolation
+    if (!user.isSuperAdmin) {
+      where.AND.push({ tenantId: user.tenantId });
+    }
+
     // Unit-based data isolation for non-admin users
     // If not admin and has unit, filter invoices where the related order's request belongs to the user's unit
     if (!user.isAdmin && user.unitId) {
@@ -295,6 +300,7 @@ export async function POST(req: NextRequest) {
           bank,
           vatRate,
           withholdingCode,
+          tenantId: user.tenantId, // Multi-tenant
           ...(orderId ? { order: { connect: { id: String(orderId) } } } : {}),
           ...(responsibleUserId ? { responsible: { connect: { id: responsibleUserId } } } : {}),
           items: items && items.length > 0 ? {
@@ -305,7 +311,7 @@ export async function POST(req: NextRequest) {
               taxRate: typeof it?.taxRate === "number" ? it.taxRate : vatRate,
             })),
           } : undefined,
-        },
+        } as any,
         include: { items: true },
       });
 
@@ -411,6 +417,7 @@ export async function POST(req: NextRequest) {
               dueDate: dueDate as Date,
               status,
               bank,
+              tenantId: user.tenantId, // Multi-tenant
               ...(orderId ? { order: { connect: { id: String(orderId) } } } : {}),
               ...(responsibleUserId ? { responsible: { connect: { id: responsibleUserId } } } : {}),
               items: items && items.length > 0 ? {
@@ -421,7 +428,7 @@ export async function POST(req: NextRequest) {
                   taxRate: typeof it?.taxRate === "number" ? it.taxRate : undefined,
                 })),
               } : undefined,
-            },
+            } as any,
             include: { items: true },
           });
           return NextResponse.json(created, { status: 201 });

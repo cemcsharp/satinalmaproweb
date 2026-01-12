@@ -115,29 +115,47 @@ export const authOptions: NextAuthOptions = {
         } catch (err) {
           console.error('[Auth] Login success update error:', err);
         }
-        return { id: user.id, email: user.email ?? null };
+        return {
+          id: user.id,
+          email: user.email ?? null,
+          role: user.role || "user",
+          isSuperAdmin: !!(user as any).isSuperAdmin,
+          tenantId: (user as any).tenantId || undefined,
+          supplierId: (user as any).supplierId || undefined
+        };
       }
     })
   ],
   callbacks: {
     async jwt({ token, user }) {
-      const tok = token as JWT & { userId?: string; role?: string };
+      const tok = token as JWT & {
+        userId?: string;
+        role?: string;
+        tenantId?: string;
+        supplierId?: string;
+        isSuperAdmin?: boolean;
+      };
+
       const initialUserId = (user as { id?: string } | null)?.id;
       if (initialUserId && !tok.userId) tok.userId = String(initialUserId);
+
       const uid = String((tok.userId || (token as any).sub || initialUserId || ""));
       if (uid) {
         try {
-          // Fetch actual user with their Role relation
+          // Fetch actual user with their Role relation and tenant/supplier info
           const me = await prisma.user.findUnique({
             where: { id: uid },
             include: { roleRef: true }
           });
 
-          tok.userId = uid;
-
-          // Prioritize roleRef.key, fallback to flat role field
-          const role = me?.roleRef?.key || me?.role || "user";
-          tok.role = role;
+          if (me) {
+            tok.userId = uid;
+            // Prioritize roleRef.key, fallback to flat role field
+            tok.role = me.roleRef?.key || me.role || "user";
+            tok.tenantId = (me as any).tenantId || undefined;
+            tok.supplierId = (me as any).supplierId || undefined;
+            tok.isSuperAdmin = !!(me as any).isSuperAdmin;
+          }
         } catch (err) {
           console.error('[Auth JWT] Sync error:', err);
         }
@@ -146,9 +164,27 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        const u = session.user as { id?: string; role?: string };
-        if ((token as { userId?: string }).userId) u.id = (token as { userId?: string }).userId as string;
-        if ((token as { role?: string }).role) u.role = (token as { role?: string }).role as string;
+        const u = session.user as {
+          id?: string;
+          role?: string;
+          tenantId?: string;
+          supplierId?: string;
+          isSuperAdmin?: boolean;
+        };
+
+        const tok = token as {
+          userId?: string;
+          role?: string;
+          tenantId?: string;
+          supplierId?: string;
+          isSuperAdmin?: boolean;
+        };
+
+        if (tok.userId) u.id = tok.userId;
+        if (tok.role) u.role = tok.role;
+        if (tok.tenantId) u.tenantId = tok.tenantId;
+        if (tok.supplierId) u.supplierId = tok.supplierId;
+        u.isSuperAdmin = !!tok.isSuperAdmin;
       }
       return session;
     }
