@@ -196,7 +196,8 @@ export async function GET(req: NextRequest) {
 
         // Admin ve satınalma müdürü tüm RFQ'ları görür
         // Diğer kullanıcılar sadece kendi taleplerinin RFQ'larını görür
-        const isFullAccess = user.isAdmin;
+        const satinalmaRoles = ['admin', 'satinalma_muduru', 'satinalma_personeli'];
+        const isFullAccess = user.isAdmin || satinalmaRoles.includes(user.role || '');
 
         // WHERE koşulu oluştur
         let whereClause: any = {};

@@ -1,0 +1,232 @@
+[2026-01-09T08:18:23.076Z] Request received
+[2026-01-09T08:18:23.077Z] Body parsed for company: Cem Ltd. Şti.
+[2026-01-09T08:18:23.085Z] Hashing password...
+[2026-01-09T08:18:23.412Z] Password hashed.
+[2026-01-09T08:18:23.413Z] Starting transaction...
+[2026-01-09T08:18:23.422Z] Registration error: 
+Invalid `tx.user.create()` invocation in
+C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\[root-of-the-server]__1e058102._.js:177:40
+
+  174     }
+  175 });
+  176 // Create user linked to supplier
+→ 177 const user = await tx.user.create({
+        data: {
+          username: "cemtur110@gmail.com",
+          email: "cemtur110@gmail.com",
+          name: "Cem Cem",
+          ~~~~
+          passwordHash: "$2b$12$blV4vtO6XQgAjwxu9YAXU.ZGob3GXfQD3SgQVdUrM4eYUW4TjyC9i",
+          role: "supplier",
+          isActive: false,
+          supplierId: "cmk6ltiyg000cfdcw1qpplzrv",
+      ?   id?: String,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime,
+      ?   lastLoginAt?: DateTime | Null,
+      ?   phoneNumber?: String | Null,
+      ?   approvalRecords?: ApprovalRecordCreateNestedManyWithoutApproverInput,
+      ?   auditLogs?: AuditLogCreateNestedManyWithoutUserInput,
+      ?   comments?: CommentCreateNestedManyWithoutAuthorInput,
+      ?   Contract?: ContractCreateNestedManyWithoutResponsibleInput,
+      ?   deliveriesReceived?: DeliveryReceiptCreateNestedManyWithoutReceiverInput,
+      ?   Invoice?: InvoiceCreateNestedManyWithoutResponsibleInput,
+      ?   notifications?: NotificationCreateNestedManyWithoutUserInput,
+      ?   notificationPref?: NotificationPreferenceCreateNestedOneWithoutUserInput,
+      ?   Order?: OrderCreateNestedManyWithoutResponsibleInput,
+      ?   requestsOwned?: RequestCreateNestedManyWithoutOwnerInput,
+      ?   requestsResponsible?: RequestCreateNestedManyWithoutResponsibleInput,
+      ?   createdRfqs?: RfqCreateNestedManyWithoutCreatedByInput,
+      ?   roleRef?: RoleCreateNestedOneWithoutUsersInput,
+      ?   supplier?: SupplierCreateNestedOneWithoutUsersInput,
+      ?   unit?: OptionItemCreateNestedOneWithoutUsersAsUnitInput,
+      ?   approvedSuppliers?: SupplierCreateNestedManyWithoutApprovedByInput
+        }
+      })
+
+Unknown argument `name`. Did you mean `role`? Available options are marked with ?.
+Stack: PrismaClientValidationError: 
+Invalid `tx.user.create()` invocation in
+C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\[root-of-the-server]__1e058102._.js:177:40
+
+  174     }
+  175 });
+  176 // Create user linked to supplier
+→ 177 const user = await tx.user.create({
+        data: {
+          username: "cemtur110@gmail.com",
+          email: "cemtur110@gmail.com",
+          name: "Cem Cem",
+          ~~~~
+          passwordHash: "$2b$12$blV4vtO6XQgAjwxu9YAXU.ZGob3GXfQD3SgQVdUrM4eYUW4TjyC9i",
+          role: "supplier",
+          isActive: false,
+          supplierId: "cmk6ltiyg000cfdcw1qpplzrv",
+      ?   id?: String,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime,
+      ?   lastLoginAt?: DateTime | Null,
+      ?   phoneNumber?: String | Null,
+      ?   approvalRecords?: ApprovalRecordCreateNestedManyWithoutApproverInput,
+      ?   auditLogs?: AuditLogCreateNestedManyWithoutUserInput,
+      ?   comments?: CommentCreateNestedManyWithoutAuthorInput,
+      ?   Contract?: ContractCreateNestedManyWithoutResponsibleInput,
+      ?   deliveriesReceived?: DeliveryReceiptCreateNestedManyWithoutReceiverInput,
+      ?   Invoice?: InvoiceCreateNestedManyWithoutResponsibleInput,
+      ?   notifications?: NotificationCreateNestedManyWithoutUserInput,
+      ?   notificationPref?: NotificationPreferenceCreateNestedOneWithoutUserInput,
+      ?   Order?: OrderCreateNestedManyWithoutResponsibleInput,
+      ?   requestsOwned?: RequestCreateNestedManyWithoutOwnerInput,
+      ?   requestsResponsible?: RequestCreateNestedManyWithoutResponsibleInput,
+      ?   createdRfqs?: RfqCreateNestedManyWithoutCreatedByInput,
+      ?   roleRef?: RoleCreateNestedOneWithoutUsersInput,
+      ?   supplier?: SupplierCreateNestedOneWithoutUsersInput,
+      ?   unit?: OptionItemCreateNestedOneWithoutUsersAsUnitInput,
+      ?   approvedSuppliers?: SupplierCreateNestedManyWithoutApprovedByInput
+        }
+      })
+
+Unknown argument `name`. Did you mean `role`? Available options are marked with ?.
+    at Nn (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:29:1363)
+    at ei.handleRequestError (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:121:6911)
+    at ei.handleAndLogRequestError (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\[root-of-the-server]__1e058102._.js:177:26
+    at async Proxy._transactionWithCallback (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:130:8120)
+    at async POST (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\[root-of-the-server]__1e058102._.js:159:24)
+    at async AppRouteRouteModule.do (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\node_modules_f9c27427._.js:18978:38)
+    at async AppRouteRouteModule.handleResponse (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\node_modules_f9c27427._.js:19040:32)
+    at async handler (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\node_modules_f9c27427._.js:19093:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\lib\start-server.js:226:13)
+[2026-01-09T08:19:12.963Z] Request received
+[2026-01-09T08:19:12.964Z] Body parsed for company: Cem A.Ş.LTD
+[2026-01-09T08:19:12.979Z] Hashing password...
+[2026-01-09T08:19:13.245Z] Password hashed.
+[2026-01-09T08:19:13.245Z] Starting transaction...
+[2026-01-09T08:19:13.256Z] Registration error: 
+Invalid `tx.user.create()` invocation in
+C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\[root-of-the-server]__1e058102._.js:177:40
+
+  174     }
+  175 });
+  176 // Create user linked to supplier
+→ 177 const user = await tx.user.create({
+        data: {
+          username: "cemtur110@gmail.com",
+          email: "cemtur110@gmail.com",
+          name: "Cem Cem",
+          ~~~~
+          passwordHash: "$2b$12$WRXI/q4iU8wd7E33bUDvTOnE339bbm11gKKjXF8GHwHx/e5yDmRO2",
+          role: "supplier",
+          isActive: false,
+          supplierId: "cmk6lulel000ffdcwr9tf72gy",
+      ?   id?: String,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime,
+      ?   lastLoginAt?: DateTime | Null,
+      ?   phoneNumber?: String | Null,
+      ?   approvalRecords?: ApprovalRecordCreateNestedManyWithoutApproverInput,
+      ?   auditLogs?: AuditLogCreateNestedManyWithoutUserInput,
+      ?   comments?: CommentCreateNestedManyWithoutAuthorInput,
+      ?   Contract?: ContractCreateNestedManyWithoutResponsibleInput,
+      ?   deliveriesReceived?: DeliveryReceiptCreateNestedManyWithoutReceiverInput,
+      ?   Invoice?: InvoiceCreateNestedManyWithoutResponsibleInput,
+      ?   notifications?: NotificationCreateNestedManyWithoutUserInput,
+      ?   notificationPref?: NotificationPreferenceCreateNestedOneWithoutUserInput,
+      ?   Order?: OrderCreateNestedManyWithoutResponsibleInput,
+      ?   requestsOwned?: RequestCreateNestedManyWithoutOwnerInput,
+      ?   requestsResponsible?: RequestCreateNestedManyWithoutResponsibleInput,
+      ?   createdRfqs?: RfqCreateNestedManyWithoutCreatedByInput,
+      ?   roleRef?: RoleCreateNestedOneWithoutUsersInput,
+      ?   supplier?: SupplierCreateNestedOneWithoutUsersInput,
+      ?   unit?: OptionItemCreateNestedOneWithoutUsersAsUnitInput,
+      ?   approvedSuppliers?: SupplierCreateNestedManyWithoutApprovedByInput
+        }
+      })
+
+Unknown argument `name`. Did you mean `role`? Available options are marked with ?.
+Stack: PrismaClientValidationError: 
+Invalid `tx.user.create()` invocation in
+C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\[root-of-the-server]__1e058102._.js:177:40
+
+  174     }
+  175 });
+  176 // Create user linked to supplier
+→ 177 const user = await tx.user.create({
+        data: {
+          username: "cemtur110@gmail.com",
+          email: "cemtur110@gmail.com",
+          name: "Cem Cem",
+          ~~~~
+          passwordHash: "$2b$12$WRXI/q4iU8wd7E33bUDvTOnE339bbm11gKKjXF8GHwHx/e5yDmRO2",
+          role: "supplier",
+          isActive: false,
+          supplierId: "cmk6lulel000ffdcwr9tf72gy",
+      ?   id?: String,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime,
+      ?   lastLoginAt?: DateTime | Null,
+      ?   phoneNumber?: String | Null,
+      ?   approvalRecords?: ApprovalRecordCreateNestedManyWithoutApproverInput,
+      ?   auditLogs?: AuditLogCreateNestedManyWithoutUserInput,
+      ?   comments?: CommentCreateNestedManyWithoutAuthorInput,
+      ?   Contract?: ContractCreateNestedManyWithoutResponsibleInput,
+      ?   deliveriesReceived?: DeliveryReceiptCreateNestedManyWithoutReceiverInput,
+      ?   Invoice?: InvoiceCreateNestedManyWithoutResponsibleInput,
+      ?   notifications?: NotificationCreateNestedManyWithoutUserInput,
+      ?   notificationPref?: NotificationPreferenceCreateNestedOneWithoutUserInput,
+      ?   Order?: OrderCreateNestedManyWithoutResponsibleInput,
+      ?   requestsOwned?: RequestCreateNestedManyWithoutOwnerInput,
+      ?   requestsResponsible?: RequestCreateNestedManyWithoutResponsibleInput,
+      ?   createdRfqs?: RfqCreateNestedManyWithoutCreatedByInput,
+      ?   roleRef?: RoleCreateNestedOneWithoutUsersInput,
+      ?   supplier?: SupplierCreateNestedOneWithoutUsersInput,
+      ?   unit?: OptionItemCreateNestedOneWithoutUsersAsUnitInput,
+      ?   approvedSuppliers?: SupplierCreateNestedManyWithoutApprovedByInput
+        }
+      })
+
+Unknown argument `name`. Did you mean `role`? Available options are marked with ?.
+    at Nn (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:29:1363)
+    at ei.handleRequestError (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:121:6911)
+    at ei.handleAndLogRequestError (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\[root-of-the-server]__1e058102._.js:177:26
+    at async Proxy._transactionWithCallback (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\@prisma\client\runtime\library.js:130:8120)
+    at async POST (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\[root-of-the-server]__1e058102._.js:159:24)
+    at async AppRouteRouteModule.do (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:37789)
+    at async AppRouteRouteModule.handle (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:5:45045)
+    at async responseGenerator (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\node_modules_f9c27427._.js:18978:38)
+    at async AppRouteRouteModule.handleResponse (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js:1:187851)
+    at async handleResponse (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\node_modules_f9c27427._.js:19040:32)
+    at async handler (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\.next\dev\server\chunks\node_modules_f9c27427._.js:19093:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\base-server.js:1413:9)
+    at async DevServer.renderPageComponent (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\base-server.js:1465:24)
+    at async DevServer.renderToResponseImpl (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\base-server.js:1515:32)
+    at async DevServer.pipeImpl (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\base-server.js:1021:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\base-server.js:912:17)
+    at async C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\dev\next-dev-server.js:382:20
+    at async Span.traceAsyncFn (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\dev\next-dev-server.js:378:24)
+    at async invokeRender (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\lib\router-server.js:436:24)
+    at async requestHandlerImpl (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\lib\router-server.js:484:13)
+    at async Server.requestListener (C:\Users\ctur\OneDrive - Piri Reis Üniversitesi\Masaüstü\Projeler\satinalmaproweb\node_modules\next\dist\server\lib\start-server.js:226:13)

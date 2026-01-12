@@ -28,6 +28,39 @@ export default function RfqListePage() {
     const { execute, loading } = useApiRequest<{ items: RfqListItem[], totalPages: number }>();
     const [canCreate, setCanCreate] = useState(false);
 
+    const refreshData = () => {
+        execute({
+            url: `/api/rfq?page=${page}`,
+            onSuccess: (json) => {
+                setData(json.items || []);
+                setTotalPages(json.totalPages || 1);
+            }
+        });
+    };
+
+    const handleStatusChange = async (id: string, newStatus: string) => {
+        const confirmMsg = newStatus === "CANCELLED"
+            ? "Bu RFQ'yu iptal etmek istediğinize emin misiniz? Tüm tedarikçilere bildirim gönderilecektir."
+            : newStatus === "PASSIVE"
+                ? "Bu RFQ'yu durdurmak (pasif) istediğinize emin misiniz? Tedarikçilere teklif girişi kapatılacaktır."
+                : "Bu RFQ'yu tekrar aktifleştirmek istiyor musunuz?";
+
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            const res = await fetch(`/api/rfq/${id}/status`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) {
+                refreshData();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     // Fetch permissions
     useEffect(() => {
         fetch("/api/profile")
@@ -43,13 +76,7 @@ export default function RfqListePage() {
     }, []);
 
     useEffect(() => {
-        execute({
-            url: `/api/rfq?page=${page}`,
-            onSuccess: (json) => {
-                setData(json.items || []);
-                setTotalPages(json.totalPages || 1);
-            }
-        });
+        refreshData();
     }, [page, execute]);
 
     const getStatusBadge = (status: string) => {
@@ -91,7 +118,7 @@ export default function RfqListePage() {
                                 <th className="p-4 text-center">Durum</th>
                                 <th className="p-4 text-center">Teklifler</th>
                                 <th className="p-4 text-center">Son Tarih</th>
-                                <th className="p-4 text-right">İşlem</th>
+                                <th className="p-4 text-right">İşlemler</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -118,7 +145,7 @@ export default function RfqListePage() {
                                             <td className="p-4 text-center text-slate-600">
                                                 {rfq.deadline ? new Date(rfq.deadline).toLocaleDateString("tr-TR") : "-"}
                                             </td>
-                                            <td className="p-4 text-right">
+                                            <td className="p-4 text-right flex items-center justify-end gap-2">
                                                 <Button
                                                     size="sm"
                                                     variant="secondary"
@@ -126,6 +153,34 @@ export default function RfqListePage() {
                                                 >
                                                     Detay
                                                 </Button>
+
+                                                {rfq.status === "ACTIVE" ? (
+                                                    <>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleStatusChange(rfq.id, "PASSIVE")}
+                                                        >
+                                                            Durdur
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            onClick={() => handleStatusChange(rfq.id, "CANCELLED")}
+                                                        >
+                                                            İptal
+                                                        </Button>
+                                                    </>
+                                                ) : (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handleStatusChange(rfq.id, "ACTIVE")}
+                                                    >
+                                                        Aktifleştir
+                                                    </Button>
+                                                )}
                                             </td>
                                         </tr>
                                     );

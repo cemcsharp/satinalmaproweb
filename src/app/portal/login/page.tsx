@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ensureSessionReady } from "@/lib/sessionClient";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -10,8 +10,12 @@ import Card from "@/components/ui/Card";
 export default function SupplierLoginPage() {
     const { status, data: session } = useSession();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const didNavigateRef = useRef(false);
-    const [email, setEmail] = useState("");
+    const callbackUrl = searchParams.get("callbackUrl") || "/portal";
+    const initialEmail = searchParams.get("email") || "";
+
+    const [email, setEmail] = useState(initialEmail);
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -30,10 +34,10 @@ export default function SupplierLoginPage() {
                     await ensureSessionReady();
                     const role = (session as any)?.role;
                     if (role === "supplier") {
-                        router.replace("/portal/dashboard");
+                        router.replace(callbackUrl);
                     } else {
                         // If they are admin or other role but hit this page, let them through to portal or home
-                        router.replace("/portal/dashboard");
+                        router.replace(callbackUrl);
                     }
                 })();
             }
@@ -63,10 +67,21 @@ export default function SupplierLoginPage() {
             });
 
             if (res?.ok) {
+                await ensureSessionReady();
+
+                // Rol kontrolü - sadece supplier kabul et
+                const sessionRes = await fetch('/api/auth/session');
+                const sessionData = await sessionRes.json();
+                const userRole = sessionData?.user?.role;
+
+                if (userRole !== 'supplier') {
+                    setError("Bu portal sadece tedarikçiler içindir. Kurumsal giriş için ana sayfayı kullanın.");
+                    return;
+                }
+
                 if (!didNavigateRef.current) {
                     didNavigateRef.current = true;
-                    await ensureSessionReady();
-                    router.replace("/portal/dashboard");
+                    router.replace(callbackUrl);
                 }
             } else {
                 setError('Giriş bilgileri hatalı. Lütfen e-posta ve şifrenizi kontrol ediniz.');
@@ -156,7 +171,17 @@ export default function SupplierLoginPage() {
                     </form>
                 </Card>
 
-                <div className="flex flex-col items-center gap-6 mt-12">
+                {/* Register Link */}
+                <div className="text-center mt-6">
+                    <p className="text-sm text-slate-500">
+                        Henüz hesabınız yok mu?{" "}
+                        <a href="/portal/register" className="text-indigo-600 font-semibold hover:underline">
+                            Tedarikçi Kaydı Oluştur
+                        </a>
+                    </p>
+                </div>
+
+                <div className="flex flex-col items-center gap-6 mt-8">
                     <div className="flex gap-4 text-xs font-bold text-slate-400">
                         <a href="#" className="hover:text-indigo-600 transition-colors uppercase tracking-widest">Yardım</a>
                         <span className="text-slate-200">•</span>

@@ -20,6 +20,13 @@ type SupplierDetail = {
   address?: string;
   createdAt: string;
   updatedAt: string;
+  users?: {
+    id: string;
+    username: string;
+    email: string;
+    isActive: boolean;
+    role: string;
+  }[];
   _count?: {
     orders: number;
     contracts: number;
@@ -71,6 +78,7 @@ export default function TedarikciDetayPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           <Card title="Genel Bilgiler" className="p-5 h-full">
+            {/* Existing general info content */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Firma Adı</label>
@@ -92,6 +100,44 @@ export default function TedarikciDetayPage() {
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Adres</label>
                 <div className="text-sm text-slate-700 whitespace-pre-wrap">{data.address || "-"}</div>
               </div>
+            </div>
+          </Card>
+
+          <Card title="Kullanıcı Hesapları" className="p-0 overflow-hidden">
+            <div className="p-5 border-b border-slate-100 bg-slate-50/50">
+              <p className="text-sm text-slate-500">Bu tedarikçinin sisteme giriş yetkisi olan hesapları</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="px-5 py-3 font-semibold text-slate-700">Kullanıcı Adı</th>
+                    <th className="px-5 py-3 font-semibold text-slate-700">E-Posta</th>
+                    <th className="px-5 py-3 font-semibold text-slate-700">Durum</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {data.users && data.users.length > 0 ? (
+                    data.users.map((u) => (
+                      <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-5 py-3 font-medium text-slate-900">{u.username}</td>
+                        <td className="px-5 py-3 text-slate-600">{u.email}</td>
+                        <td className="px-5 py-3">
+                          <Badge variant={u.isActive ? "success" : "default"}>
+                            {u.isActive ? "Aktif" : "Pasif"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="px-5 py-8 text-center text-slate-400 italic">
+                        Bağlı kullanıcı hesabı bulunamadı.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </Card>
         </div>

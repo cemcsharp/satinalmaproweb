@@ -1,7 +1,22 @@
+"use client";
 import React from "react";
+import { usePathname } from "next/navigation";
 import PortalSidebar from "@/components/PortalSidebar";
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
+    const isAuthPage = pathname === "/portal/login" || pathname.startsWith("/portal/register");
+
+    // Login/Register pages: standalone layout without sidebar
+    if (isAuthPage) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
+                {children}
+            </div>
+        );
+    }
+
+    // All other portal pages: with sidebar
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-blue-50/30">
             <div className="flex h-screen w-screen overflow-hidden">

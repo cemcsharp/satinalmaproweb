@@ -301,6 +301,16 @@ function RfqOlusturContent() {
         if (!title) return show({ title: "Başlık zorunlu", variant: "warning" });
         if (!deadline) return show({ title: "Son teklif tarihi zorunlu", variant: "warning" });
 
+        // Category validation: at least one item should have category selected
+        const itemsWithCategory = Object.keys(itemCategories).filter(k => itemCategories[k]);
+        if (linkedRequestDetail.items.length > 0 && itemsWithCategory.length === 0) {
+            return show({
+                title: "Kategori seçimi zorunlu",
+                description: "Tedarikçi eşleşmesi için en az bir kalem için kategori seçmelisiniz.",
+                variant: "warning"
+            });
+        }
+
         // Collect all suppliers
         const allSuppliers: { id?: string; email: string; name?: string }[] = [];
 

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
@@ -10,10 +10,26 @@ export default function PortalSidebar() {
     const { data: session } = useSession();
     const pathname = usePathname();
     const [expanded, setExpanded] = useState(true);
+    const [openRfqCount, setOpenRfqCount] = useState(0);
+
+    // Fetch open RFQ count for badge
+    useEffect(() => {
+        fetch("/api/portal/open-rfqs")
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && Array.isArray(data.rfqs)) {
+                    // Count RFQs that supplier hasn't participated in yet
+                    const newRfqs = data.rfqs.filter((r: any) => !r.token);
+                    setOpenRfqCount(newRfqs.length);
+                }
+            })
+            .catch(() => { });
+    }, []);
 
     const menuItems = [
         { label: "Dashboard", href: "/portal", icon: "home", category: "Genel" },
-        { label: "Açık Talepler (RFQ)", href: "/portal/rfq", icon: "file-plus", category: "Süreçler" },
+        { label: "Açık Talepler", href: "/portal/rfq/marketplace", icon: "search", category: "Süreçler", badge: openRfqCount > 0 ? openRfqCount : undefined },
+        { label: "Tekliflerim", href: "/portal/rfq", icon: "file-plus", category: "Süreçler" },
         { label: "Siparişlerim", href: "/portal/orders", icon: "cart", category: "Süreçler" },
         { label: "Sözleşmeler", href: "/portal/contracts", icon: "document", category: "Süreçler" },
         { label: "Teklif Geçmişi", href: "/portal/rfq/history", icon: "history", category: "Arşiv" },
@@ -145,7 +161,14 @@ export default function PortalSidebar() {
 
                                                 <Icon name={item.icon} className={`h-4 w-4 flex-shrink-0 ${active ? "text-white" : ""}`} />
                                                 {expanded && (
-                                                    <span className="text-sm truncate">{item.label}</span>
+                                                    <span className="text-sm truncate flex items-center gap-2">
+                                                        {item.label}
+                                                        {item.badge && (
+                                                            <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-full animate-pulse">
+                                                                {item.badge}
+                                                            </span>
+                                                        )}
+                                                    </span>
                                                 )}
                                             </Link>
                                         );

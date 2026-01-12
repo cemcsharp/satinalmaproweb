@@ -12,8 +12,15 @@ export async function GET(req: NextRequest) {
     if (!admin) return jsonError(403, "forbidden");
     const url = new URL(req.url);
     const q = url.searchParams.get("q")?.toLowerCase() || "";
+    const excludeSuppliers = url.searchParams.get("excludeSuppliers") === "true";
+
+    const where: any = {};
+    if (excludeSuppliers) {
+      where.role = { not: "supplier" };
+    }
 
     const list = await prisma.user.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       include: {
         unit: true,

@@ -18,7 +18,7 @@ export type MenuItem = {
  * Main menu items for regular users
  */
 export const menuItems: MenuItem[] = [
-    { label: "Dashboard", href: "/", icon: "home", category: "Ana" },
+    { label: "Dashboard", href: "/dashboard", icon: "home", category: "Ana" },
     { label: "Talep Oluştur", href: "/talep/olustur", icon: "file-plus", category: "Talep", requiredPermission: "talep:create", moduleKey: "talep" },
     { label: "Talep Listesi", href: "/talep/liste", icon: "file-text", category: "Talep", requiredPermission: "talep:read", moduleKey: "talep" },
 
@@ -43,6 +43,7 @@ export const menuItems: MenuItem[] = [
     { label: "Sektörler / Kategoriler", href: "/tedarikci/kategoriler", icon: "folder", category: "Tedarikçi", requiredPermission: "tedarikci:read", moduleKey: "tedarikci" },
     { label: "Tedarikçi Değerlendirme", href: "/tedarikci/degerlendirme", icon: "star", category: "Tedarikçi", requiredPermission: "evaluation:submit", moduleKey: "tedarikci" },
     { label: "Değerlendirmeler", href: "/tedarikci/degerlendirmeler", icon: "bar-chart", category: "Tedarikçi", requiredPermission: "tedarikci:read", moduleKey: "tedarikci" },
+    { label: "Kayıt Onayları", href: "/tedarikci/onay-bekleyenler", icon: "clipboard-check", category: "Tedarikçi", requiredPermission: "tedarikci:create", moduleKey: "tedarikci" },
     { label: "Raporlar", href: "/raporlama/raporlar", icon: "clipboard", category: "Raporlama", requiredPermission: "rapor:read", moduleKey: "raporlama" },
     { label: "Dashboard", href: "/raporlama/dashboard", icon: "pie-chart", category: "Raporlama", requiredPermission: "rapor:read", moduleKey: "raporlama" },
 
@@ -58,7 +59,7 @@ export const menuItems: MenuItem[] = [
  * Restricted menu for birim_evaluator role
  */
 export const evaluatorMenuItems: MenuItem[] = [
-    { label: "Dashboard", href: "/", icon: "home", category: "Ana" },
+    { label: "Dashboard", href: "/dashboard", icon: "home", category: "Ana" },
     { label: "Değerlendirmelerim", href: "/birim/degerlendirmeler", icon: "star", category: "Değerlendirme" },
     { label: "Değerlendirme Yap", href: "/tedarikci/degerlendirme", icon: "check-square", category: "Değerlendirme" },
 ];

@@ -10,7 +10,20 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
   const safeId = String(id || "").trim();
   if (!safeId) return jsonError(404, "not_found");
   try {
-    const supplier = await prisma.supplier.findUnique({ where: { id: safeId } });
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: safeId },
+      include: {
+        users: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            isActive: true,
+            role: true
+          }
+        }
+      }
+    });
     if (!supplier) return jsonError(404, "not_found");
 
     // Latest evaluation summary (by period desc)
@@ -51,6 +64,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       commercialRegistrationNo: (supplier as any).commercialRegistrationNo,
       mersisNo: (supplier as any).mersisNo,
       notes: supplier.notes,
+      users: (supplier as any).users || [],
       createdAt: supplier.createdAt?.toISOString?.() ?? null,
       aggregates: {
         recentOrders,

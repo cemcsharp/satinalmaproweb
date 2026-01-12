@@ -110,7 +110,19 @@ export default function LoginPage() {
         if (!didNavigateRef.current) {
           didNavigateRef.current = true;
           await ensureSessionReady();
-          router.replace("/");
+
+          // Rol bazlı yönlendirme
+          const sessionRes = await fetch('/api/auth/session');
+          const sessionData = await sessionRes.json();
+          const userRole = sessionData?.user?.role;
+
+          if (userRole === 'supplier') {
+            router.replace("/portal");
+          } else if (userRole === 'admin') {
+            router.replace("/admin");
+          } else {
+            router.replace("/dashboard");
+          }
         }
       } else {
         const rateLimitResponse = await fetch('/api/auth/rate-limit', {

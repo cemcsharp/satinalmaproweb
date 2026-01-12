@@ -85,6 +85,15 @@ const defaultRoles = [
             "evaluation:submit",
             "tedarikci:read"
         ]
+    },
+    {
+        key: "supplier",
+        name: "supplier",
+        displayName: "Tedarikçi",
+        isSystem: true,
+        permissions: [
+            "portal:view", "rfq:submit"
+        ]
     }
 ];
 

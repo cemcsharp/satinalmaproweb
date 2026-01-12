@@ -47,7 +47,11 @@ export async function GET(req: NextRequest) {
             supplierData = await prisma.supplier.findUnique({
                 where: { id: rfqSupplier.supplierId }
             });
-            if (!supplierData || !supplierData.bankIban || !supplierData.taxOffice) {
+            // Only require onboarding if supplier is NOT approved and missing critical info
+            // Approved suppliers should go directly to offer form
+            if (supplierData && supplierData.registrationStatus === 'approved') {
+                needsOnboarding = false;
+            } else if (!supplierData || !supplierData.bankIban || !supplierData.taxOffice) {
                 needsOnboarding = true;
             }
         } else {
@@ -55,7 +59,12 @@ export async function GET(req: NextRequest) {
             supplierData = await prisma.supplier.findUnique({
                 where: { email: rfqSupplier.email }
             });
-            needsOnboarding = true;
+            // If supplier exists and is approved, no onboarding needed
+            if (supplierData && supplierData.registrationStatus === 'approved') {
+                needsOnboarding = false;
+            } else {
+                needsOnboarding = true;
+            }
         }
 
         // Check if a User account actually exists for this email
@@ -68,9 +77,11 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
             ok: true,
             rfq: {
+                id: rfqSupplier.rfqId,
                 title: rfqSupplier.rfq.title,
                 rfxCode: rfqSupplier.rfq.rfxCode,
                 deadline: rfqSupplier.rfq.deadline,
+                status: rfqSupplier.rfq.status,
                 items: rfqSupplier.rfq.items.map(i => ({
                     id: i.id,
                     name: i.name,
@@ -104,7 +115,7 @@ export async function GET(req: NextRequest) {
             },
             needsOnboarding,
             isRegistered,
-            existingOffer: rfqSupplier.offer // If they already submitted, return it (so they can edit possibly, or just view)
+            existingOffer: rfqSupplier.offer // If they already submitted, return it
         });
 
     } catch (e: any) {
@@ -123,7 +134,18 @@ export async function POST(req: NextRequest) {
         const rfqSupplier = await prisma.rfqSupplier.findUnique({
             where: { token },
             include: {
-                rfq: { include: { items: true } },
+                rfq: {
+                    include: {
+                        items: true,
+                        rfqMessages: {
+                            include: {
+                                author: { select: { name: true, email: true } },
+                                rfqSupplier: { select: { companyName: true } }
+                            },
+                            orderBy: { createdAt: "asc" }
+                        }
+                    }
+                },
                 offer: { include: { items: true } }
             }
         });
@@ -136,7 +158,6 @@ export async function POST(req: NextRequest) {
         const action = req.nextUrl.searchParams.get("action");
 
         if (action === "onboard") {
-            // --- ONBOARDING FLOW ---
             const {
                 name, taxId, taxOffice, contactName, phone, address, website, notes,
                 bankName, bankBranch, bankIban, bankAccountNo, bankCurrency,
@@ -240,6 +261,22 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ ok: true, supplierId: supplierId });
         }
 
+        if (action === "send_message") {
+            const { content } = await req.json();
+            if (!content || !content.trim()) return jsonError(400, "no_content");
+
+            const msg = await prisma.rfqMessage.create({
+                data: {
+                    rfqId: rfqSupplier.rfqId,
+                    rfqSupplierId: rfqSupplier.id,
+                    content: content.trim(),
+                    isFromSupplier: true
+                }
+            });
+
+            return NextResponse.json({ ok: true, message: msg });
+        }
+
         // --- OFFER SUBMISSION FLOW (Default) ---
         const body = await req.json();
         /*
@@ -253,7 +290,11 @@ export async function POST(req: NextRequest) {
         // allow overwriting offer? Yes.
         // If offer exists, update or delete/recreate. Delete/recreate is easier for items.
 
-        const { items, notes, validUntil, currency, attachments, companyName } = body;
+        const {
+            items, notes, validUntil, currency, attachments, companyName,
+            incoterm, paymentTerm, extraCostPackaging, extraCostLogistics,
+            shippingIncluded, deliveryDays, partialDelivery, validityDays, generalWarranty
+        } = body;
 
         if (!Array.isArray(items) || items.length === 0) return jsonError(400, "no_items");
 
@@ -267,6 +308,9 @@ export async function POST(req: NextRequest) {
             totalPrice: number;
             notes?: string;
             brand?: string;
+            technicalSpecs?: string;
+            isAlternative?: boolean;
+            warranty?: string;
         }> = [];
 
         for (const item of items) {
@@ -283,7 +327,10 @@ export async function POST(req: NextRequest) {
                 vatRate: vat,
                 totalPrice: lineTotal,
                 notes: item.notes,
-                brand: item.brand
+                brand: item.brand,
+                technicalSpecs: item.technicalSpecs,
+                isAlternative: !!item.isAlternative,
+                warranty: item.warranty
             });
         }
 
@@ -341,6 +388,15 @@ export async function POST(req: NextRequest) {
                     items: {
                         create: offerItemsData
                     },
+                    incoterm: incoterm || null,
+                    paymentTerm: paymentTerm || null,
+                    extraCostPackaging: extraCostPackaging ? Number(extraCostPackaging) : 0,
+                    extraCostLogistics: extraCostLogistics ? Number(extraCostLogistics) : 0,
+                    shippingIncluded: shippingIncluded ?? false,
+                    deliveryDays: deliveryDays ? Number(deliveryDays) : null,
+                    partialDelivery: partialDelivery ?? false,
+                    validityDays: validityDays ? Number(validityDays) : 30,
+                    generalWarranty: generalWarranty || null,
                     submittedAt: new Date()
                 }
             });
