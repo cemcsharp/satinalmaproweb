@@ -6,7 +6,7 @@ import Providers from "./providers";
 import Script from "next/script";
 
 const inter = Inter({
-  variable: "--font-geist-sans",
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700"],
@@ -107,7 +107,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.variable} ${geistMono.variable} antialiased min-h-screen bg-background text-foreground`}>
+      <body className={`${inter.variable} ${geistMono.variable} antialiased min-h-screen bg-background text-foreground`} suppressHydrationWarning>
         <a href="#main-content" className="skip-link">İçeriğe atla</a>
         <Providers>
           <Shell>{children}</Shell>
