@@ -3,14 +3,18 @@ import React from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import AdminSidebar from "@/components/AdminSidebar";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const pathname = usePathname();
+
+    const isLoginPage = pathname === "/admin/login";
 
     useEffect(() => {
-        if (status === "loading") return;
+        if (status === "loading" || isLoginPage) return;
 
         if (status === "unauthenticated") {
             router.replace("/admin/login");
@@ -22,7 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             router.replace("/");
             return;
         }
-    }, [status, session, router]);
+    }, [status, session, router, isLoginPage]);
 
     if (status === "loading") {
         return (
@@ -30,6 +34,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
             </div>
         );
+    }
+
+    if (isLoginPage) {
+        return <>{children}</>;
     }
 
     if (session?.user?.role !== "admin") {
