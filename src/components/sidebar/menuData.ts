@@ -51,8 +51,6 @@ export const menuItems: MenuItem[] = [
     { label: "Ürün Listesi", href: "/urun/liste", icon: "package", category: "Ürün", requiredPermission: "urun:read", moduleKey: "urun" },
     { label: "Ürün Ekle", href: "/urun/olustur", icon: "plus-circle", category: "Ürün", requiredPermission: "urun:create", moduleKey: "urun" },
     { label: "Kategoriler", href: "/urun/kategoriler", icon: "folder", category: "Ürün", requiredPermission: "urun:edit", moduleKey: "urun" },
-
-    { label: "Ayarlar", href: "/ayarlar", icon: "settings", category: "Ayarlar", requiredPermission: "ayarlar:read" },
 ];
 
 /**
@@ -67,7 +65,7 @@ export const evaluatorMenuItems: MenuItem[] = [
 /**
  * Category order for navigation
  */
-export const categories = ["Ana", "Talep", "Teklif", "Sipariş", "Teslimat", "Sözleşme", "Fatura", "Tedarikçi", "Ürün", "Raporlama", "Ayarlar"];
+export const categories = ["Ana", "Talep", "Teklif", "Sipariş", "Teslimat", "Sözleşme", "Fatura", "Tedarikçi", "Ürün", "Raporlama"];
 export const evaluatorCategories = ["Ana", "Değerlendirme"];
 
 /**

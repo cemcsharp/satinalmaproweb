@@ -3,6 +3,19 @@ import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/authOptions";
+import { prisma } from "@/lib/db";
+
+// Helper to get system settings
+async function getSystemSettings() {
+    try {
+        const settings = await prisma.systemSetting.findMany();
+        const map: Record<string, string> = {};
+        settings.forEach((s: { key: string; value: string }) => { map[s.key] = s.value; });
+        return map;
+    } catch {
+        return {};
+    }
+}
 
 export default async function LandingPage() {
     const session = await getServerSession(authOptions);
@@ -11,6 +24,12 @@ export default async function LandingPage() {
         if (role === "supplier") redirect("/portal");
         redirect("/dashboard");
     }
+
+    // Get system settings for footer
+    const settings = await getSystemSettings();
+    const supportEmail = settings.supportEmail || "info@satinalmapro.com";
+    const supportPhone = settings.supportPhone || "+90 (212) 444 0 000";
+    const siteName = settings.siteName || "SatınalmaPRO";
 
     return (
         <div className="min-h-screen bg-white font-sans selection:bg-indigo-100 selection:text-indigo-900">
@@ -364,17 +383,17 @@ export default async function LandingPage() {
                         <div>
                             <h5 className="font-bold text-slate-900 mb-6">Çözümler</h5>
                             <ul className="space-y-4 text-sm text-slate-500">
-                                <li><a href="#" className="hover:text-indigo-600 transition-colors">Satınalma Yönetimi</a></li>
-                                <li><a href="#" className="hover:text-indigo-600 transition-colors">İhale & RFQ</a></li>
-                                <li><a href="#" className="hover:text-indigo-600 transition-colors">Tedarikçi Portalı</a></li>
-                                <li><a href="#" className="hover:text-indigo-600 transition-colors">Sözleşme Yönetimi</a></li>
+                                <li><a href="/login" className="hover:text-indigo-600 transition-colors">Satınalma Yönetimi</a></li>
+                                <li><a href="/login" className="hover:text-indigo-600 transition-colors">İhale & RFQ</a></li>
+                                <li><a href="/portal/login" className="hover:text-indigo-600 transition-colors">Tedarikçi Portalı</a></li>
+                                <li><a href="/login" className="hover:text-indigo-600 transition-colors">Sözleşme Yönetimi</a></li>
                             </ul>
                         </div>
                         <div>
                             <h5 className="font-bold text-slate-900 mb-6">İletişim</h5>
                             <ul className="space-y-4 text-sm text-slate-500">
-                                <li>info@satinalmapro.com</li>
-                                <li>+90 (212) 444 0 000</li>
+                                <li><a href={`mailto:${supportEmail}`} className="hover:text-indigo-600 transition-colors">{supportEmail}</a></li>
+                                <li><a href={`tel:${supportPhone.replace(/\s/g, '')}`} className="hover:text-indigo-600 transition-colors">{supportPhone}</a></li>
                                 <li>İstanbul, Türkiye</li>
                             </ul>
                         </div>
