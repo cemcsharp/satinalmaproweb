@@ -5,6 +5,8 @@ import "./globals.css";
 import Providers from "./providers";
 import Script from "next/script";
 
+import { getSystemSettings, defaultSettings } from "@/lib/settings";
+
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -18,21 +20,27 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "SatınalmaPRO",
-  description: "Kurumsal Satın Alma ve Tedarik Yönetim Sistemi",
-  manifest: "/manifest.json",
+export async function generateMetadata() {
+  const settings = await getSystemSettings();
 
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "SatınAlma Pro",
-  },
-  icons: {
-    icon: "/icons/icon.svg",
-    apple: "/icons/icon.svg",
-  },
-};
+  return {
+    title: {
+      default: settings.siteName || defaultSettings.siteName,
+      template: `%s | ${settings.siteName || defaultSettings.siteName}`,
+    },
+    description: settings.siteDescription || defaultSettings.siteDescription,
+    manifest: "/manifest.json",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: settings.siteName || defaultSettings.siteName,
+    },
+    icons: {
+      icon: "/icons/icon.svg",
+      apple: "/icons/icon.svg",
+    },
+  };
+}
 
 export const viewport = {
   width: "device-width",
@@ -42,11 +50,13 @@ export const viewport = {
   themeColor: "#2563eb",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const settings = await getSystemSettings();
+
   return (
     <html lang="tr" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
@@ -110,7 +120,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${geistMono.variable} antialiased min-h-screen bg-background text-foreground`} suppressHydrationWarning>
         <a href="#main-content" className="skip-link">İçeriğe atla</a>
         <Providers>
-          <Shell>{children}</Shell>
+          <Shell settings={settings}>{children}</Shell>
         </Providers>
       </body>
     </html>

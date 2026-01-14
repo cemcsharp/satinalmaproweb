@@ -37,7 +37,7 @@ type Props = {
   unitOptions: Option[];
   currencyOptions?: Option[];  // Para birimi seçenekleri
   defaultCurrency?: string;    // Varsayılan para birimi ID
-  productCatalog?: { name: string; unitPrice: number; unitId: string }[]; // Legacy uyumluluk
+  productCatalog?: { sku?: string; name: string; unitPrice: number; unitId: string }[]; // Legacy uyumluluk
 };
 
 export default function ItemsSection({
@@ -48,6 +48,7 @@ export default function ItemsSection({
   unitOptions,
   currencyOptions = [],
   defaultCurrency,
+  productCatalog = [],
 }: Props) {
   const [editing, setEditing] = useState<Record<string, { quantity?: string; unitPrice?: string; extraCosts?: string }>>({});
   const [errors, setErrors] = useState<Record<string, { quantity?: string; unitPrice?: string; extraCosts?: string }>>({});
@@ -108,27 +109,59 @@ export default function ItemsSection({
 
     setSearchLoading(prev => ({ ...prev, [rowId]: true }));
     try {
-      const res = await fetch(`/api/urun?search=${encodeURIComponent(query)}&pageSize=10&active=true`);
-      const data = await res.json();
-      const products: CatalogProduct[] = (data.items || []).map((p: any) => ({
-        id: p.id,
-        sku: p.sku,
-        name: p.name,
-        defaultUnit: p.defaultUnit,
-        estimatedPrice: p.estimatedPrice ? Number(p.estimatedPrice) : undefined,
-        currency: p.currency
-      }));
+      // 1. API'den ara
+      let apiProducts: CatalogProduct[] = [];
+      try {
+        const res = await fetch(`/api/urun?search=${encodeURIComponent(query)}&pageSize=10&active=true`);
+        if (res.ok) {
+          const data = await res.json();
+          apiProducts = (data.items || []).map((p: any) => ({
+            id: p.id,
+            sku: p.sku,
+            name: p.name,
+            defaultUnit: p.defaultUnit,
+            estimatedPrice: p.estimatedPrice ? Number(p.estimatedPrice) : undefined,
+            currency: p.currency
+          }));
+        }
+      } catch (e) {
+        console.error("API search error:", e);
+      }
+
+      // 2. Local Katalogdan ara (Fallback & Extension)
+      const localProducts: CatalogProduct[] = (productCatalog || [])
+        .filter(p =>
+          p.sku?.toLowerCase().includes(query.toLowerCase()) ||
+          p.name.toLowerCase().includes(query.toLowerCase())
+        )
+        .map((p, i) => ({
+          id: `local_${i}_${p.name}`,
+          sku: p.sku || `LOCAL-${i}`,
+          name: p.name,
+          defaultUnit: p.unitId,
+          estimatedPrice: p.unitPrice,
+          currency: "TRY"
+        }));
+
+      // 3. Birleştir (Tekrar edenleri SKU bazlı temizle - opsiyonel ama temizlik iyidir)
+      const combined = [...apiProducts];
+      localProducts.forEach(lp => {
+        if (!combined.some(ap => ap.sku === lp.sku)) {
+          combined.push(lp);
+        }
+      });
+
       // flushSync ile senkron render zorla - dropdown hemen görünsün
       flushSync(() => {
-        setSearchResults(prev => ({ ...prev, [rowId]: products }));
+        setSearchResults(prev => ({ ...prev, [rowId]: combined }));
       });
-      if (products.length > 0) setActiveDropdown(rowId);
+      if (combined.length > 0) setActiveDropdown(rowId);
     } catch (e) {
       console.error("Product search error:", e);
     } finally {
       setSearchLoading(prev => ({ ...prev, [rowId]: false }));
     }
-  }, []);
+  }, [productCatalog]);
 
   // Debounced search effect - hem SKU hem Ürün Adı aramaları için çalışır
   useEffect(() => {

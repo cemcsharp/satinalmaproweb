@@ -24,8 +24,8 @@ export default function DropdownPortal({ children, anchorRef, isOpen, className 
             const rect = anchorRef.current?.getBoundingClientRect();
             if (rect) {
                 setPosition({
-                    top: rect.bottom + window.scrollY + 4,
-                    left: rect.left + window.scrollX,
+                    top: rect.bottom + 4,
+                    left: rect.left,
                     width: Math.max(rect.width, 320)
                 });
             }

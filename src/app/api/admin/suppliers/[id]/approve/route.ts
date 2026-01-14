@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermissionApi, getSessionUser } from "@/lib/apiAuth";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
+import { getSystemSettings } from "@/lib/settings";
 
 // POST: Approve a supplier
 export async function POST(
@@ -45,16 +46,17 @@ export async function POST(
 
         // Send approval email
         if (supplier.email) {
+            const settings = await getSystemSettings();
             const emailHtml = renderEmailTemplate("generic", {
                 title: "Tedarikçi Hesabınız Onaylandı",
                 body: `
                     <p>Sayın ${supplier.contactName || supplier.name},</p>
-                    <p>SatınalmaPRO platformuna tedarikçi kaydınız onaylanmıştır.</p>
+                    <p>${settings.siteName} platformuna tedarikçi kaydınız onaylanmıştır.</p>
                     <p>Artık portala giriş yaparak açık taleplere teklif verebilirsiniz.</p>
                 `,
                 actionUrl: `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/portal/login`,
                 actionText: "Portala Giriş Yap",
-                footerText: "SatınalmaPRO - B2B Satınalma Platformu"
+                footerText: `${settings.siteName} - ${settings.siteDescription}`
             });
 
             await dispatchEmail({

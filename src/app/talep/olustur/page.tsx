@@ -64,40 +64,66 @@ export default function TalepOlusturPage() {
 
   const productCatalog = useMemo(
     () => [
-      { name: "Laptop", unitPrice: 35000, unitId: "u1" },
-      { name: "Monitör", unitPrice: 5000, unitId: "u1" },
-      { name: "Klavye", unitPrice: 700, unitId: "u1" },
-      { name: "Mouse", unitPrice: 600, unitId: "u1" },
-      { name: "Ofis Sandalyesi", unitPrice: 2500, unitId: "u1" },
+      { sku: "LPT-001", name: "Laptop", unitPrice: 35000, unitId: "u1" },
+      { sku: "MON-001", name: "Monitör", unitPrice: 5000, unitId: "u1" },
+      { sku: "KLY-001", name: "Klavye", unitPrice: 700, unitId: "u1" },
+      { sku: "MS-001", name: "Mouse", unitPrice: 600, unitId: "u1" },
+      { sku: "OFS-001", name: "Ofis Sandalyesi", unitPrice: 2500, unitId: "u1" },
+      { sku: "KRT-001", name: "Karton Kutu (Küçük)", unitPrice: 15, unitId: "u1" },
+      { sku: "KRT-002", name: "Karton Kutu (Büyük)", unitPrice: 25, unitId: "u1" },
+      { sku: "PRT-001", name: "A4 Fotokopi Kağıdı", unitPrice: 120, unitId: "u1" },
     ],
     []
   );
+
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
     (async () => {
       setOptionsLoading(true);
       setOptionsError(null);
       try {
-        const res = await fetch("/api/options", { cache: "no-store" });
-        if (!res.ok) {
-          console.error("[options] fetch failed", res.status);
-          setOptionsError(`HTTP ${res.status}`);
+        const [optRes, profRes] = await Promise.all([
+          fetch("/api/options", { cache: "no-store" }),
+          fetch("/api/profile", { cache: "no-store" })
+        ]);
+
+        if (!optRes.ok) {
+          console.error("[options] fetch failed", optRes.status);
+          setOptionsError(`HTTP ${optRes.status}`);
           setOptions(emptyOptions);
           return;
         }
-        const data = (await res.json()) as OptionsPayload;
+
+        const data = (await optRes.json()) as OptionsPayload;
         const merged = { ...emptyOptions, ...data };
         setOptions(merged);
-        setSelected((s) => ({
-          ilgiliKisi: merged.ilgiliKisi[0]?.id ?? s.ilgiliKisi,
-          birim: merged.birim[0]?.id ?? s.birim,
-          durum: merged.durum[0]?.id ?? s.durum,
-          paraBirimi: merged.paraBirimi[0]?.id ?? s.paraBirimi,
-        }));
-        try {
-          const firstUnit = merged.birim.find((b) => b.id === (merged.birim[0]?.id ?? ""));
-          setUnitEmail((firstUnit?.email ?? "") || "");
-        } catch { }
+
+        let userData: any = null;
+        if (profRes.ok) {
+          userData = await profRes.json();
+          setUserProfile(userData);
+        }
+
+        setSelected((s) => {
+          // Find matching related person (ilgili kişi) by username
+          const matchingPerson = userData
+            ? merged.ilgiliKisi.find(p => p.label === userData.username)
+            : null;
+
+          // Find matching unit (birim) by unitId
+          const matchingUnit = userData
+            ? merged.birim.find(b => b.id === userData.unitId)
+            : null;
+
+          return {
+            ilgiliKisi: matchingPerson?.id ?? (merged.ilgiliKisi[0]?.id ?? s.ilgiliKisi),
+            birim: matchingUnit?.id ?? (merged.birim[0]?.id ?? s.birim),
+            durum: merged.durum[0]?.id ?? s.durum,
+            paraBirimi: merged.paraBirimi[0]?.id ?? s.paraBirimi,
+          };
+        });
+
       } catch (e) {
         console.error("[options] error:", e);
         setOptionsError("network_error");
@@ -110,8 +136,10 @@ export default function TalepOlusturPage() {
 
   useEffect(() => {
     const u = options.birim.find((b) => b.id === selected.birim);
-    setUnitEmail((u?.email ?? "") || "");
-  }, [selected.birim, options.birim]);
+    // Priority: Unit's own email -> User's profile email -> Empty string
+    const emailToSet = (u?.email ?? "") || (userProfile?.email ?? "") || "";
+    setUnitEmail(emailToSet);
+  }, [selected.birim, options.birim, userProfile]);
 
   useEffect(() => {
     if (!barcode) {

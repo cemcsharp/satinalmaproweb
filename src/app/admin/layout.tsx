@@ -5,9 +5,22 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import AdminSidebar from "@/components/AdminSidebar";
+import { SystemSettings, defaultSettings } from "@/lib/settings";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const { data: session, status } = useSession();
+    const [settings, setSettings] = React.useState<SystemSettings>(defaultSettings);
+
+    useEffect(() => {
+        fetch("/api/admin/settings")
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && data.settings) {
+                    setSettings(data.settings);
+                }
+            })
+            .catch(console.error);
+    }, []);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -47,7 +60,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return (
         <div className="min-h-screen bg-slate-100">
             <div className="flex h-screen w-screen overflow-hidden">
-                <AdminSidebar />
+                <AdminSidebar settings={settings} />
                 <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                     <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-slate-200/50">
                         <nav className="flex items-center justify-between h-16 px-6">

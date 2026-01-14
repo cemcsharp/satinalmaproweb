@@ -13,6 +13,7 @@ import Textarea from "@/components/ui/Textarea";
 import Badge from "@/components/ui/Badge";
 import Alert from "@/components/ui/Alert";
 import { Table, TableContainer, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
+import { SystemSettings, defaultSettings } from "@/lib/settings";
 
 type RfqPublicDetail = {
     ok: boolean;
@@ -70,6 +71,22 @@ export default function SupplierPortalRfqPage() {
     const [companyName, setCompanyName] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+
+    const [siteSettings, setSiteSettings] = useState<Partial<SystemSettings>>(defaultSettings);
+
+    // Fetch settings for dynamic branding
+    useEffect(() => {
+        fetch("/api/admin/settings")
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && data.settings) {
+                    setSiteSettings(data.settings);
+                }
+            })
+            .catch(console.error);
+    }, []);
+
+    const siteName = siteSettings.siteName || defaultSettings.siteName;
 
     const CURRENCIES = ["TRY", "USD", "EUR", "GBP"];
     const [attachments, setAttachments] = useState<string[]>([]);
@@ -317,7 +334,7 @@ export default function SupplierPortalRfqPage() {
                         </div>
 
                         <div className="mb-12">
-                            <h1 className="text-4xl font-black text-slate-900 mb-6 tracking-tighter">SatınalmaPRO Portal</h1>
+                            <h1 className="text-4xl font-black text-slate-900 mb-6 tracking-tighter">{siteName} Portal</h1>
                             <div className="flex justify-center mb-6">
                                 <Badge variant="primary" className="px-6 py-2 rounded-2xl text-sm font-black uppercase tracking-widest shadow-sm">
                                     {data.rfq.rfxCode}

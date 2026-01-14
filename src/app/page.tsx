@@ -5,17 +5,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/db";
 
-// Helper to get system settings
-async function getSystemSettings() {
-    try {
-        const settings = await prisma.systemSetting.findMany();
-        const map: Record<string, string> = {};
-        settings.forEach((s: { key: string; value: string }) => { map[s.key] = s.value; });
-        return map;
-    } catch {
-        return {};
-    }
-}
+import { getSystemSettings, defaultSettings } from "@/lib/settings";
 
 export default async function LandingPage() {
     const session = await getServerSession(authOptions);
@@ -25,11 +15,12 @@ export default async function LandingPage() {
         redirect("/dashboard");
     }
 
-    // Get system settings for footer
+    // Get system settings
     const settings = await getSystemSettings();
-    const supportEmail = settings.supportEmail || "info@satinalmapro.com";
-    const supportPhone = settings.supportPhone || "+90 (212) 444 0 000";
-    const siteName = settings.siteName || "SatınalmaPRO";
+    const siteName = settings.siteName || defaultSettings.siteName;
+    const siteDescription = settings.siteDescription || defaultSettings.siteDescription;
+    const supportEmail = settings.supportEmail || defaultSettings.supportEmail;
+    const supportPhone = settings.supportPhone || defaultSettings.supportPhone;
 
     return (
         <div className="min-h-screen bg-white font-sans selection:bg-indigo-100 selection:text-indigo-900">
@@ -43,7 +34,7 @@ export default async function LandingPage() {
                             </svg>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xl font-bold text-[#2E248F] tracking-tight">SatınalmaPRO</span>
+                            <span className="text-xl font-bold text-[#2E248F] tracking-tight">{siteName}</span>
                             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] -mt-1">Enterprise Solution</span>
                         </div>
                     </div>
@@ -85,8 +76,7 @@ export default async function LandingPage() {
                                 <span className="text-gradient">Verimliliğinizi Artırın</span>
                             </h1>
                             <p className="text-lg md:text-xl text-indigo-100/80 leading-relaxed mb-10 max-w-xl mx-auto lg:mx-0">
-                                Talepten faturaya tüm süreçlerinizi tek platformda birleştirin.
-                                Şeffaf, hızlı ve denetlenebilir satınalma yönetimiyle karlılığınızı maksimize edin.
+                                {siteDescription}
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
@@ -172,13 +162,13 @@ export default async function LandingPage() {
             {/* Solutions Grid */}
             <section id="solutions" className="py-24 lg:py-32 px-6">
                 <div className="max-w-7xl mx-auto">
-                    <div className="text-center max-w-3xl mx-auto mb-20">
-                        <h2 className="text-indigo-600 font-bold text-sm uppercase tracking-[0.2em] mb-4">Uçtan Uca Çözümler</h2>
-                        <p className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-6">
-                            Satınalmanın Her Aşamasında <span className="text-[#2E248F]">Mükemmellik</span>
-                        </p>
-                        <p className="text-lg text-slate-500 leading-relaxed">
-                            SatınalmaPRO, karmaşık operasyonları basitleştirmek ve veriye dayalı kararlar almanızı sağlamak için tasarlandı.
+                    <div className="text-center lg:text-left">
+                        <h2 className="text-3xl md:text-5xl font-bold text-slate-900 leading-tight mb-8">
+                            Küresel Standartlarda <br />
+                            <span className="text-[#4F46E5]">Satınalma Gücü</span>
+                        </h2>
+                        <p className="text-lg text-slate-600 leading-relaxed mb-10">
+                            {siteName}, karmaşık operasyonları basitleştirmek ve veriye dayalı kararlar almanızı sağlamak için tasarlandı.
                         </p>
                     </div>
 
@@ -300,7 +290,7 @@ export default async function LandingPage() {
                                 <span className="text-indigo-500">Değer Kazandırıyoruz</span>
                             </p>
                             <p className="text-lg text-slate-300 leading-relaxed mb-10">
-                                SatınalmaPRO, kurumsal şirketlerin tedarik zinciri süreçlerini uçtan uca dijitalleştirerek insan hatasını sıfıra indirir ve operasyonel hızı %60 artırır.
+                                {siteName}, kurumsal şirketlerin tedarik zinciri süreçlerini uçtan uca dijitalleştirerek insan hatasını sıfıra indirir ve operasyonel hızı %60 artırır.
                             </p>
 
                             <div className="space-y-6">
@@ -374,32 +364,43 @@ export default async function LandingPage() {
                         <div className="col-span-2">
                             <div className="flex items-center gap-3 mb-6">
                                 <div className="w-8 h-8 bg-[#2E248F] rounded-lg"></div>
-                                <span className="text-2xl font-black text-[#2E248F] tracking-tight">SatınalmaPRO</span>
+                                <span className="text-2xl font-black text-[#2E248F] tracking-tight">{siteName}</span>
                             </div>
-                            <p className="text-slate-500 max-w-sm leading-relaxed">
-                                Kurumsal şirketler için uçtan uca e-satınalma ve tedarik zinciri yönetim çözümleri sunan Türkiye&apos;nin lider platformu.
+                            <p className="text-slate-500 text-sm leading-relaxed mb-8">
+                                {siteDescription}
                             </p>
                         </div>
+
                         <div>
-                            <h5 className="font-bold text-slate-900 mb-6">Çözümler</h5>
+                            <h4 className="font-bold text-slate-900 mb-6">Kurumsal</h4>
                             <ul className="space-y-4 text-sm text-slate-500">
-                                <li><a href="/login" className="hover:text-indigo-600 transition-colors">Satınalma Yönetimi</a></li>
-                                <li><a href="/login" className="hover:text-indigo-600 transition-colors">İhale & RFQ</a></li>
-                                <li><a href="/portal/login" className="hover:text-indigo-600 transition-colors">Tedarikçi Portalı</a></li>
-                                <li><a href="/login" className="hover:text-indigo-600 transition-colors">Sözleşme Yönetimi</a></li>
+                                <li><a href="#" className="hover:text-[#4F46E5] transition-colors text-slate-400">Hakkımızda</a></li>
+                                <li><a href="#" className="hover:text-[#4F46E5] transition-colors text-slate-400">Kariyer</a></li>
+                                <li><a href="#" className="hover:text-[#4F46E5] transition-colors text-slate-400">İletişim</a></li>
                             </ul>
                         </div>
+
                         <div>
-                            <h5 className="font-bold text-slate-900 mb-6">İletişim</h5>
+                            <h4 className="font-bold text-slate-900 mb-6">Destek</h4>
                             <ul className="space-y-4 text-sm text-slate-500">
-                                <li><a href={`mailto:${supportEmail}`} className="hover:text-indigo-600 transition-colors">{supportEmail}</a></li>
-                                <li><a href={`tel:${supportPhone.replace(/\s/g, '')}`} className="hover:text-indigo-600 transition-colors">{supportPhone}</a></li>
+                                <li><a href="#" className="hover:text-[#4F46E5] transition-colors text-slate-400">Yardım Merkezi</a></li>
+                                <li><a href="#" className="hover:text-[#4F46E5] transition-colors text-slate-400">API Dökümantasyonu</a></li>
+                                <li><a href="#" className="hover:text-[#4F46E5] transition-colors text-slate-400">Güvenlik</a></li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 className="font-bold text-slate-900 mb-6">İletişim</h4>
+                            <ul className="space-y-4 text-sm text-slate-500">
+                                <li>{supportPhone}</li>
+                                <li>{supportEmail}</li>
                                 <li>İstanbul, Türkiye</li>
                             </ul>
                         </div>
                     </div>
-                    <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-slate-100">
-                        <p className="text-sm text-slate-400">© {new Date().getFullYear()} SatınalmaPRO. Tüm hakları saklıdır.</p>
+
+                    <div className="pt-10 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
+                        <p className="text-sm text-slate-400">© {new Date().getFullYear()} {siteName}. Tüm hakları saklıdır.</p>
                         <div className="flex gap-6 mt-4 md:mt-0 text-xs font-bold text-slate-400 uppercase tracking-widest">
                             <a href="#" className="hover:text-slate-900 transition-colors">KVKK</a>
                             <a href="#" className="hover:text-slate-900 transition-colors">Kullanım Koşulları</a>

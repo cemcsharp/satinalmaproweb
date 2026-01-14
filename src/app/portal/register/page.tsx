@@ -6,11 +6,27 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 
+import { SystemSettings, defaultSettings } from "@/lib/settings";
+
 export default function SupplierRegisterPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [categories, setCategories] = useState<any[]>([]);
+
+    const [siteSettings, setSiteSettings] = useState<Partial<SystemSettings>>(defaultSettings);
+
+    // Fetch settings for dynamic branding
+    useEffect(() => {
+        fetch("/api/admin/settings")
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && data.settings) {
+                    setSiteSettings(data.settings);
+                }
+            })
+            .catch(console.error);
+    }, []);
 
     const [formData, setFormData] = useState({
         // Supplier info
@@ -109,7 +125,7 @@ export default function SupplierRegisterPage() {
                         </svg>
                     </div>
                     <h1 className="text-2xl font-bold text-slate-900">Tedarikçi Kaydı</h1>
-                    <p className="text-sm text-slate-500 mt-1">SatınalmaPRO Tedarikçi Portalı&apos;na kayıt olun</p>
+                    <p className="text-sm text-slate-500 mt-1">{siteSettings.siteName} Tedarikçi Portalı&apos;na kayıt olun</p>
                 </div>
 
                 <Card className="p-8 shadow-xl border-0">

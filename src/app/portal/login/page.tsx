@@ -7,6 +7,8 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 
+import { SystemSettings, defaultSettings } from "@/lib/settings";
+
 export default function SupplierLoginPage() {
     const { status, data: session } = useSession();
     const router = useRouter();
@@ -24,6 +26,20 @@ export default function SupplierLoginPage() {
         password?: string;
     }>({});
     const [showPassword, setShowPassword] = useState(false);
+
+    const [siteSettings, setSiteSettings] = useState<Partial<SystemSettings>>(defaultSettings);
+
+    // Fetch settings for dynamic branding
+    useEffect(() => {
+        fetch("/api/admin/settings")
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && data.settings) {
+                    setSiteSettings(data.settings);
+                }
+            })
+            .catch(console.error);
+    }, []);
 
     // Auth guard - Redirect to dashboard if already logged in as supplier
     useEffect(() => {
@@ -105,7 +121,7 @@ export default function SupplierLoginPage() {
                         </div>
                     </div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight">Tedarikçi Portalı</h1>
-                    <p className="text-slate-500 font-medium">SatınalmaPRO'ya hoş geldiniz.</p>
+                    <p className="text-slate-500 font-medium">{siteSettings.siteName}&apos;ya hoş geldiniz.</p>
                 </div>
 
                 <Card className="p-8 shadow-2xl shadow-indigo-100 border-slate-200/60 bg-white/80 backdrop-blur-xl">
@@ -188,7 +204,7 @@ export default function SupplierLoginPage() {
                         <a href="#" className="hover:text-indigo-600 transition-colors uppercase tracking-widest">Güvenlik</a>
                     </div>
                     <p className="text-[11px] text-slate-300 font-medium">
-                        © {new Date().getFullYear()} SatınalmaPRO Link. Tüm hakları saklıdır.
+                        © {new Date().getFullYear()} {siteSettings.siteName}. Tüm hakları saklıdır.
                     </p>
                 </div>
             </div>

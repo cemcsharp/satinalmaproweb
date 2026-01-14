@@ -122,6 +122,9 @@ const styles = StyleSheet.create({
     },
 });
 
+import { useState, useEffect } from 'react';
+import { SystemSettings, defaultSettings } from '@/lib/settings';
+
 type InvoiceItem = {
     description: string;
     quantity: number;
@@ -144,6 +147,21 @@ type InvoiceData = {
 };
 
 export function InvoicePDF({ data }: { data: InvoiceData }) {
+    const [siteSettings, setSiteSettings] = useState<Partial<SystemSettings>>(defaultSettings);
+
+    useEffect(() => {
+        fetch("/api/admin/settings")
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && data.settings) {
+                    setSiteSettings(data.settings);
+                }
+            })
+            .catch(console.error);
+    }, []);
+
+    const siteName = siteSettings.siteName || defaultSettings.siteName;
+
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('tr-TR', {
             style: 'currency',
@@ -156,7 +174,7 @@ export function InvoicePDF({ data }: { data: InvoiceData }) {
             <Page size="A4" style={styles.page}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <Text style={styles.logo}>SatınalmaPRO</Text>
+                    <Text style={styles.logo}>{siteName}</Text>
                     <Text style={styles.subtitle}>Fatura Belgesi</Text>
                 </View>
 
@@ -243,7 +261,7 @@ export function InvoicePDF({ data }: { data: InvoiceData }) {
 
                 {/* Footer */}
                 <Text style={styles.footer}>
-                    Bu belge SatınalmaPRO sistemi tarafından oluşturulmuştur. • {new Date().toLocaleDateString('tr-TR')}
+                    Bu belge {siteName} sistemi tarafından oluşturulmuştur. • {new Date().toLocaleDateString('tr-TR')}
                 </Text>
             </Page>
         </Document>

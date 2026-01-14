@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermissionApi } from "@/lib/apiAuth";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
+import { getSystemSettings } from "@/lib/settings";
 
 // POST: Reject a supplier registration
 export async function POST(
@@ -33,15 +34,16 @@ export async function POST(
 
         // Send rejection email
         if (supplier.email) {
+            const settings = await getSystemSettings();
             const emailHtml = renderEmailTemplate("generic", {
                 title: "Tedarikçi Başvurunuz Hakkında",
                 body: `
                     <p>Sayın ${supplier.contactName || supplier.name},</p>
-                    <p>SatınalmaPRO platformuna tedarikçi başvurunuz değerlendirilmiştir.</p>
+                    <p>${settings.siteName} platformuna tedarikçi başvurunuz değerlendirilmiştir.</p>
                     <p>Maalesef başvurunuz şu an için onaylanamamıştır.</p>
                     <p>Detaylı bilgi için bizimle iletişime geçebilirsiniz.</p>
                 `,
-                footerText: "SatınalmaPRO - B2B Satınalma Platformu"
+                footerText: `${settings.siteName} - ${settings.siteDescription}`
             });
 
             await dispatchEmail({

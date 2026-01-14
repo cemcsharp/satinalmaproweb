@@ -9,14 +9,18 @@ import { useModuleAccess } from "@/contexts/ModuleAccessContext";
 
 import { menuItems, evaluatorMenuItems, categories, categoryColors, categoryIcons, type MenuItem } from "./sidebar/menuData";
 import ProfileMenu from "./sidebar/ProfileMenu";
+import { SystemSettings, defaultSettings } from "@/lib/settings";
 
-export default function Sidebar() {
+export default function Sidebar({ settings }: { settings?: SystemSettings }) {
     const { data: session } = useSession();
     const pathname = usePathname();
     const [expanded, setExpanded] = useState(true);
     const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
     const [userPermissions, setUserPermissions] = useState<string[]>([]);
     const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+
+    const siteName = settings?.siteName || defaultSettings.siteName;
+    const siteDescription = settings?.siteDescription || defaultSettings.siteDescription;
 
     // Modül erişim kontrolü için context (sadece aktif/pasif kontrolü)
     const { isModuleEnabled, loading: moduleLoading } = useModuleAccess();
@@ -122,8 +126,8 @@ export default function Sidebar() {
                         </div>
                         {expanded && (
                             <div className="animate-in fade-in duration-300">
-                                <div className="text-lg font-bold text-white whitespace-nowrap">SatınalmaPRO</div>
-                                <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">Kurumsal Çözümler</div>
+                                <div className="text-lg font-bold text-white whitespace-nowrap">{siteName}</div>
+                                <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">{siteDescription}</div>
                             </div>
                         )}
                     </Link>

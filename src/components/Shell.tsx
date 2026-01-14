@@ -5,8 +5,15 @@ import { useSession } from "next-auth/react";
 import Sidebar from "./Sidebar";
 import NotificationBell from "./NotificationBell";
 import GlobalSearch from "./GlobalSearch";
+import { SystemSettings, defaultSettings } from "@/lib/settings";
 
-export default function Shell({ children }: { children: React.ReactNode }) {
+export default function Shell({
+  children,
+  settings
+}: {
+  children: React.ReactNode;
+  settings?: SystemSettings;
+}) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,6 +25,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const isAuthPage = ["/", "/login", "/register"].includes(pathname) || pathname.startsWith("/portal") || pathname.startsWith("/admin");
   // Public detail logic removed per request
   const userName = session?.user?.name || "Kullanıcı";
+  const siteName = settings?.siteName || defaultSettings.siteName;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-blue-50/30">
@@ -28,7 +36,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         {!isAuthPage && (
           <>
             <div className="hidden md:block">
-              <Sidebar />
+              <Sidebar settings={settings} />
             </div>
             {sidebarOpen && (
               <>
@@ -38,7 +46,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                   aria-hidden="true"
                 />
                 <div id="mobile-sidebar" className="md:hidden fixed left-0 top-0 bottom-0 z-50 w-72">
-                  <Sidebar />
+                  <Sidebar settings={settings} />
                 </div>
               </>
             )}
@@ -94,7 +102,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <span className="text-base font-bold text-slate-800">SatınalmaPRO</span>
+                  <span className="text-base font-bold text-slate-800">{siteName}</span>
                 </div>
               </nav>
             </header>

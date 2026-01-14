@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
+import { getSystemSettings, defaultSettings } from "@/lib/settings";
 
 /**
  * Yeni bir RFQ yayınlandığında ilgili kategorideki tedarikçilere bildirim gönderir
@@ -51,12 +52,8 @@ export async function notifySuppliersByCategory(rfqId: string) {
                     },
                     // Category mapping match
                     {
-                        categories: {
-                            some: {
-                                categoryId: {
-                                    in: categoryIds
-                                }
-                            }
+                        categoryId: {
+                            in: categoryIds
                         }
                     }
                 ]
@@ -82,6 +79,10 @@ export async function notifySuppliersByCategory(rfqId: string) {
             })
             : "Belirtilmemiş";
 
+        // Get system settings for footer
+        const settings = await getSystemSettings();
+        const footerText = `${settings.siteName} - ${settings.siteDescription}`;
+
         // Send emails to each supplier
         for (const supplier of suppliers) {
             if (!supplier.email) continue;
@@ -103,7 +104,7 @@ export async function notifySuppliersByCategory(rfqId: string) {
                     `,
                     actionUrl: `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/portal/rfq/marketplace`,
                     actionText: "Portala Git",
-                    footerText: "SatınalmaPRO - B2B Satınalma Platformu"
+                    footerText: footerText
                 });
 
                 await dispatchEmail({

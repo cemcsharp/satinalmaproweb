@@ -225,9 +225,10 @@ type InvoicePdfProps = {
         address?: string;
         taxId?: string;
     };
+    siteName?: string;
 };
 
-export default function InvoicePdf({ invoice, company }: InvoicePdfProps) {
+export default function InvoicePdf({ invoice, company, siteName = 'SatınalmaPRO' }: InvoicePdfProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('tr-TR', {
             minimumFractionDigits: 2,
@@ -253,7 +254,7 @@ export default function InvoicePdf({ invoice, company }: InvoicePdfProps) {
                 {/* Header */}
                 <View style={styles.header}>
                     <View>
-                        <Text style={styles.logo}>{company?.name || 'SatınalmaPRO'}</Text>
+                        <Text style={styles.logo}>{company?.name || siteName}</Text>
                         <Text style={styles.subtitle}>Fatura</Text>
                     </View>
                     <View style={styles.invoiceInfo}>
@@ -372,7 +373,7 @@ export default function InvoicePdf({ invoice, company }: InvoicePdfProps) {
 
                 {/* Footer */}
                 <Text style={styles.footer}>
-                    Bu belge {formatDate(invoice.createdAt)} tarihinde SatınalmaPRO sistemi üzerinden oluşturulmuştur. • Fatura No: {invoice.number}
+                    Bu belge {formatDate(invoice.createdAt)} tarihinde {siteName} sistemi üzerinden oluşturulmuştur. • Fatura No: {invoice.number}
                 </Text>
             </Page>
         </Document>

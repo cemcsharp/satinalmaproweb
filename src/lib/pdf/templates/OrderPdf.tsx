@@ -196,9 +196,10 @@ type OrderPdfProps = {
         address?: string;
         taxId?: string;
     };
+    siteName?: string;
 };
 
-export default function OrderPdf({ order, company }: OrderPdfProps) {
+export default function OrderPdf({ order, company, siteName = 'SatınalmaPRO' }: OrderPdfProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('tr-TR', {
             minimumFractionDigits: 2,
@@ -220,7 +221,7 @@ export default function OrderPdf({ order, company }: OrderPdfProps) {
                 {/* Header */}
                 <View style={styles.header}>
                     <View>
-                        <Text style={styles.logo}>{company?.name || 'SatınalmaPRO'}</Text>
+                        <Text style={styles.logo}>{company?.name || siteName}</Text>
                         <Text style={styles.subtitle}>Satın Alma Sipariş Formu</Text>
                     </View>
                     <View style={styles.orderInfo}>
@@ -339,7 +340,7 @@ export default function OrderPdf({ order, company }: OrderPdfProps) {
 
                 {/* Footer */}
                 <Text style={styles.footer}>
-                    Bu belge {formatDate(order.createdAt)} tarihinde SatınalmaPRO sistemi üzerinden oluşturulmuştur. • Sipariş No: {order.barcode}
+                    Bu belge {formatDate(order.createdAt)} tarihinde {siteName} sistemi üzerinden oluşturulmuştur. • Sipariş No: {order.barcode}
                 </Text>
             </Page>
         </Document>

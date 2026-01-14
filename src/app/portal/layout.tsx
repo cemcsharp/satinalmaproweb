@@ -3,9 +3,24 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import PortalSidebar from "@/components/PortalSidebar";
 
+import { SystemSettings, defaultSettings } from "@/lib/settings";
+
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const isAuthPage = pathname === "/portal/login" || pathname.startsWith("/portal/register");
+
+    const [siteSettings, setSiteSettings] = React.useState<Partial<SystemSettings>>(defaultSettings);
+
+    React.useEffect(() => {
+        fetch("/api/admin/settings")
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok && data.settings) {
+                    setSiteSettings(data.settings);
+                }
+            })
+            .catch(console.error);
+    }, []);
 
     // Login/Register pages: standalone layout without sidebar
     if (isAuthPage) {
@@ -55,9 +70,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                                 <div className="flex flex-col items-center md:items-start">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                                        SatınalmaPRO Enterprise Portal v2.0
+                                        {siteSettings.siteName} Enterprise Portal v2.0
                                     </p>
-                                    <p className="text-[9px] text-slate-300 font-medium">© {new Date().getFullYear()} Tüm Hakları Saklıdır.</p>
+                                    <p className="text-[9px] text-slate-300 font-medium">© {new Date().getFullYear()} {siteSettings.siteName}. Tüm Hakları Saklıdır.</p>
                                 </div>
                                 <div className="flex items-center gap-6">
                                     <a href="#" className="text-[10px] font-bold text-slate-400 hover:text-blue-600 uppercase tracking-widest transition-colors">Yardım</a>

@@ -8,6 +8,8 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 
+import { SystemSettings, defaultSettings } from "@/lib/settings";
+
 export default function LoginPage() {
   const { status } = useSession();
   const router = useRouter();
@@ -25,6 +27,20 @@ export default function LoginPage() {
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockTimeRemaining, setBlockTimeRemaining] = useState(0);
+
+  const [siteSettings, setSiteSettings] = useState<Partial<SystemSettings>>(defaultSettings);
+
+  // Fetch settings for dynamic branding
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then(res => res.json())
+      .then(data => {
+        if (data.ok && data.settings) {
+          setSiteSettings(data.settings);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   // Auth guard
   useEffect(() => {
@@ -162,7 +178,7 @@ export default function LoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">SatınalmaPRO</h1>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">{siteSettings.siteName}</h1>
           <p className="text-slate-600">Hesabınıza giriş yapın</p>
         </div>
 
@@ -249,7 +265,7 @@ export default function LoginPage() {
 
         <div className="text-center">
           <p className="text-sm text-slate-500">
-            © 2024 Satın Alma Pro. Tüm hakları saklıdır.
+            © {new Date().getFullYear()} {siteSettings.siteName}. Tüm hakları saklıdır.
           </p>
         </div>
       </div>
