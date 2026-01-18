@@ -23,6 +23,14 @@ export async function POST(req: NextRequest) {
             const expiresAt = new Date();
             expiresAt.setDate(expiresAt.getDate() + 7);
 
+            // Verify order belongs to tenant
+            if (!user.isSuperAdmin) {
+                const orderCheck = await prisma.order.findFirst({
+                    where: { id: orderId, tenantId: user.tenantId }
+                });
+                if (!orderCheck) return jsonError(403, "forbidden_order_tenant");
+            }
+
             await prisma.deliveryToken.create({
                 data: { token, orderId, expiresAt }
             });
@@ -70,16 +78,19 @@ export async function POST(req: NextRequest) {
             return jsonError(400, "invalid_payload", { message: "orderId and items required" });
         }
 
-        // Verify Order
-        const order = await prisma.order.findUnique({
-            where: { id: orderId },
+        // Verify Order (Tenant bound)
+        const order = await prisma.order.findFirst({
+            where: {
+                id: orderId,
+                tenantId: user.isSuperAdmin ? undefined : user.tenantId
+            },
             include: {
                 items: true,
                 deliveries: { include: { items: true } },
                 request: { include: { unit: true, owner: true } } // Include unit info
             }
         });
-        if (!order) return jsonError(404, "order_not_found");
+        if (!order) return jsonError(404, "order_not_found_in_tenant");
 
         // Calculate previously delivered quantities
         const deliveredMap = new Map<string, number>();
@@ -211,7 +222,10 @@ export async function POST(req: NextRequest) {
             if (s) {
                 // Update order status if changed
                 await prisma.order.update({
-                    where: { id: orderId },
+                    where: {
+                        id: orderId,
+                        tenantId: user.isSuperAdmin ? undefined : user.tenantId
+                    },
                     data: { statusId: s.id }
                 });
             }

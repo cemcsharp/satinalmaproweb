@@ -27,8 +27,8 @@ type Order = {
 
 const statusColors: Record<string, string> = {
     "Açık": "bg-blue-100 text-blue-700",
-    "Onaylandı": "bg-emerald-100 text-emerald-700",
-    "Sevk Edildi": "bg-amber-100 text-amber-700",
+    "Onaylandı": "bg-sky-100 text-blue-700",
+    "Sevk Edildi": "bg-sky-100 text-amber-700",
     "Tamamlandı": "bg-green-100 text-green-700",
     "İptal": "bg-red-100 text-red-700",
 };
@@ -189,9 +189,9 @@ export default function OrdersPage() {
                                                             ))}
                                                         </div>
                                                         {order.lastDelivery && (
-                                                            <div className="mt-4 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                                                                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1">Son Teslimat</p>
-                                                                <p className="text-sm text-emerald-800">
+                                                            <div className="mt-4 p-3 bg-sky-50 rounded-xl border border-sky-100">
+                                                                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-1">Son Teslimat</p>
+                                                                <p className="text-sm text-sky-800">
                                                                     {order.lastDelivery.code} - {formatDate(order.lastDelivery.date)} ({order.lastDelivery.status})
                                                                 </p>
                                                             </div>

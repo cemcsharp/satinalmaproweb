@@ -12,6 +12,7 @@ export const PERMISSION_CATEGORIES = {
             { key: "talep:create", label: "Oluşturma" },
             { key: "talep:edit", label: "Düzenleme" },
             { key: "talep:delete", label: "Silme" },
+            { key: "request:approve", label: "Onaylama (Yönetici)" },
         ],
     },
     siparis: {
@@ -30,6 +31,8 @@ export const PERMISSION_CATEGORIES = {
             { key: "rfq:create", label: "Oluşturma" },
             { key: "rfq:edit", label: "Düzenleme" },
             { key: "rfq:delete", label: "Silme" },
+            { key: "rfq:manage", label: "RFQ Yönetimi (Full)" },
+            { key: "offer:view", label: "Teklifleri İnceleme" },
             { key: "offer:submit", label: "Teklif Verme" },
             { key: "portal:access", label: "Portal Erişimi" },
         ],
@@ -81,9 +84,19 @@ export const PERMISSION_CATEGORIES = {
         ],
     },
     rapor: {
-        label: "Raporlama",
+        label: "Raporlama & AI",
         permissions: [
             { key: "rapor:read", label: "Görüntüleme" },
+            { key: "report:view", label: "Gelişmiş Analitik Sorgulama" },
+            { key: "ai:forecast", label: "AI Fiyat Tahmini" },
+        ],
+    },
+    butce: {
+        label: "Bütçe ve Finans",
+        permissions: [
+            { key: "budget:view", label: "Bütçe Görüntüleme" },
+            { key: "budget:manage", label: "Bütçe Yönetimi/Tanımlama" },
+            { key: "invoice:approve", label: "Fatura Onaylama" },
         ],
     },
     ayarlar: {

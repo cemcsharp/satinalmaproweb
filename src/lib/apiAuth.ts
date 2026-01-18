@@ -115,6 +115,7 @@ export type UserWithPermissions = {
   tenantId: string | null;
   supplierId: string | null;
   isSuperAdmin: boolean;
+  departmentId: string | null;
 };
 
 export async function getUserWithPermissions(req: NextRequest): Promise<UserWithPermissions | null> {
@@ -165,7 +166,8 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
     isAdmin: roleKey === "admin",
     tenantId: (user as any).tenantId,
     supplierId: (user as any).supplierId,
-    isSuperAdmin: !!(user as any).isSuperAdmin
+    isSuperAdmin: !!(user as any).isSuperAdmin,
+    departmentId: user.departmentId
   };
 }
 

@@ -71,7 +71,7 @@ export default function ClientTevkifat({ initialItems = [] }: { initialItems?: {
         {/* Add New Form */}
         <Card variant="glass" className="h-fit lg:sticky lg:top-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 shadow-sm">
+            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-blue-600 shadow-sm">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             </div>
             <div>
@@ -150,7 +150,7 @@ export default function ClientTevkifat({ initialItems = [] }: { initialItems?: {
                           variant="ghost"
                           size="sm"
                           onClick={() => toggleActive(it.code, !(it.active ?? true))}
-                          className={(it.active ?? true) ? "text-red-600 hover:bg-red-50" : "text-emerald-600 hover:bg-emerald-50"}
+                          className={(it.active ?? true) ? "text-red-600 hover:bg-red-50" : "text-blue-600 hover:bg-sky-50"}
                         >
                           {(it.active ?? true) ? "Pasif Yap" : "Aktif Yap"}
                         </Button>

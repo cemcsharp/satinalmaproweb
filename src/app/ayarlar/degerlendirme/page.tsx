@@ -134,7 +134,7 @@ export default function DegerlendirmePage() {
                 <button
                     onClick={() => setActiveTab("questions")}
                     className={`px-4 py-2 rounded-lg font-medium transition-all ${activeTab === "questions"
-                        ? "bg-amber-600 text-white shadow-md"
+                        ? "bg-sky-600 text-white shadow-md"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                         }`}
                 >
@@ -143,7 +143,7 @@ export default function DegerlendirmePage() {
                 <button
                     onClick={() => setActiveTab("scoring")}
                     className={`px-4 py-2 rounded-lg font-medium transition-all ${activeTab === "scoring"
-                        ? "bg-amber-600 text-white shadow-md"
+                        ? "bg-sky-600 text-white shadow-md"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                         }`}
                 >

@@ -72,10 +72,8 @@ export default function Sidebar({ settings }: { settings?: SystemSettings }) {
         return true;
     });
 
-    // Add evaluator-specific menu items if user has evaluation:submit permission
     const evaluatorExtraItems: MenuItem[] = [];
     if (hasPermission(userPermissions, "evaluation:submit", userRole) || !permissionsLoaded) {
-        // Check if evaluator items already exist in filtered items
         const hasEvaluatorDashboard = filteredMenuItems.some(i => i.href === "/birim/degerlendirmeler");
         if (!hasEvaluatorDashboard) {
             evaluatorExtraItems.push(
@@ -86,7 +84,6 @@ export default function Sidebar({ settings }: { settings?: SystemSettings }) {
 
     const activeMenuItems = [...filteredMenuItems, ...evaluatorExtraItems];
 
-    // Determine active categories based on what's in the filtered menu
     const usedCategories = new Set(activeMenuItems.map(item => item.category));
     const activeCategories = categories.filter(cat => usedCategories.has(cat));
 
@@ -113,16 +110,15 @@ export default function Sidebar({ settings }: { settings?: SystemSettings }) {
                 transition-all duration-300 z-40 
                 ${expanded ? "w-72" : "w-20"}
             `}>
-                {/* Logo Header & Toggle */}
                 <div className="p-4 border-b border-slate-700/50 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-3 group overflow-hidden">
                         <div className="relative shrink-0">
-                            <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-shadow">
+                            <div className="w-11 h-11 bg-gradient-to-br from-sky-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-sky-500/30 group-hover:shadow-sky-500/50 transition-shadow">
                                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                             </div>
-                            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-slate-900" />
+                            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-sky-500 rounded-full border-2 border-slate-900" />
                         </div>
                         {expanded && (
                             <div className="animate-in fade-in duration-300">
@@ -132,7 +128,6 @@ export default function Sidebar({ settings }: { settings?: SystemSettings }) {
                         )}
                     </Link>
 
-                    {/* Collapse Button (Only visible when expanded, or adjust logic) */}
                     {expanded && (
                         <button
                             onClick={() => setExpanded(!expanded)}
@@ -146,7 +141,6 @@ export default function Sidebar({ settings }: { settings?: SystemSettings }) {
                     )}
                 </div>
 
-                {/* Mobile/Collapsed Toggle (Centered if collapsed) */}
                 {!expanded && (
                     <div className="w-full flex justify-center py-2 border-b border-slate-700/50">
                         <button
@@ -161,7 +155,6 @@ export default function Sidebar({ settings }: { settings?: SystemSettings }) {
                     </div>
                 )}
 
-                {/* Menu Items */}
                 <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-2 custom-scrollbar">
                     {activeCategories.map((category) => {
                         const items = activeMenuItems.filter(item => item.category === category);
@@ -172,7 +165,6 @@ export default function Sidebar({ settings }: { settings?: SystemSettings }) {
 
                         return (
                             <div key={category} className="space-y-1">
-                                {/* Category Header */}
                                 {expanded ? (
                                     <button
                                         onClick={() => toggleCategory(category)}
@@ -208,7 +200,6 @@ export default function Sidebar({ settings }: { settings?: SystemSettings }) {
                                     </div>
                                 )}
 
-                                {/* Category Items */}
                                 {(isOpen || !expanded) && (
                                     <div className={`space-y-0.5 ${expanded ? "ml-2 pl-3 border-l border-slate-700" : ""}`}>
                                         {items.map((item) => {
@@ -248,7 +239,6 @@ export default function Sidebar({ settings }: { settings?: SystemSettings }) {
                     })}
                 </nav>
 
-                {/* Bottom Profile Section */}
                 <div className="p-3 border-t border-slate-700/50 shrink-0">
                     <ProfileMenu expanded={expanded} />
                 </div>
@@ -256,5 +246,3 @@ export default function Sidebar({ settings }: { settings?: SystemSettings }) {
         </aside>
     );
 }
-
-

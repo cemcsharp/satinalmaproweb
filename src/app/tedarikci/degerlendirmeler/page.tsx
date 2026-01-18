@@ -335,14 +335,14 @@ export default function SupplierEvaluationsPage() {
 
               <div className="mb-4">
                 <div className="flex items-baseline gap-1">
-                  <span className={`text-3xl font-bold ${it.totalScore >= 80 ? "text-emerald-600" : it.totalScore >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                  <span className={`text-3xl font-bold ${it.totalScore >= 80 ? "text-blue-600" : it.totalScore >= 50 ? "text-blue-600" : "text-red-600"}`}>
                     {formatNumberTR(it.totalScore ?? 0, 0)}
                   </span>
                   <span className="text-sm text-slate-400">/ 100</span>
                 </div>
                 <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${it.totalScore >= 80 ? "bg-emerald-500" : it.totalScore >= 50 ? "bg-amber-500" : "bg-red-500"}`}
+                    className={`h-full rounded-full ${it.totalScore >= 80 ? "bg-sky-500" : it.totalScore >= 50 ? "bg-sky-500" : "bg-red-500"}`}
                     style={{ width: `${it.totalScore}%` }}
                   ></div>
                 </div>

@@ -310,9 +310,9 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 
         try {
           await dispatchEmail({ to: supplierEmail, subject: supplierSubject, html: supplierHtml, category: "supplier_order_notification" });
-          console.log(`[Supplier Notification] Email sent to ${supplierEmail} for order ${after?.barcode}`);
+          // Email sent
         } catch (emailErr) {
-          console.error(`[Supplier Notification] Failed to send email to ${supplierEmail}:`, emailErr);
+          // Email sent
         }
       }
     } catch { }

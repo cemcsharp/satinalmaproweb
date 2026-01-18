@@ -125,12 +125,12 @@ export default function SifreSifirlaPage() {
                     {["request", "verify", "reset"].map((s, i) => (
                         <div key={s} className="flex items-center">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${step === s ? "bg-blue-600 text-white" :
-                                    ["request", "verify", "reset"].indexOf(step) > i ? "bg-emerald-500 text-white" :
+                                    ["request", "verify", "reset"].indexOf(step) > i ? "bg-sky-500 text-white" :
                                         "bg-slate-200 text-slate-500"
                                 }`}>
                                 {["request", "verify", "reset"].indexOf(step) > i ? "✓" : i + 1}
                             </div>
-                            {i < 2 && <div className={`w-12 h-1 mx-2 rounded ${["request", "verify", "reset"].indexOf(step) > i ? "bg-emerald-500" : "bg-slate-200"}`} />}
+                            {i < 2 && <div className={`w-12 h-1 mx-2 rounded ${["request", "verify", "reset"].indexOf(step) > i ? "bg-sky-500" : "bg-slate-200"}`} />}
                         </div>
                     ))}
                 </div>
@@ -192,7 +192,7 @@ export default function SifreSifirlaPage() {
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="••••••••"
                         />
-                        <Button type="submit" className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white" disabled={loading}>
+                        <Button type="submit" className="w-full bg-gradient-to-r from-sky-600 to-teal-600 text-white" disabled={loading}>
                             {loading ? "Kaydediliyor..." : "Şifreyi Değiştir"}
                         </Button>
                     </form>

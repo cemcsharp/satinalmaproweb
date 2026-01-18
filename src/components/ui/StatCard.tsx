@@ -48,10 +48,10 @@ export default function StatCard({
     const cardStyles = {
         default: "bg-white border-slate-200",
         primary: "bg-gradient-to-br from-blue-500 to-blue-600 border-blue-400",
-        success: "bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-400",
-        warning: "bg-gradient-to-br from-amber-500 to-amber-600 border-amber-400",
+        success: "bg-gradient-to-br from-sky-500 to-sky-600 border-sky-400",
+        warning: "bg-gradient-to-br from-sky-400 to-sky-500 border-sky-300",
         error: "bg-gradient-to-br from-red-500 to-red-600 border-red-400",
-        info: "bg-gradient-to-br from-purple-500 to-purple-600 border-purple-400",
+        info: "bg-gradient-to-br from-blue-500 to-blue-600 border-blue-400",
     }[variant];
 
     const isColored = variant !== "default";
@@ -61,10 +61,10 @@ export default function StatCard({
         : {
             default: "bg-slate-100 text-slate-600",
             primary: "bg-blue-100 text-blue-600",
-            success: "bg-green-100 text-green-600",
-            warning: "bg-amber-100 text-amber-600",
+            success: "bg-sky-100 text-blue-600",
+            warning: "bg-blue-100 text-blue-600",
             error: "bg-red-100 text-red-600",
-            info: "bg-purple-100 text-purple-600",
+            info: "bg-sky-100 text-indigo-600",
         }[variant];
 
     const textColor = isColored ? "text-white" : "text-slate-800";

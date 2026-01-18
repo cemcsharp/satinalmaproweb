@@ -34,7 +34,7 @@ export default function NotFound() {
             </div>
 
             <div className="mt-16 text-slate-400 text-sm">
-                Satınalma Pro v2.0
+                satinalma.app v2.0
             </div>
         </div>
     );

@@ -21,56 +21,49 @@ model Role {
   users       User[]
 }
 
-// Multi-tenant: Alıcı Firma (Tenant)
 model Tenant {
-  id            String    @id @default(cuid())
-  name          String    @unique
-  slug          String    @unique
-  taxId         String?   @unique
-  email         String
-  phone         String?
-  address       String?   @db.VarChar(500)
-  logo          String?
-  
-  // Abonelik bilgileri
-  plan          String    @default("free")  // free, pro, enterprise
-  planExpiresAt DateTime?
-  isActive      Boolean   @default(true)
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // İlişkiler
-  users         User[]
-  requests      Request[]
-  orders        Order[]
-  rfqs          Rfq[]
-  contracts     Contract[]
-  invoices      Invoice[]
-  deliveries    DeliveryReceipt[]
-  products      Product[]
+  id                String            @id @default(cuid())
+  name              String            @unique
+  slug              String            @unique
+  taxId             String?           @unique
+  email             String
+  phone             String?
+  address           String?           @db.VarChar(500)
+  logo              String?
+  plan              String            @default("free")
+  planExpiresAt     DateTime?
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  contracts         Contract[]
+  deliveries        DeliveryReceipt[]
+  departments       Department[]
+  invoices          Invoice[]
+  orders            Order[]
+  products          Product[]
   productCategories ProductCategory[]
-  supplierLinks TenantSupplier[]
-  
+  requests          Request[]
+  rfqs              Rfq[]
+  supplierLinks     TenantSupplier[]
+  users             User[]
+
   @@index([slug])
   @@index([isActive])
 }
 
-// Tenant-Supplier İlişkisi (Onay durumu ile)
 model TenantSupplier {
   id           String    @id @default(cuid())
   tenantId     String
   supplierId   String
-  status       String    @default("pending")  // pending, approved, rejected, blocked
+  status       String    @default("pending")
   approvedAt   DateTime?
   approvedById String?
   notes        String?   @db.VarChar(500)
   createdAt    DateTime  @default(now())
-  
-  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  supplier     Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
   approvedBy   User?     @relation("TenantSupplierApprover", fields: [approvedById], references: [id])
-  
+  supplier     Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@unique([tenantId, supplierId])
   @@index([tenantId])
   @@index([supplierId])
@@ -78,46 +71,80 @@ model TenantSupplier {
 }
 
 model User {
-  id                  String                  @id @default(cuid())
-  username            String                  @unique
-  passwordHash        String
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
-  email               String?                 @unique
-  role                String                  @default("user")
-  roleId              String?
-  unitId              String?
-  isActive            Boolean                 @default(true)
-  supplierId          String?
-  lastLoginAt         DateTime?
-  phoneNumber         String?
-  
-  // Multi-tenant alanları
-  tenantId            String?
-  isSuperAdmin        Boolean                 @default(false)
-  
-  approvalRecords     ApprovalRecord[]        @relation("ApprovalRecordApprover")
-  auditLogs           AuditLog[]
-  comments            Comment[]               @relation("UserComments")
-  Contract            Contract[]
-  deliveriesReceived  DeliveryReceipt[]
-  Invoice             Invoice[]
-  notifications       Notification[]
-  notificationPref    NotificationPreference?
-  Order               Order[]
-  requestsOwned       Request[]               @relation("RequestOwner")
-  requestsResponsible Request[]               @relation("RequestResponsible")
-  createdRfqs         Rfq[]
-  roleRef             Role?                   @relation(fields: [roleId], references: [id])
-  supplier            Supplier?               @relation(fields: [supplierId], references: [id])
-  unit                OptionItem?             @relation("UserUnit", fields: [unitId], references: [id])
-  approvedSuppliers   Supplier[]              @relation("ApprovedSuppliers")
-  rfqMessages         RfqMessage[]
-  tenant              Tenant?                 @relation(fields: [tenantId], references: [id])
-  tenantSupplierApprovals TenantSupplier[]    @relation("TenantSupplierApprover")
-  
+  id                      String                  @id @default(cuid())
+  username                String                  @unique
+  passwordHash            String
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  email                   String?                 @unique
+  role                    String                  @default("user")
+  roleId                  String?
+  unitId                  String?
+  isActive                Boolean                 @default(true)
+  supplierId              String?
+  lastLoginAt             DateTime?
+  phoneNumber             String?
+  isSuperAdmin            Boolean                 @default(false)
+  tenantId                String?
+  departmentId            String?
+  approvalRecords         ApprovalRecord[]        @relation("ApprovalRecordApprover")
+  auditLogs               AuditLog[]
+  comments                Comment[]               @relation("UserComments")
+  Contract                Contract[]
+  deliveriesReceived      DeliveryReceipt[]
+  managedDepartments      Department[]            @relation("DepartmentManager")
+  Invoice                 Invoice[]
+  notifications           Notification[]
+  notificationPref        NotificationPreference?
+  Order                   Order[]
+  requestsOwned           Request[]               @relation("RequestOwner")
+  requestsResponsible     Request[]               @relation("RequestResponsible")
+  createdRfqs             Rfq[]
+  rfqMessages             RfqMessage[]
+  approvedSuppliers       Supplier[]              @relation("ApprovedSuppliers")
+  tenantSupplierApprovals TenantSupplier[]        @relation("TenantSupplierApprover")
+  department              Department?             @relation(fields: [departmentId], references: [id])
+  roleRef                 Role?                   @relation(fields: [roleId], references: [id])
+  supplier                Supplier?               @relation(fields: [supplierId], references: [id])
+  tenant                  Tenant?                 @relation(fields: [tenantId], references: [id])
+  unit                    OptionItem?             @relation("UserUnit", fields: [unitId], references: [id])
+
   @@index([tenantId])
   @@index([isSuperAdmin])
+  @@index([departmentId])
+}
+
+model Department {
+  id        String    @id @default(cuid())
+  name      String
+  tenantId  String?
+  managerId String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  budgets   Budget[]
+  manager   User?     @relation("DepartmentManager", fields: [managerId], references: [id])
+  tenant    Tenant?   @relation(fields: [tenantId], references: [id])
+  requests  Request[]
+  users     User[]
+
+  @@unique([name, tenantId])
+  @@index([tenantId])
+}
+
+model Budget {
+  id             String     @id @default(cuid())
+  departmentId   String
+  year           Int
+  month          Int?
+  totalAmount    Decimal    @db.Decimal(18, 2)
+  spentAmount    Decimal    @default(0) @db.Decimal(18, 2)
+  reservedAmount Decimal    @default(0) @db.Decimal(18, 2)
+  currency       String     @default("TRY")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  department     Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([departmentId, year, month])
 }
 
 model AuditLog {
@@ -168,65 +195,63 @@ model OptionItem {
 }
 
 model Supplier {
-  id                  String                      @id @default(cuid())
-  name                String                      @unique
-  active              Boolean                     @default(true)
-  address             String?                     @db.VarChar(500)
-  contactName         String?
-  createdAt           DateTime                    @default(now())
-  email               String?                     @unique
-  notes               String?
-  phone               String?
-  taxId               String?                     @unique
-  taxOffice           String?
-  bankName            String?
-  bankBranch          String?
-  bankIban            String?
-  bankAccountNo       String?
-  bankCurrency        String?                     @default("TRY")
+  id                       String                      @id @default(cuid())
+  name                     String                      @unique
+  active                   Boolean                     @default(true)
+  address                  String?                     @db.VarChar(500)
+  contactName              String?
+  createdAt                DateTime                    @default(now())
+  email                    String?                     @unique
+  notes                    String?
+  phone                    String?
+  taxId                    String?                     @unique
+  taxOffice                String?
+  bankName                 String?
+  bankBranch               String?
+  bankIban                 String?
+  bankAccountNo            String?
+  bankCurrency             String?                     @default("TRY")
   commercialRegistrationNo String?
-  mersisNo            String?
-  updatedAt           DateTime                    @updatedAt
-  website             String?
-  categoryId          String?                     // Primary category (backward compat)
-  
-  // Registration approval fields
-  registrationStatus  String                      @default("approved") // pending, approved, rejected
-  registrationSource  String?                     // self, invite, admin
-  approvedAt          DateTime?
-  approvedById        String?
-  approvedBy          User?                       @relation("ApprovedSuppliers", fields: [approvedById], references: [id])
-  
-  // Platform seviyesi onay (multi-tenant)
-  platformApproved    Boolean                     @default(false)
-  platformApprovedAt  DateTime?
-  
-  orders              Order[]
-  productsPreferred   Product[]                   @relation("PreferredSupplier")
-  rfqParticipations   RfqSupplier[]
-  category            SupplierCategory?           @relation(fields: [categoryId], references: [id])
-  categories          SupplierCategoryMapping[]   // Multiple categories support
-  alerts              SupplierAlert[]             @relation("SupplierAlerts")
-  evaluations         SupplierEvaluation[]
-  evaluationSummaries SupplierEvaluationSummary[] @relation("SupplierEvaluationSummaries")
-  performanceMetrics  SupplierPerformanceMetric[] @relation("SupplierPerformanceMetrics")
-  supportTickets      SupportTicket[]
-  users               User[]
-  tenantLinks         TenantSupplier[]
+  mersisNo                 String?
+  updatedAt                DateTime                    @updatedAt
+  website                  String?
+  categoryId               String?
+  registrationStatus       String                      @default("approved")
+  registrationSource       String?
+  approvedAt               DateTime?
+  approvedById             String?
+  platformApproved         Boolean                     @default(false)
+  platformApprovedAt       DateTime?
+  isVerified               Boolean                     @default(false)
+  profileCompleted         Boolean                     @default(false)
+  score                    Decimal                     @default(0) @db.Decimal(5, 2)
+  orders                   Order[]
+  productsPreferred        Product[]                   @relation("PreferredSupplier")
+  rfqParticipations        RfqSupplier[]
+  approvedBy               User?                       @relation("ApprovedSuppliers", fields: [approvedById], references: [id])
+  category                 SupplierCategory?           @relation(fields: [categoryId], references: [id])
+  alerts                   SupplierAlert[]             @relation("SupplierAlerts")
+  categories               SupplierCategoryMapping[]
+  evaluations              SupplierEvaluation[]
+  evaluationSummaries      SupplierEvaluationSummary[] @relation("SupplierEvaluationSummaries")
+  performanceMetrics       SupplierPerformanceMetric[] @relation("SupplierPerformanceMetrics")
+  supportTickets           SupportTicket[]
+  tenantLinks              TenantSupplier[]
+  users                    User[]
 
   @@index([active])
+  @@index([isVerified])
   @@index([registrationStatus])
   @@index([platformApproved])
 }
 
-// Many-to-many mapping for Supplier <-> Category
 model SupplierCategoryMapping {
-  id          String           @id @default(cuid())
-  supplierId  String
-  categoryId  String
-  createdAt   DateTime         @default(now())
-  supplier    Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  category    SupplierCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  id         String           @id @default(cuid())
+  supplierId String
+  categoryId String
+  createdAt  DateTime         @default(now())
+  category   SupplierCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  supplier   Supplier         @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   @@unique([supplierId, categoryId])
   @@index([supplierId])
@@ -239,11 +264,20 @@ model SupplierCategory {
   parentId         String?
   createdAt        DateTime                  @default(now())
   updatedAt        DateTime                  @updatedAt
+  code             String?
+  active           Boolean                   @default(true)
+  level            Int                       @default(1)
+  products         Product[]
+  requestItems     RequestItem[]
   rfqItems         RfqItem[]
   suppliers        Supplier[]
-  supplierMappings SupplierCategoryMapping[]
   parent           SupplierCategory?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children         SupplierCategory[]        @relation("CategoryHierarchy")
+  supplierMappings SupplierCategoryMapping[]
+
+  @@index([code])
+  @@index([active])
+  @@index([level])
 }
 
 model Company {
@@ -292,20 +326,23 @@ model Request {
   justification     String?       @db.VarChar(2000)
   rfqId             String?
   tenantId          String?
+  departmentId      String?
   attachments       Attachment[]
   comments          Comment[]
   orders            Order[]
   currency          OptionItem    @relation("RequestCurrency", fields: [currencyId], references: [id])
+  department        Department?   @relation(fields: [departmentId], references: [id])
   owner             User?         @relation("RequestOwner", fields: [ownerUserId], references: [id])
   relatedPerson     OptionItem    @relation("RequestRelatedPerson", fields: [relatedPersonId], references: [id])
   responsible       User?         @relation("RequestResponsible", fields: [responsibleUserId], references: [id])
   rfq               Rfq?          @relation(fields: [rfqId], references: [id])
   status            OptionItem    @relation("RequestStatus", fields: [statusId], references: [id])
+  tenant            Tenant?       @relation(fields: [tenantId], references: [id])
   unit              OptionItem    @relation("RequestUnit", fields: [unitId], references: [id])
   items             RequestItem[]
-  tenant            Tenant?       @relation(fields: [tenantId], references: [id])
-  
+
   @@index([tenantId])
+  @@index([departmentId])
 }
 
 model Attachment {
@@ -331,17 +368,19 @@ model Comment {
 }
 
 model RequestItem {
-  id        String     @id @default(cuid())
-  requestId String
-  name      String
-  quantity  Decimal    @db.Decimal(18, 2)
-  unitId    String
-  unitPrice Decimal    @default(0) @db.Decimal(18, 2)
-  productId String?
-  sku       String?
-  product   Product?   @relation(fields: [productId], references: [id])
-  request   Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  unit      OptionItem @relation("RequestItemUnit", fields: [unitId], references: [id])
+  id         String            @id @default(cuid())
+  requestId  String
+  name       String
+  quantity   Decimal           @db.Decimal(18, 2)
+  unitId     String
+  unitPrice  Decimal           @default(0) @db.Decimal(18, 2)
+  productId  String?
+  sku        String?
+  categoryId String?
+  category   SupplierCategory? @relation(fields: [categoryId], references: [id])
+  product    Product?          @relation(fields: [productId], references: [id])
+  request    Request           @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  unit       OptionItem        @relation("RequestItemUnit", fields: [unitId], references: [id])
 }
 
 model Order {
@@ -374,10 +413,10 @@ model Order {
   responsible       User?                @relation(fields: [responsibleUserId], references: [id])
   status            OptionItem           @relation("OrderStatus", fields: [statusId], references: [id])
   supplier          Supplier             @relation(fields: [supplierId], references: [id])
+  tenant            Tenant?              @relation(fields: [tenantId], references: [id])
   items             OrderItem[]
   evaluations       SupplierEvaluation[]
-  tenant            Tenant?              @relation(fields: [tenantId], references: [id])
-  
+
   @@index([tenantId])
 }
 
@@ -411,7 +450,7 @@ model DeliveryReceipt {
   receiver       User?          @relation(fields: [receiverId], references: [id])
   receiverUnit   OptionItem?    @relation("UnitDeliveries", fields: [receiverUnitId], references: [id])
   tenant         Tenant?        @relation(fields: [tenantId], references: [id])
-  
+
   @@index([tenantId])
 }
 
@@ -459,12 +498,12 @@ model Contract {
   tenantId          String?
   order             Order?               @relation(fields: [orderId], references: [id])
   responsible       User?                @relation(fields: [responsibleUserId], references: [id])
+  tenant            Tenant?              @relation(fields: [tenantId], references: [id])
   attachments       ContractAttachment[]
   events            ContractEvent[]
   histories         ContractHistory[]
   revisions         ContractRevision[]
-  tenant            Tenant?              @relation(fields: [tenantId], references: [id])
-  
+
   @@index([tenantId])
 }
 
@@ -526,9 +565,9 @@ model Invoice {
   tenantId          String?
   order             Order?        @relation(fields: [orderId], references: [id])
   responsible       User?         @relation(fields: [responsibleUserId], references: [id])
-  items             InvoiceItem[]
   tenant            Tenant?       @relation(fields: [tenantId], references: [id])
-  
+  items             InvoiceItem[]
+
   @@index([tenantId])
 }
 
@@ -816,11 +855,11 @@ model Rfq {
   company           Company?         @relation(fields: [companyId], references: [id])
   createdBy         User             @relation(fields: [createdById], references: [id])
   deliveryAddress   DeliveryAddress? @relation(fields: [deliveryAddressId], references: [id])
-  items             RfqItem[]
-  suppliers         RfqSupplier[]
-  messages          RfqMessage[]
   tenant            Tenant?          @relation(fields: [tenantId], references: [id])
-  
+  items             RfqItem[]
+  messages          RfqMessage[]
+  suppliers         RfqSupplier[]
+
   @@index([tenantId])
 }
 
@@ -839,86 +878,76 @@ model RfqItem {
 }
 
 model RfqSupplier {
-  id          String    @id @default(cuid())
+  id          String       @id @default(cuid())
   rfqId       String
   supplierId  String?
   contactName String?
   companyName String?
   email       String
-  token       String    @unique
+  token       String       @unique
   tokenExpiry DateTime
-  stage       String    @default("PENDING")
-  createdAt   DateTime  @default(now())
+  stage       String       @default("PENDING")
+  createdAt   DateTime     @default(now())
   offer       Offer?
-  rfq         Rfq       @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  supplier    Supplier? @relation(fields: [supplierId], references: [id])
-
   rfqMessages RfqMessage[]
+  rfq         Rfq          @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  supplier    Supplier?    @relation(fields: [supplierId], references: [id])
 
   @@unique([rfqId, email])
 }
 
 model Offer {
-  id            String      @id @default(cuid())
-  rfqSupplierId String      @unique
-  totalAmount   Decimal     @db.Decimal(18, 2)
-  currency      String      @default("TRY")
-  validUntil    DateTime?
-  notes         String?
-  attachments   String?
-  submittedAt   DateTime    @default(now())
-  isWinner      Boolean     @default(false)
-  
-  // Advanced Fields
-  incoterm      String?     // EXW, DDP, DAP etc.
-  paymentTerm   String?     // Cash, 30 Days, 60 Days etc.
-  extraCostPackaging Decimal? @default(0) @db.Decimal(18, 2)
-  extraCostLogistics Decimal? @default(0) @db.Decimal(18, 2)
-  
-  // New Detailed Fields
-  shippingIncluded  Boolean?   @default(false)  // Nakliye dahil mi?
-  deliveryDays      Int?                         // Teslimat süresi (iş günü)
-  partialDelivery   Boolean?   @default(false)  // Kısmi teslimat yapılabilir mi?
-  validityDays      Int?       @default(30)     // Teklif geçerlilik süresi (gün)
-  generalWarranty   String?                      // Genel garanti bilgisi
-  
-  rfqSupplier   RfqSupplier @relation(fields: [rfqSupplierId], references: [id])
-  items         OfferItem[]
+  id                 String      @id @default(cuid())
+  rfqSupplierId      String      @unique
+  totalAmount        Decimal     @db.Decimal(18, 2)
+  currency           String      @default("TRY")
+  validUntil         DateTime?
+  notes              String?
+  attachments        String?
+  submittedAt        DateTime    @default(now())
+  isWinner           Boolean     @default(false)
+  incoterm           String?
+  paymentTerm        String?
+  extraCostPackaging Decimal?    @default(0) @db.Decimal(18, 2)
+  extraCostLogistics Decimal?    @default(0) @db.Decimal(18, 2)
+  deliveryDays       Int?
+  generalWarranty    String?
+  partialDelivery    Boolean?    @default(false)
+  shippingIncluded   Boolean?    @default(false)
+  validityDays       Int?        @default(30)
+  rfqSupplier        RfqSupplier @relation(fields: [rfqSupplierId], references: [id])
+  items              OfferItem[]
 }
 
 model OfferItem {
-  id           String    @id @default(cuid())
-  offerId      String
-  rfqItemId    String
-  quantity     Decimal   @db.Decimal(18, 2)
-  unitPrice    Decimal   @db.Decimal(18, 2)
-  vatRate      Int       @default(20)
-  totalPrice   Decimal   @db.Decimal(18, 2)
-  deliveryDate DateTime?
-  brand        String?
-  notes        String?
-  
-  // Advanced Fields
+  id             String    @id @default(cuid())
+  offerId        String
+  rfqItemId      String
+  quantity       Decimal   @db.Decimal(18, 2)
+  unitPrice      Decimal   @db.Decimal(18, 2)
+  vatRate        Int       @default(20)
+  totalPrice     Decimal   @db.Decimal(18, 2)
+  deliveryDate   DateTime?
+  brand          String?
+  notes          String?
   technicalSpecs String?
   isAlternative  Boolean   @default(false)
-  warranty       String?   // Warranty info for this item
-  
-  offer        Offer     @relation(fields: [offerId], references: [id], onDelete: Cascade)
-  rfqItem      RfqItem   @relation(fields: [rfqItemId], references: [id])
+  warranty       String?
+  offer          Offer     @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  rfqItem        RfqItem   @relation(fields: [rfqItemId], references: [id])
 }
 
 model RfqMessage {
-  id              String      @id @default(cuid())
-  rfqId           String
-  authorId        String?     // User.id (optional if from guest supplier)
-  rfqSupplierId   String?     // Link to rfqSupplier (optional if from internal user)
-  content         String      @db.Text
-  isFromSupplier  Boolean     @default(false)
-  createdAt       DateTime    @default(now())
-  
-  rfq             Rfq         @relation(fields: [rfqId], references: [id], onDelete: Cascade)
-  author          User?       @relation(fields: [authorId], references: [id])
-  rfqSupplier     RfqSupplier? @relation(fields: [rfqSupplierId], references: [id])
+  id             String       @id @default(cuid())
+  rfqId          String
+  authorId       String?
+  rfqSupplierId  String?
+  content        String
+  isFromSupplier Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  author         User?        @relation(fields: [authorId], references: [id])
+  rfq            Rfq          @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  rfqSupplier    RfqSupplier? @relation(fields: [rfqSupplierId], references: [id])
 }
 
 model ProductCategory {
@@ -931,11 +960,10 @@ model ProductCategory {
   sortOrder   Int               @default(0)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
-  products    Product[]
   tenantId    String?
-  tenant      Tenant?           @relation(fields: [tenantId], references: [id])
   parent      ProductCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    ProductCategory[] @relation("CategoryHierarchy")
+  tenant      Tenant?           @relation(fields: [tenantId], references: [id])
 
   @@index([parentId])
   @@index([active])
@@ -943,24 +971,24 @@ model ProductCategory {
 }
 
 model Product {
-  id                  String           @id @default(cuid())
-  sku                 String           @unique
+  id                  String            @id @default(cuid())
+  sku                 String            @unique
   name                String
   description         String?
   categoryId          String?
   defaultUnit         String?
-  estimatedPrice      Decimal?         @db.Decimal(18, 2)
-  currency            String           @default("TRY")
+  estimatedPrice      Decimal?          @db.Decimal(18, 2)
+  currency            String            @default("TRY")
   preferredSupplierId String?
-  minStock            Decimal?         @db.Decimal(18, 2)
+  minStock            Decimal?          @db.Decimal(18, 2)
   leadTimeDays        Int?
-  active              Boolean          @default(true)
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  active              Boolean           @default(true)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
   tenantId            String?
-  tenant              Tenant?          @relation(fields: [tenantId], references: [id])
-  category            ProductCategory? @relation(fields: [categoryId], references: [id])
-  preferredSupplier   Supplier?        @relation("PreferredSupplier", fields: [preferredSupplierId], references: [id])
+  category            SupplierCategory? @relation(fields: [categoryId], references: [id])
+  preferredSupplier   Supplier?         @relation("PreferredSupplier", fields: [preferredSupplierId], references: [id])
+  tenant              Tenant?           @relation(fields: [tenantId], references: [id])
   requestItems        RequestItem[]
 
   @@index([categoryId])
@@ -1003,8 +1031,8 @@ model SupportTicket {
   supplierId String
   subject    String   @db.VarChar(200)
   message    String   @db.VarChar(2000)
-  status     String   @default("OPEN") @db.VarChar(20) // OPEN, IN_PROGRESS, RESOLVED
-  priority   String   @default("NORMAL") @db.VarChar(20) // LOW, NORMAL, HIGH
+  status     String   @default("OPEN") @db.VarChar(20)
+  priority   String   @default("NORMAL") @db.VarChar(20)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   supplier   Supplier @relation(fields: [supplierId], references: [id])
@@ -1014,16 +1042,15 @@ model SupportTicket {
   @@index([createdAt])
 }
 
-// Platform genel ayarları (key-value formatında)
 model SystemSettings {
   id        String   @id @default(cuid())
   key       String   @unique
-  value     String   @db.Text
-  type      String   @default("string") // string, number, boolean, json
-  category  String   @default("general") // general, email, security, display
+  value     String
+  type      String   @default("string")
+  category  String   @default("general")
   label     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([category])
 }

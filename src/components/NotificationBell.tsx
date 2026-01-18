@@ -81,7 +81,7 @@ export default function NotificationBell() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-amber-50 text-amber-500 hover:text-amber-600 transition-all relative"
+        className="flex items-center justify-center w-9 h-9 rounded-lg hover:bg-amber-50 text-sky-500 hover:text-blue-600 transition-all relative"
         aria-label="Bildirimler"
         title="Bildirimler"
       >

@@ -63,9 +63,9 @@ export default function SozlesmeRaporu() {
                 <Card variant="glass" className="p-6 flex items-center justify-between">
                     <div>
                         <p className="text-sm text-slate-500 font-medium">Aktif</p>
-                        <h3 className="text-3xl font-bold text-emerald-600 mt-1">{data.summary.active}</h3>
+                        <h3 className="text-3xl font-bold text-blue-600 mt-1">{data.summary.active}</h3>
                     </div>
-                    <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                    <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center text-blue-600">
                         ✅
                     </div>
                 </Card>
@@ -81,9 +81,9 @@ export default function SozlesmeRaporu() {
                 <Card variant="glass" className="p-6 flex items-center justify-between">
                     <div>
                         <p className="text-sm text-slate-500 font-medium">Yaklaşan Bitiş</p>
-                        <h3 className="text-3xl font-bold text-amber-600 mt-1">{data.summary.expiringSoon}</h3>
+                        <h3 className="text-3xl font-bold text-blue-600 mt-1">{data.summary.expiringSoon}</h3>
                     </div>
-                    <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                    <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center text-blue-600">
                         ⚠️
                     </div>
                 </Card>
@@ -117,7 +117,7 @@ export default function SozlesmeRaporu() {
                                         <p className="text-xs text-slate-500">{item.unit}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-sm font-medium text-amber-600">{item.date}</p>
+                                        <p className="text-sm font-medium text-blue-600">{item.date}</p>
                                         <p className="text-xs text-slate-400">Bitiş Tarihi</p>
                                     </div>
                                 </div>
@@ -170,7 +170,7 @@ export default function SozlesmeRaporu() {
                                         <TR key={idx}>
                                             <TD className="font-medium text-slate-700">{item.name}</TD>
                                             <TD className="text-slate-500">{item.unit}</TD>
-                                            <TD className="text-right text-amber-600 font-medium">{item.date}</TD>
+                                            <TD className="text-right text-blue-600 font-medium">{item.date}</TD>
                                         </TR>
                                     ))}
                                 </TBody>

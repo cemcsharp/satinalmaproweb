@@ -19,15 +19,15 @@
   --text-muted: #94a3b8;
   --text-inverse: #ffffff;
 
-  /* Brand - Corporate Blue (PratisPro Inspired) */
-  --brand-deep: #2e248f;
-  --brand-royal: #4f46e5;
-  --brand-accent: #10b981;
+  /* Brand - Ocean Blue (Corporate) */
+  --brand-deep: #075985;
+  --brand-royal: #0369A1;
+  --brand-accent: #0284c7;
   --brand-primary: var(--brand-royal);
-  --brand-primary-hover: #4338ca;
-  --brand-primary-active: #3730a3;
-  --brand-primary-light: #eef2ff;
-  --brand-primary-lighter: #f5f3ff;
+  --brand-primary-hover: #0284C7;
+  --brand-primary-active: #0EA5E9;
+  --brand-primary-light: #e0f2fe;
+  --brand-primary-lighter: #f0f9ff;
 
   /* Status Colors */
   --status-success: #16a34a;
@@ -125,6 +125,12 @@ html.dark {
   box-sizing: border-box;
 }
 
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -168,13 +174,20 @@ p {
   line-height: 1.6;
 }
 
-a {
+/* Only apply brand color to links within text content, not styled buttons */
+p a,
+li a,
+.prose a,
+article a {
   color: var(--brand-primary);
   text-decoration: none;
   transition: color 0.15s;
 }
 
-a:hover {
+p a:hover,
+li a:hover,
+.prose a:hover,
+article a:hover {
   color: var(--brand-primary-hover);
 }
 
@@ -635,11 +648,11 @@ a:hover {
 
 /* ============ LANDING PAGE UTILITIES ============ */
 .mesh-gradient-bg {
-  background-color: #2e248f;
+  background-color: #075985;
   background-image:
-    radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
-    radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
-    radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+    radial-gradient(at 0% 0%, hsla(200, 50%, 7%, 1) 0, transparent 50%),
+    radial-gradient(at 50% 0%, hsla(200, 60%, 30%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(200, 49%, 20%, 1) 0, transparent 50%);
 }
 
 .glass-card {
@@ -681,6 +694,298 @@ a:hover {
 
 .animate-float {
   animation: float 6s ease-in-out infinite;
+}
+
+/* ============ PREMIUM LANDING PAGE STYLES ============ */
+
+/* Animated Gradient Background */
+.premium-gradient-bg {
+  background: linear-gradient(-45deg, #0f172a, #1e3a5f, #312e81, #1e1b4b, #0f172a);
+  background-size: 400% 400%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Glassmorphism Navigation */
+.glass-nav {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-nav-scrolled {
+  background: rgba(15, 23, 42, 0.95);
+}
+
+/* Premium Glass Card */
+.premium-glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-glass-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-8px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Glowing Buttons */
+.btn-glow {
+  position: relative;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  border: none;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  filter: blur(15px);
+}
+
+.btn-glow:hover::before {
+  opacity: 1;
+}
+
+.btn-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px -10px rgba(139, 92, 246, 0.5);
+}
+
+/* Secondary Glow Button */
+.btn-glow-outline {
+  position: relative;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-glow-outline:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+}
+
+/* Gradient Text */
+.premium-text-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #c4b5fd 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.premium-text-gradient-accent {
+  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Floating Shapes */
+.floating-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.3;
+  animation: float-shape 20s ease-in-out infinite;
+}
+
+@keyframes float-shape {
+
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+
+  25% {
+    transform: translate(30px, -30px) rotate(90deg);
+  }
+
+  50% {
+    transform: translate(-20px, 20px) rotate(180deg);
+  }
+
+  75% {
+    transform: translate(20px, 10px) rotate(270deg);
+  }
+}
+
+/* Feature Card with Gradient Border */
+.feature-card-premium {
+  position: relative;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border-radius: 16px;
+  padding: 2rem;
+  transition: all 0.4s ease;
+  overflow: hidden;
+}
+
+.feature-card-premium::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.5), rgba(139, 92, 246, 0.5), rgba(236, 72, 153, 0.3));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.feature-card-premium:hover::before {
+  opacity: 1;
+}
+
+.feature-card-premium:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+}
+
+/* Icon Gradient Background */
+.icon-gradient-bg {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* Stat Card Premium */
+.stat-premium {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.stat-premium:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Reveal Animations */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-reveal-up {
+  animation: reveal-up 0.8s ease-out forwards;
+}
+
+.delay-100 {
+  animation-delay: 0.1s;
+}
+
+.delay-200 {
+  animation-delay: 0.2s;
+}
+
+.delay-300 {
+  animation-delay: 0.3s;
+}
+
+.delay-400 {
+  animation-delay: 0.4s;
+}
+
+.delay-500 {
+  animation-delay: 0.5s;
+}
+
+/* Testimonial Card */
+.testimonial-premium {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+}
+
+/* CTA Section Gradient */
+.cta-gradient-bg {
+  background: linear-gradient(135deg, #1e3a8a 0%, #4c1d95 50%, #831843 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-gradient-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 70% 50%, rgba(168, 85, 247, 0.3) 0%, transparent 50%);
+}
+
+/* Premium Footer */
+.footer-premium {
+  background: #030712;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Dashboard Mockup Effect */
+.dashboard-mockup {
+  transform: perspective(1000px) rotateY(-5deg) rotateX(5deg);
+  transition: transform 0.5s ease;
+}
+
+.dashboard-mockup:hover {
+  transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
+}
+
+/* Pulse Glow Animation */
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.6);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* Grid Pattern Overlay */
+.grid-pattern {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
 }
 
 /* ============ SCROLLBAR ============ */

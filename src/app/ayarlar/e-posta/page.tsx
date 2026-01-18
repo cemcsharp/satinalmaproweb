@@ -105,7 +105,7 @@ export default function EpostaAyarlariPage() {
             {loading ? (
                 <Card className="p-10">
                     <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
                     </div>
                 </Card>
             ) : smtpSettings.length === 0 ? (
@@ -149,10 +149,10 @@ export default function EpostaAyarlariPage() {
             )}
 
             {/* Info */}
-            <Card className="p-4 bg-emerald-50 border-emerald-200">
+            <Card className="p-4 bg-sky-50 border-sky-200">
                 <div className="flex items-start gap-3">
                     <span className="text-xl">💡</span>
-                    <div className="text-sm text-emerald-700">
+                    <div className="text-sm text-blue-700">
                         <p className="font-medium mb-1">Popüler Ayarlar:</p>
                         <p>Gmail: smtp.gmail.com | Port: 587 | SSL: Açık</p>
                         <p>Outlook: smtp.office365.com | Port: 587 | SSL: Açık</p>

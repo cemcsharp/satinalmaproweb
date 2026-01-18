@@ -27,6 +27,9 @@ type RfqPublicDetail = {
             quantity: number;
             unit: string;
             description?: string;
+            categoryId?: string | null;
+            categoryName?: string | null;
+            categoryCode?: string | null;
         }>;
     };
     supplier: {
@@ -348,12 +351,14 @@ export default function SupplierPortalRfqPage() {
                         <div className="space-y-6 max-w-sm mx-auto">
                             <Button
                                 onClick={() => signIn(undefined, { callbackUrl: window.location.href })}
-                                className="w-full h-20 rounded-[1.5rem] shadow-[0_20px_40px_-15px_rgba(37,99,235,0.4)] text-xl font-black !gap-4"
+                                className="w-full h-24 rounded-[2rem] shadow-[0_25px_50px_-15px_rgba(37,99,235,0.4)] text-2xl font-black !gap-6 group"
                                 variant="primary"
                             >
-                                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                                </svg>
+                                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:bg-white group-hover:text-blue-600 transition-all">
+                                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                                    </svg>
+                                </div>
                                 Kurumsal Giriş Yap
                             </Button>
 
@@ -443,8 +448,9 @@ export default function SupplierPortalRfqPage() {
                     <div className="p-10 md:p-14 space-y-12 bg-white">
                         {/* Section 1: Firma Kimlik */}
                         <div className="space-y-8">
-                            <h3 className="text-xs font-black text-blue-600 uppercase tracking-[0.3em] flex items-center gap-4 before:h-px before:flex-1 before:bg-slate-100 after:h-px after:flex-1 after:bg-slate-100">
-                                01. FİRMA KİMLİK BİLGİLERİ
+                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-6 before:h-px before:flex-1 before:bg-slate-100 after:h-px after:flex-1 after:bg-slate-100">
+                                <span className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-500 border border-slate-200">01</span>
+                                FİRMA KİMLİK BİLGİLERİ
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="md:col-span-2">
@@ -478,8 +484,9 @@ export default function SupplierPortalRfqPage() {
 
                         {/* Section 2: İletişim */}
                         <div className="space-y-8">
-                            <h3 className="text-xs font-black text-blue-600 uppercase tracking-[0.3em] flex items-center gap-4 before:h-px before:flex-1 before:bg-slate-100 after:h-px after:flex-1 after:bg-slate-100">
-                                02. İLETİŞİM VE ADRES
+                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-6 before:h-px before:flex-1 before:bg-slate-100 after:h-px after:flex-1 after:bg-slate-100">
+                                <span className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-500 border border-slate-200">02</span>
+                                İLETİŞİM VE ADRES
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <Input
@@ -520,8 +527,9 @@ export default function SupplierPortalRfqPage() {
 
                         {/* Section 3: Banka */}
                         <div className="space-y-8">
-                            <h3 className="text-xs font-black text-blue-600 uppercase tracking-[0.3em] flex items-center gap-4 before:h-px before:flex-1 before:bg-slate-100 after:h-px after:flex-1 after:bg-slate-100">
-                                03. BANKA HESAP BİLGİLERİ
+                            <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-6 before:h-px before:flex-1 before:bg-slate-100 after:h-px after:flex-1 after:bg-slate-100">
+                                <span className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-500 border border-slate-200">03</span>
+                                BANKA HESAP BİLGİLERİ
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
                                 <Input
@@ -656,12 +664,12 @@ export default function SupplierPortalRfqPage() {
                 <Table>
                     <THead>
                         <TR>
-                            <TH className="w-[30%]">Ürün / Hizmet</TH>
-                            <TH className="w-[10%] text-center" align="center">Miktar</TH>
-                            <TH className="w-[25%]">Marka & Spesifikasyon</TH>
-                            <TH className="w-[15%] text-right" align="right">Birim Fiyat</TH>
-                            <TH className="w-[10%] text-center" align="center">Döviz</TH>
-                            <TH className="w-[10%] text-right" align="right">Toplam</TH>
+                            <TH className="w-[35%] py-6">Ürün / Hizmet Bilgisi</TH>
+                            <TH className="w-[10%] text-center py-6" align="center">Miktar</TH>
+                            <TH className="w-[20%] py-6">Marka & Teknik Detay</TH>
+                            <TH className="w-[15%] text-right py-6" align="right">Birim Fiyat</TH>
+                            <TH className="w-[10%] text-center py-6" align="center">Döviz</TH>
+                            <TH className="w-[10%] text-right py-6" align="right">Satır Toplamı</TH>
                         </TR>
                     </THead>
                     <TBody>
@@ -670,34 +678,50 @@ export default function SupplierPortalRfqPage() {
                             const curr = itemCurrencies[item.id] || "TRY";
                             const total = item.quantity * price;
                             return (
-                                <TR key={item.id}>
+                                <TR key={item.id} className="group hover:bg-slate-50/50 transition-colors">
                                     <TD>
-                                        <div className="font-bold text-slate-800 text-lg">{item.name}</div>
-                                        {item.description && <div className="text-xs text-slate-400 mt-1 line-clamp-1">{item.description}</div>}
+                                        <div className="flex flex-col gap-1 py-1">
+                                            <div className="font-black text-slate-800 text-xl tracking-tight group-hover:text-blue-700 transition-colors">{item.name}</div>
+                                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                {item.categoryName && (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-wider border border-blue-100/50">
+                                                        {item.categoryCode ? `${item.categoryCode} | ` : ""}{item.categoryName}
+                                                    </span>
+                                                )}
+                                                {item.description && (
+                                                    <span className="text-xs text-slate-400 italic line-clamp-1">{item.description}</span>
+                                                )}
+                                            </div>
+                                        </div>
                                     </TD>
                                     <TD align="center">
-                                        <Badge variant="info" className="font-bold">
-                                            {formatNumberTR(item.quantity)} {item.unit}
-                                        </Badge>
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-2xl font-black text-slate-900 leading-none">{formatNumberTR(item.quantity)}</span>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{item.unit}</span>
+                                        </div>
                                     </TD>
                                     <TD>
-                                        <Input
-                                            placeholder="Marka/Model..."
-                                            size="sm"
-                                            value={notes[item.id] || brands[item.id] || ""}
-                                            onChange={e => setNotes({ ...notes, [item.id]: e.target.value })}
-                                            className="bg-slate-50 border-none focus:bg-white transition-all shadow-none"
-                                        />
+                                        <div className="px-2">
+                                            <Input
+                                                placeholder="Model / Teknik Detay..."
+                                                size="sm"
+                                                value={notes[item.id] || brands[item.id] || ""}
+                                                onChange={e => setNotes({ ...notes, [item.id]: e.target.value })}
+                                                className="bg-transparent border-0 border-b-2 border-slate-100 focus:border-blue-400 rounded-none px-0 py-2 font-bold text-slate-700 transition-all placeholder:font-medium placeholder:text-slate-300"
+                                            />
+                                        </div>
                                     </TD>
                                     <TD align="right">
-                                        <Input
-                                            type="number"
-                                            placeholder="0.00"
-                                            size="sm"
-                                            value={prices[item.id] || ""}
-                                            onChange={e => setPrices({ ...prices, [item.id]: Number(e.target.value) })}
-                                            className="w-28 ml-auto font-black text-blue-600 bg-slate-50 border-none focus:bg-white transition-all shadow-none text-right"
-                                        />
+                                        <div className="px-2">
+                                            <Input
+                                                type="number"
+                                                placeholder="0.00"
+                                                size="sm"
+                                                value={prices[item.id] || ""}
+                                                onChange={e => setPrices({ ...prices, [item.id]: Number(e.target.value) })}
+                                                className="w-full font-black text-2xl text-blue-600 bg-blue-50/30 border-2 border-transparent focus:border-blue-400 focus:bg-white rounded-2xl px-4 py-3 text-right transition-all shadow-inner-sm"
+                                            />
+                                        </div>
                                     </TD>
                                     <TD align="center">
                                         <Select
@@ -705,12 +729,14 @@ export default function SupplierPortalRfqPage() {
                                             options={CURRENCIES.map(c => ({ label: c, value: c }))}
                                             value={curr}
                                             onChange={e => setItemCurrencies({ ...itemCurrencies, [item.id]: e.target.value })}
-                                            className="bg-slate-50 border-none focus:bg-white transition-all shadow-none font-bold"
+                                            className="bg-slate-50 border-2 border-transparent focus:border-blue-200 rounded-xl font-black text-slate-700"
                                         />
                                     </TD>
                                     <TD align="right">
-                                        <span className="font-black text-slate-900 font-mono text-base">{formatNumberTR(total)}</span>
-                                        <span className="text-[10px] font-black text-slate-400 ml-1.5">{curr}</span>
+                                        <div className="flex flex-col items-end py-1">
+                                            <span className="text-2xl font-black text-slate-900 font-mono tracking-tighter">{formatNumberTR(total)}</span>
+                                            <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest leading-none">{curr}</span>
+                                        </div>
                                     </TD>
                                 </TR>
                             );

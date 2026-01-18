@@ -77,7 +77,7 @@ export default function PageHeader({
           <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-blue-50/30" />
           {/* Decorative circles */}
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-100/50 rounded-full blur-3xl" />
-          <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-indigo-100/40 rounded-full blur-2xl" />
+          <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-sky-100/40 rounded-full blur-2xl" />
           {/* Grid pattern */}
           <div
             className="absolute inset-0 opacity-[0.015]"

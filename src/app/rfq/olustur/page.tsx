@@ -36,6 +36,8 @@ function RfqOlusturContent() {
     const [manualEmails, setManualEmails] = useState("");
     const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
     const [suppliersLoading, setSuppliersLoading] = useState(false);
+    const [suggestedSuppliersApi, setSuggestedSuppliersApi] = useState<Supplier[]>([]);
+    const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
     // RFQ Form State
     const [title, setTitle] = useState("");
@@ -156,7 +158,36 @@ function RfqOlusturContent() {
             setDeadline(d.toISOString().slice(0, 10));
         }
     }, [validityDays, linkedRequestDetail]);
+    // Updated Smart Suggestions Effect
+    useEffect(() => {
+        const catIds = Array.from(new Set(Object.values(itemCategories).filter(Boolean)));
+        if (catIds.length === 0) {
+            setSuggestedSuppliersApi([]);
+            return;
+        }
 
+        const fetchSuggestions = async () => {
+            setLoadingSuggestions(true);
+            try {
+                const res = await fetch("/api/rfq/suggest-suppliers", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ categoryIds: catIds })
+                });
+                const json = await res.json();
+                if (json.items) {
+                    setSuggestedSuppliersApi(json.items);
+                }
+            } catch (e) {
+                console.error("Suggestion fetch failed", e);
+            } finally {
+                setLoadingSuggestions(false);
+            }
+        };
+
+        const timer = setTimeout(fetchSuggestions, 500);
+        return () => clearTimeout(timer);
+    }, [itemCategories]);
     // Request Barcode Search
     useEffect(() => {
         if (!linkedRequestBarcode || linkedRequestBarcode.length < 3 || linkedRequestDetail) {
@@ -254,31 +285,32 @@ function RfqOlusturContent() {
             );
         }
 
-        // Category Matching
-        // Get set of selected category IDs
-        const selectedCatIds = new Set(Object.values(itemCategories).filter(Boolean));
-
-        if (selectedCatIds.size === 0) {
-            return { suggestedSuppliers: [], otherSuppliers: filtered };
-        }
-
+        // Logic: Suggested are those from API results
+        const suggestedIds = new Set(suggestedSuppliersApi.map(s => s.id));
         const suggested: Supplier[] = [];
         const others: Supplier[] = [];
 
         filtered.forEach(s => {
-            if (s.categoryId && selectedCatIds.has(s.categoryId)) {
+            if (suggestedIds.has(s.id)) {
                 suggested.push(s);
             } else {
                 others.push(s);
             }
         });
 
-        // Sort suggested by name
+        // Add suggested from API that might not be in the initial 'pageSize=100' registeredSuppliers call
+        suggestedSuppliersApi.forEach(apiSup => {
+            if (!filtered.some(s => s.id === apiSup.id)) {
+                suggested.push(apiSup);
+            }
+        });
+
+        // Final sorting
         suggested.sort((a, b) => a.name.localeCompare(b.name));
         others.sort((a, b) => a.name.localeCompare(b.name));
 
         return { suggestedSuppliers: suggested, otherSuppliers: others };
-    }, [registeredSuppliers, supplierSearchQuery, itemCategories]);
+    }, [registeredSuppliers, supplierSearchQuery, suggestedSuppliersApi]);
 
     // Select all suggested suppliers
     const selectAllSuggested = () => {
@@ -608,13 +640,18 @@ function RfqOlusturContent() {
                                     {/* Suggested Section */}
                                     {suggestedSuppliers.length > 0 && (
                                         <div className="space-y-2">
-                                            <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center justify-between gap-2">
-                                                <span className="bg-emerald-100 px-2 py-0.5 rounded-full">✨ Önerilenler ({suggestedSuppliers.length})</span>
+                                            <div className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center justify-between gap-2">
+                                                <span className="bg-sky-100 px-2 py-0.5 rounded-full flex items-center gap-1.5">
+                                                    {loadingSuggestions ? (
+                                                        <div className="w-3 h-3 border-2 border-sky-600 border-t-transparent rounded-full animate-spin"></div>
+                                                    ) : "✨"}
+                                                    Önerilenler ({suggestedSuppliers.length})
+                                                </span>
                                                 {!allSuggestedSelected && (
                                                     <button
                                                         type="button"
                                                         onClick={selectAllSuggested}
-                                                        className="text-[10px] bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 transition-colors font-semibold"
+                                                        className="text-[10px] bg-sky-500 text-white px-2 py-1 rounded hover:bg-sky-600 transition-colors font-semibold"
                                                     >
                                                         Tümünü Seç
                                                     </button>
@@ -622,14 +659,14 @@ function RfqOlusturContent() {
                                             </div>
                                             {suggestedSuppliers.map(sup => (
                                                 <label key={sup.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${selectedSupplierIds.includes(sup.id)
-                                                    ? "bg-emerald-50 border-emerald-300 shadow-sm ring-1 ring-emerald-200"
-                                                    : "bg-white border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/30"
+                                                    ? "bg-sky-50 border-sky-300 shadow-sm ring-1 ring-sky-200"
+                                                    : "bg-white border-slate-200 hover:border-sky-200 hover:bg-sky-50/30"
                                                     }`}>
                                                     <input
                                                         type="checkbox"
                                                         checked={selectedSupplierIds.includes(sup.id)}
                                                         onChange={() => toggleSupplier(sup.id)}
-                                                        className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                                                        className="w-4 h-4 text-blue-600 rounded focus:ring-sky-500"
                                                     />
                                                     <div className="flex-1 min-w-0">
                                                         <div className="font-medium text-slate-800 truncate">{sup.name}</div>

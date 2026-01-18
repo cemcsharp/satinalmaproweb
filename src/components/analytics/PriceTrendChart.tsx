@@ -41,7 +41,7 @@ export default function PriceTrendChart({ name, sku }: Props) {
             <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold text-slate-700">Fiyat Trend Analizi</h4>
                 {chartData.length > 1 && (
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${chartData[chartData.length - 1].price > chartData[chartData.length - 2].price ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${chartData[chartData.length - 1].price > chartData[chartData.length - 2].price ? 'bg-rose-50 text-rose-600' : 'bg-sky-50 text-blue-600'
                         }`}>
                         {chartData[chartData.length - 1].price > chartData[chartData.length - 2].price ? '↑ Artış' : '↓ Azalış'}
                     </span>
@@ -100,7 +100,7 @@ export default function PriceTrendChart({ name, sku }: Props) {
 
             <div className="grid grid-cols-2 gap-2 mt-2">
                 <div className="text-[10px] text-slate-400">
-                    En Düşük: <span className="font-bold text-emerald-600">₺{Math.min(...chartData.map((d: any) => d.price))}</span>
+                    En Düşük: <span className="font-bold text-blue-600">₺{Math.min(...chartData.map((d: any) => d.price))}</span>
                 </div>
                 <div className="text-[10px] text-slate-400 text-right">
                     En Yüksek: <span className="font-bold text-rose-600">₺{Math.max(...chartData.map((d: any) => d.price))}</span>

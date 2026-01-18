@@ -531,7 +531,7 @@ function SiparisOlusturContent() {
               {/* Sipariş Detayları */}
               <div className="border-t border-slate-100 pt-6">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-sky-100 text-blue-600 flex items-center justify-center">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                   </div>
                   Sipariş Detayları
@@ -567,7 +567,7 @@ function SiparisOlusturContent() {
               {/* Tedarikçi ve Bütçe */}
               <div className="border-t border-slate-100 pt-6">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-sky-100 text-blue-600 flex items-center justify-center">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                   </div>
                   Tedarikçi ve Bütçe
@@ -637,7 +637,7 @@ function SiparisOlusturContent() {
                   </div>
                   <div className="text-sm text-slate-600 mt-2 sm:mt-0">
                     Bütçe Farkı:
-                    <span className={`font-bold text-lg ml-2 ${budgetDiff === undefined ? "text-slate-900" : budgetDiff >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    <span className={`font-bold text-lg ml-2 ${budgetDiff === undefined ? "text-slate-900" : budgetDiff >= 0 ? "text-blue-600" : "text-red-600"}`}>
                       {budgetDiff === undefined ? "-" : formatNumberTR(budgetDiff)}
                     </span>
                   </div>

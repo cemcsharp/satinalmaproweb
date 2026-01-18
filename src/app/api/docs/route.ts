@@ -5,12 +5,12 @@ const options: swaggerJsdoc.Options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'SatınalmaPRO API',
+            title: 'satinalma.app API',
             version: '1.0.0',
-            description: 'Satınalma Yönetim Sistemi API Dokümantasyonu',
+            description: 'satinalma.app Yönetim Sistemi API Dokümantasyonu',
             contact: {
                 name: 'API Support',
-                email: 'support@satinalmapro.com'
+                email: 'support@satinalma.app'
             }
         },
         servers: [

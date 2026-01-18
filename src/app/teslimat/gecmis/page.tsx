@@ -122,7 +122,7 @@ export default function DeliveryHistoryPage() {
                     <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                         {/* Header */}
                         <div className={`px-6 py-5 text-white relative ${selectedDelivery.status === "approved"
-                                ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                                ? "bg-gradient-to-r from-green-500 to-sky-600"
                                 : selectedDelivery.status === "rejected"
                                     ? "bg-gradient-to-r from-red-500 to-rose-600"
                                     : "bg-gradient-to-r from-slate-600 to-slate-700"
@@ -161,7 +161,7 @@ export default function DeliveryHistoryPage() {
                                 }`}>
                                 <svg className={`w-5 h-5 flex-shrink-0 ${selectedDelivery.status === "approved" ? "text-green-600"
                                         : selectedDelivery.status === "rejected" ? "text-red-600"
-                                            : "text-amber-600"
+                                            : "text-blue-600"
                                     }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={
                                         selectedDelivery.status === "approved" ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
@@ -172,7 +172,7 @@ export default function DeliveryHistoryPage() {
                                 <div>
                                     <p className={`text-sm font-medium ${selectedDelivery.status === "approved" ? "text-green-800"
                                             : selectedDelivery.status === "rejected" ? "text-red-800"
-                                                : "text-amber-800"
+                                                : "text-blue-800"
                                         }`}>
                                         {selectedDelivery.status === "approved" ? "Onaylandı" : selectedDelivery.status === "rejected" ? "Reddedildi" : "Onay Bekliyor"}
                                     </p>

@@ -100,21 +100,36 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.order.findUnique({ where: { barcode: body.barcode.trim() } });
     if (existing) return jsonError(409, "duplicate_barcode");
 
-    // Tek şirketli senaryo için companyId fallback: gelmezse otomatik seç
     let companyId = body.companyId?.trim();
     if (!companyId) {
-      const companies = await prisma.company.findMany({ select: { id: true }, take: 2 });
+      const companies = await prisma.company.findMany({
+        where: { tenantId: user.isSuperAdmin ? undefined : user.tenantId },
+        select: { id: true },
+        take: 2
+      });
       if (companies.length === 1) {
         companyId = companies[0].id;
       } else {
         return jsonError(400, "missing_company");
       }
+    } else {
+      // Validate provided companyId belongs to tenant
+      if (!user.isSuperAdmin) {
+        const comp = await prisma.company.findFirst({ where: { id: companyId, tenantId: user.tenantId } });
+        if (!comp) return jsonError(403, "invalid_company_tenant");
+      }
     }
 
     let requestId: string | undefined = undefined;
     if (body.requestBarcode) {
-      const reqFound = await prisma.request.findUnique({ where: { barcode: body.requestBarcode.trim() } });
+      const reqFound = await prisma.request.findFirst({
+        where: {
+          barcode: body.requestBarcode.trim(),
+          tenantId: user.isSuperAdmin ? undefined : user.tenantId
+        }
+      });
       if (reqFound) requestId = reqFound.id;
+      else return jsonError(404, "request_not_found_in_tenant");
     }
 
     const parsedItems = (body.items || []).map((i) => {

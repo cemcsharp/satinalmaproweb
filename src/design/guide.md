@@ -1,4 +1,4 @@
-# Satın Alma Pro – Tasarım Sistemi ve Bileşen Kılavuzu
+# satinalma.app – Tasarım Sistemi ve Bileşen Kılavuzu
 
 Bu kılavuz, tüm sayfa ve modüllerde ortak bir tasarım dili ve bileşen kullanımını standartlaştırır. Amaç: tutarlılık, erişilebilirlik (WCAG), performans ve bakım kolaylığı.
 

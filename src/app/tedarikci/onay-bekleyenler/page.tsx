@@ -113,8 +113,8 @@ export default function PendingApprovalsPage() {
 
     const getStatusBadge = (status: string) => {
         const styles: Record<string, string> = {
-            pending: "bg-amber-100 text-amber-700",
-            approved: "bg-emerald-100 text-emerald-700",
+            pending: "bg-sky-100 text-amber-700",
+            approved: "bg-sky-100 text-blue-700",
             rejected: "bg-red-100 text-red-700",
         };
         const labels: Record<string, string> = {
@@ -191,7 +191,7 @@ export default function PendingApprovalsPage() {
                                         <div>
                                             <p className="text-slate-500 mb-1 font-medium">Yetkili / Kategori</p>
                                             <p className="text-slate-900 font-semibold">{supplier.contactName}</p>
-                                            <p className="text-emerald-600 text-xs font-bold mt-1 bg-emerald-50 px-2 py-0.5 rounded-full inline-block">
+                                            <p className="text-blue-600 text-xs font-bold mt-1 bg-sky-50 px-2 py-0.5 rounded-full inline-block">
                                                 {supplier.category?.name || "Kategori Belirtilmemiş"}
                                             </p>
                                         </div>
@@ -255,7 +255,7 @@ export default function PendingApprovalsPage() {
                                             size="sm"
                                             loading={actionLoading === supplier.id}
                                             onClick={() => handleApprove(supplier.id)}
-                                            className="bg-emerald-600 hover:bg-emerald-700"
+                                            className="bg-sky-600 hover:bg-sky-700"
                                         >
                                             ✓ Onayla
                                         </Button>

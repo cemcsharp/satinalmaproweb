@@ -18,6 +18,8 @@ const SENSITIVE_ENDPOINTS = [
   "/api/kullanicilar",
   "/api/roller",
   "/api/ayarlar",
+  "/api/auth/forgot",
+  "/api/auth/reset",
 ];
 
 function getClientIp(req: NextRequest): string {
@@ -137,6 +139,7 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    "/dashboard/:path*",
     "/raporlama/:path*",
     "/talep/:path*",
     "/siparis/:path*",
@@ -145,8 +148,16 @@ export const config = {
     "/tedarikci/:path*",
     "/ayarlar/:path*",
     "/profile",
+    "/admin/:path*",
+    "/finans/:path*",
+    "/analitik",
+    "/rfq/:path*",
+    "/teslimat/:path*",
+    "/urun/:path*",
+    "/birim/:path*",
+    "/api-docs",
     // Exclude NextAuth and public endpoints from middleware
-    "/api/((?!auth|portal|upload).*)",
+    "/api/((?!portal|upload).*)",
   ],
 };
 

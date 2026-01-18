@@ -6,6 +6,7 @@ import { defaultSWRConfig } from "@/lib/swr";
 import { SessionProvider } from "next-auth/react";
 import { SWRConfig } from "swr";
 import { useEffect } from "react";
+import LandingProvider from "@/components/landing/LandingProvider";
 
 // Safe SessionProvider wrapper
 function SafeSessionProvider({ children }: { children: React.ReactNode }) {
@@ -45,9 +46,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <SWRConfig value={defaultSWRConfig}>
         <ThemeProvider>
           <ToastProvider>
-            <ModuleAccessProvider>
-              {children}
-            </ModuleAccessProvider>
+            <LandingProvider>
+              <ModuleAccessProvider>
+                {children}
+              </ModuleAccessProvider>
+            </LandingProvider>
           </ToastProvider>
         </ThemeProvider>
       </SWRConfig>

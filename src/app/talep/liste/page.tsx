@@ -381,7 +381,7 @@ function TalepListeContent() {
                     </div>
                   </TD>
                   <TD>
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-50 to-yellow-50 border border-amber-200">
                       <span className="font-semibold text-amber-700">
                         {r.budget.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>

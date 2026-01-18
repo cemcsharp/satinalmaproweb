@@ -182,7 +182,7 @@ export default function OpenRfqListPage() {
                                                             window.location.href = `/portal/rfq/${data.token}`;
                                                         }
                                                     }}
-                                                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+                                                    className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors text-sm font-medium"
                                                 >
                                                     Teklif'e Katıl
                                                 </button>

@@ -122,34 +122,63 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        const order = await prisma.order.create({
-            data: {
-                barcode: orderBarcode,
-                requestId: mainRequestId,
-                supplierId: supplierId,
-                companyId: finalCompanyId,
-                statusId,
-                methodId,
-                regulationId,
-                currencyId,
-                realizedTotal: offer.totalAmount, // or sum
-                responsibleUserId: user.id,
-                items: {
-                    create: orderItemsData
+        const order = await prisma.$transaction(async (tx) => {
+            const newOrder = await tx.order.create({
+                data: {
+                    barcode: orderBarcode,
+                    requestId: mainRequestId,
+                    supplierId: supplierId,
+                    companyId: finalCompanyId,
+                    statusId,
+                    methodId,
+                    regulationId,
+                    currencyId,
+                    realizedTotal: offer.totalAmount,
+                    responsibleUserId: user.id,
+                    items: {
+                        create: orderItemsData
+                    }
+                }
+            });
+
+            // Phase 3: Budget Transition (Reserved -> Spent)
+            if (mainRequestId && Number(offer.totalAmount) > 0) {
+                const request = await tx.request.findUnique({
+                    where: { id: mainRequestId },
+                    select: { departmentId: true }
+                });
+
+                if (request?.departmentId) {
+                    const currentYear = new Date().getFullYear();
+                    const budgetRecord = await tx.budget.findFirst({
+                        where: { departmentId: request.departmentId, year: currentYear }
+                    });
+
+                    if (budgetRecord) {
+                        await tx.budget.update({
+                            where: { id: budgetRecord.id },
+                            data: {
+                                reservedAmount: { decrement: Number(offer.totalAmount) },
+                                spentAmount: { increment: Number(offer.totalAmount) }
+                            }
+                        });
+                    }
                 }
             }
-        });
 
-        // Mark RFQ Completed
-        await prisma.rfq.update({
-            where: { id: rfqId },
-            data: { status: "COMPLETED" }
-        });
+            // Mark RFQ Completed
+            await tx.rfq.update({
+                where: { id: rfqId },
+                data: { status: "COMPLETED" }
+            });
 
-        // Mark Offer as Winner
-        await prisma.offer.update({
-            where: { id: offerId },
-            data: { isWinner: true }
+            // Mark Offer as Winner
+            await tx.offer.update({
+                where: { id: offerId },
+                data: { isWinner: true }
+            });
+
+            return newOrder;
         });
 
         return NextResponse.json({ ok: true, orderId: order.id, barcode: orderBarcode });

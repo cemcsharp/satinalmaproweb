@@ -141,7 +141,7 @@ export default function DeliveryApprovalPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                         {/* Header */}
-                        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-5 text-white relative">
+                        <div className="bg-gradient-to-r from-sky-500 to-orange-500 px-6 py-5 text-white relative">
                             <button
                                 onClick={() => setIsModalOpen(false)}
                                 className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
@@ -227,9 +227,9 @@ export default function DeliveryApprovalPage() {
 
                             {/* Warning */}
                             <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-                                <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                 <div>
-                                    <p className="text-sm font-medium text-amber-800">Onay Gerekiyor</p>
+                                    <p className="text-sm font-medium text-blue-800">Onay Gerekiyor</p>
                                     <p className="text-xs text-amber-700 mt-0.5">Bu teslimat dış kaynak tarafından gönderilmiştir. Onayladığınızda stok güncellenir.</p>
                                 </div>
                             </div>

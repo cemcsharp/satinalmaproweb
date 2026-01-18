@@ -48,7 +48,7 @@ export default function AdminDashboard() {
 
     const statCards = [
         { label: "Toplam Kullanıcı", value: stats?.users.total, subLabel: `${stats?.users.active || 0} aktif`, icon: "users", color: "blue" },
-        { label: "Tedarikçi", value: stats?.suppliers.total, subLabel: `${stats?.suppliers.pending || 0} bekliyor`, icon: "truck", color: "emerald" },
+        { label: "Tedarikçi", value: stats?.suppliers.total, subLabel: `${stats?.suppliers.pending || 0} bekliyor`, icon: "truck", color: "sky" },
         { label: "Aktif RFQ", value: stats?.rfqs.open, subLabel: `${stats?.rfqs.total || 0} toplam`, icon: "file", color: "orange" },
         { label: "Toplam Teklif", value: stats?.offers, subLabel: "tüm zamanlar", icon: "chart", color: "purple" },
     ];
@@ -133,7 +133,7 @@ export default function AdminDashboard() {
                                     </div>
                                     <Link
                                         href="/admin/tedarikciler"
-                                        className="px-3 py-1 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600"
+                                        className="px-3 py-1 bg-sky-500 text-white text-xs font-medium rounded-lg hover:bg-sky-600"
                                     >
                                         İncele
                                     </Link>

@@ -199,7 +199,7 @@ type OrderPdfProps = {
     siteName?: string;
 };
 
-export default function OrderPdf({ order, company, siteName = 'SatınalmaPRO' }: OrderPdfProps) {
+export default function OrderPdf({ order, company, siteName = 'satinalma.app' }: OrderPdfProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('tr-TR', {
             minimumFractionDigits: 2,

@@ -143,7 +143,7 @@ export default function AdminSuppliersPage() {
                                                         variant="primary"
                                                         onClick={() => handleAction(supplier.id, "approve")}
                                                         loading={actionLoading === supplier.id}
-                                                        className="bg-emerald-600 hover:bg-emerald-700"
+                                                        className="bg-sky-600 hover:bg-sky-700"
                                                     >
                                                         Onayla
                                                     </Button>

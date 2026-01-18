@@ -78,7 +78,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
 
         await dispatchEmail({ to: supplierEmail, subject, html, category: "supplier_order_notification" });
 
-        console.log(`[Manual Supplier Notification] Email sent to ${supplierEmail} for order ${order.barcode} by user ${user.id}`);
+        // Email sent
 
         return NextResponse.json({
             ok: true,

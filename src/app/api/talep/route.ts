@@ -16,7 +16,15 @@ type CreateRequestBody = {
   statusId: string;
   currencyId: string;
   unitEmail?: string;
-  items: { name: string; quantity: number; unitId: string; unitPrice?: number }[];
+  items: {
+    name: string;
+    quantity: number;
+    unitId: string;
+    unitPrice?: number;
+    productId?: string;
+    sku?: string;
+    categoryId?: string
+  }[];
 };
 
 function generateTempPassword(length = 12): string {
@@ -118,29 +126,67 @@ export async function POST(req: NextRequest) {
 
     let created;
     try {
-      created = await prisma.request.create({
-        data: {
-          barcode: body.barcode.trim(),
-          subject: body.subject.trim(),
-          budget: body.budget,
-          relatedPersonId: body.relatedPersonId,
-          unitId: body.unitId,
-          statusId: body.statusId,
-          currencyId: body.currencyId,
-          unitEmail: unitEmail || null,
-          justification: body.justification?.trim() || null,
-          ownerUserId: String(user.id),
-          tenantId: user.tenantId, // Multi-tenant: associate request with user's tenant
-          items: body.items && body.items.length > 0 ? {
-            create: body.items.map((i) => ({ name: i.name.trim(), quantity: i.quantity, unitId: i.unitId, unitPrice: Number(i.unitPrice ?? 0) }))
-          } : undefined,
-        } as any,
-        select: { id: true, barcode: true }
+      // Phase 3: Budget Reservation Logic
+      // Find current year's budget for the department
+      const currentYear = new Date().getFullYear();
+      const budgetAmount = Number(body.budget);
+
+      created = await prisma.$transaction(async (tx) => {
+        // 1. Create the request
+        const req = await tx.request.create({
+          data: {
+            barcode: body.barcode.trim(),
+            subject: body.subject.trim(),
+            budget: body.budget,
+            relatedPersonId: body.relatedPersonId,
+            unitId: body.unitId,
+            statusId: body.statusId,
+            currencyId: body.currencyId,
+            unitEmail: unitEmail || null,
+            justification: body.justification?.trim() || null,
+            ownerUserId: String(user.id),
+            tenantId: user.tenantId,
+            departmentId: user.departmentId, // Link to user's department
+            items: body.items && body.items.length > 0 ? {
+              create: body.items.map((i) => ({
+                name: i.name.trim(),
+                quantity: i.quantity,
+                unitId: i.unitId,
+                unitPrice: Number(i.unitPrice ?? 0),
+                productId: i.productId || null,
+                sku: i.sku || null,
+                categoryId: i.categoryId || null
+              }))
+            } : undefined,
+          } as any,
+          select: { id: true, barcode: true }
+        });
+
+        // 2. Reserve Budget if department and budget exist
+        if (user.departmentId && budgetAmount > 0) {
+          const budgetRecord = await tx.budget.findFirst({
+            where: {
+              departmentId: user.departmentId,
+              year: currentYear
+            }
+          });
+
+          if (budgetRecord) {
+            await tx.budget.update({
+              where: { id: budgetRecord.id },
+              data: {
+                reservedAmount: { increment: budgetAmount }
+              }
+            });
+          }
+        }
+
+        return req;
       });
     } catch (err: any) {
       const msg = String(err?.message || "");
-      // Handle case where justification or unitPrice field not yet in Prisma client
       if (/Unknown argument/i.test(msg)) {
+        // Fallback for older schema
         created = await prisma.request.create({
           data: {
             barcode: body.barcode.trim(),
@@ -154,7 +200,14 @@ export async function POST(req: NextRequest) {
             ownerUserId: String(user.id),
             tenantId: user.tenantId,
             items: body.items && body.items.length > 0 ? {
-              create: body.items.map((i) => ({ name: i.name.trim(), quantity: i.quantity, unitId: i.unitId }))
+              create: body.items.map((i) => ({
+                name: i.name.trim(),
+                quantity: i.quantity,
+                unitId: i.unitId,
+                productId: i.productId || null,
+                sku: i.sku || null,
+                categoryId: i.categoryId || null
+              }))
             } : undefined,
           } as any,
           select: { id: true, barcode: true }
@@ -212,7 +265,7 @@ export async function POST(req: NextRequest) {
 
             // Send welcome email
             const welcomeHtml = renderEmailTemplate("generic", {
-              title: "Satınalma Pro - Hesabınız Oluşturuldu",
+              title: "satinalma.app - Hesabınız Oluşturuldu",
               body: `<p>Merhaba,</p>
                       <p>Adınıza/Biriminiz adına yeni bir satınalma talebi oluşturuldu. İşlemleri takip edebilmeniz için hesabınız oluşturulmuştur.</p>
                       <table style="width:100%;border-collapse:collapse;margin:16px 0;background:#f8fafc;border-radius:8px;padding:16px;">
@@ -226,7 +279,7 @@ export async function POST(req: NextRequest) {
             });
             await dispatchEmail({
               to: unitEmail,
-              subject: "Satınalma Pro - Hesabınız Oluşturuldu",
+              subject: "satinalma.app - Hesabınız Oluşturuldu",
               html: welcomeHtml,
               category: "welcome",
             });
@@ -443,10 +496,16 @@ export async function PATCH(req: NextRequest) {
     const body = (await req.json()) as UpdateStatusBody;
     const identifier = String(body.id || body.barcode || "").trim();
     if (!identifier || !body.statusId) return jsonError(400, "missing_fields");
-    const where = body.id ? { id: identifier } : { barcode: identifier };
-    const before = await prisma.request.findUnique({ where, include: { status: true, owner: true, responsible: true, unit: true } });
+    const where: any = body.id ? { id: identifier } : { barcode: identifier };
+
+    // MULTI-TENANT: Ensure the user can only edit within their own tenant
+    if (!user.isSuperAdmin) {
+      where.tenantId = user.tenantId;
+    }
+
+    const before = await prisma.request.findFirst({ where, include: { status: true, owner: true, responsible: true, unit: true } });
     if (!before) return jsonError(404, "not_found");
-    const updated = await prisma.request.update({ where, data: { statusId: String(body.statusId) } });
+    const updated = await prisma.request.update({ where: { id: before.id }, data: { statusId: String(body.statusId) } });
     const after = await prisma.request.findUnique({ where, include: { status: true, owner: true, responsible: true, unit: true } });
     // Notifications
     const prev = before?.status?.label || "";

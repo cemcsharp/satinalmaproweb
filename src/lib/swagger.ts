@@ -3,12 +3,12 @@ import swaggerJSDoc from 'swagger-jsdoc';
 const swaggerDefinition = {
     openapi: '3.0.0',
     info: {
-        title: 'SatınalmaPRO API',
+        title: 'satinalma.app API',
         version: '1.0.0',
         description: 'Kurumsal Satınalma Yönetim Sistemi REST API Documentation',
         contact: {
             name: 'API Support',
-            email: 'destek@satinalmapro.com'
+            email: 'destek@satinalma.app'
         }
     },
     servers: [
@@ -17,7 +17,7 @@ const swaggerDefinition = {
             description: 'Development server'
         },
         {
-            url: 'https://api.satinalmapro.com',
+            url: 'https://api.satinalma.app',
             description: 'Production server'
         }
     ],

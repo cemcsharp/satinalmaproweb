@@ -25,7 +25,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     // Login/Register pages: standalone layout without sidebar
     if (isAuthPage) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50/30">
                 {children}
             </div>
         );
@@ -52,7 +52,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                                     <div className="flex flex-col items-end">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Erişim</p>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                                            <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse"></span>
                                             <p className="text-xs font-bold text-slate-700 leading-none uppercase">Güvenli Seans</p>
                                         </div>
                                     </div>

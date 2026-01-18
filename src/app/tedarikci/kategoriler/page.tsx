@@ -167,7 +167,7 @@ export default function CategoryManagementPage() {
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleAddSubCategory(node); }}
-                                    className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-sky-50 rounded"
                                     title="Alt Kategori Ekle"
                                 >
                                     <Icon name="folder-plus" className="w-4 h-4" />

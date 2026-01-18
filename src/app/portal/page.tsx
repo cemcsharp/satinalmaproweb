@@ -59,7 +59,7 @@ export default function PortalDashboard() {
         switch (stage) {
             case "OFFERED": return "bg-green-500";
             case "SENT": return "bg-blue-500";
-            case "VIEWED": return "bg-amber-500";
+            case "VIEWED": return "bg-sky-500";
             case "DECLINED": return "bg-rose-500";
             default: return "bg-slate-400";
         }
@@ -82,7 +82,7 @@ export default function PortalDashboard() {
                 {/* Background Decorative Elements */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl translate-y-1/4 -translate-x-1/4" />
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl translate-y-1/4 -translate-x-1/4" />
                 </div>
 
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -103,11 +103,11 @@ export default function PortalDashboard() {
                                 {dashboardRates && (
                                     <>
                                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-mono text-slate-300 backdrop-blur-sm">
-                                            <span className="text-emerald-400 font-bold">USD</span>
+                                            <span className="text-sky-400 font-bold">USD</span>
                                             <span>{Number(dashboardRates.USD).toFixed(4)}</span>
                                         </div>
                                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-mono text-slate-300 backdrop-blur-sm">
-                                            <span className="text-purple-400 font-bold">EUR</span>
+                                            <span className="text-indigo-400 font-bold">EUR</span>
                                             <span>{Number(dashboardRates.EUR).toFixed(4)}</span>
                                         </div>
                                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-mono text-slate-300 backdrop-blur-sm">
@@ -193,8 +193,8 @@ export default function PortalDashboard() {
                     {[
                         { href: "/portal/rfq", icon: "📝", label: "Teklif Ver", bg: "bg-blue-50 hover:bg-blue-100" },
                         { href: "/portal/rfq", icon: "📊", label: "Süreç Takibi", bg: "bg-green-50 hover:bg-green-100" },
-                        { href: "/portal/rfq", icon: "📄", label: "Gelen RFQ'lar", bg: "bg-purple-50 hover:bg-purple-100" },
-                        { href: "/portal/orders", icon: "🛒", label: "Siparişlerim", bg: "bg-amber-50 hover:bg-amber-100" },
+                        { href: "/portal/rfq", icon: "📄", label: "Gelen RFQ'lar", bg: "bg-purple-50 hover:bg-sky-100" },
+                        { href: "/portal/orders", icon: "🛒", label: "Siparişlerim", bg: "bg-amber-50 hover:bg-sky-100" },
                         { href: "/portal/profile", icon: "👤", label: "Hesap Bilgileri", bg: "bg-cyan-50 hover:bg-cyan-100" },
                         { href: "/portal/support", icon: "🎧", label: "Destek", bg: "bg-rose-50 hover:bg-rose-100" },
                     ].map((action) => (
@@ -290,8 +290,8 @@ export default function PortalDashboard() {
 
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
                                     </svg>
                                 </div>

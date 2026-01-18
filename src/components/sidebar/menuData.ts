@@ -1,7 +1,7 @@
 /**
- * Sidebar Menu Data
+ * Sidebar Menu Data - Professional v2.0
  * 
- * Menu items, categories, colors, and icons for the sidebar navigation.
+ * Includes RBAC v2.0 roles and strategic categorization.
  */
 
 export type MenuItem = {
@@ -10,96 +10,78 @@ export type MenuItem = {
     icon: string;
     category: string;
     requiredPermission?: string | string[];
-    requiredRole?: string[]; // Sadece bu roller görebilir
-    moduleKey?: string; // Modül erişim kontrolü için
+    requiredRole?: string[];
+    moduleKey?: string;
 };
 
 /**
- * Main menu items for regular users
+ * Main menu items for regular users & professional roles
  */
 export const menuItems: MenuItem[] = [
-    { label: "Dashboard", href: "/dashboard", icon: "home", category: "Ana" },
-    { label: "Talep Oluştur", href: "/talep/olustur", icon: "file-plus", category: "Talep", requiredPermission: "talep:create", moduleKey: "talep" },
-    { label: "Talep Listesi", href: "/talep/liste", icon: "file-text", category: "Talep", requiredPermission: "talep:read", moduleKey: "talep" },
+    { label: "Control Tower", href: "/dashboard", icon: "home", category: "Genel" },
 
-    // Teklif (RFQ) - Talep'ten sonra, Sipariş'ten önce
-    { label: "Teklif Listesi", href: "/rfq/liste", icon: "inbox", category: "Teklif", requiredPermission: "rfq:read", moduleKey: "rfq" },
-    { label: "Yeni RFQ", href: "/rfq/olustur", icon: "file-plus", category: "Teklif", requiredPermission: "rfq:create", moduleKey: "rfq" },
 
-    { label: "Sipariş Oluştur", href: "/siparis/olustur", icon: "cart", category: "Sipariş", requiredPermission: "siparis:create", moduleKey: "siparis" },
-    { label: "Sipariş Listesi", href: "/siparis/liste", icon: "package", category: "Sipariş", requiredPermission: "siparis:read", moduleKey: "siparis" },
+    // OPERASYONEL (Satınalma Döngüsü)
+    { label: "Yeni Talep", href: "/talep/olustur", icon: "file-plus", category: "Operasyon", requiredPermission: "request:create" },
+    { label: "Talep Havuzu", href: "/talep/liste", icon: "file-text", category: "Operasyon", requiredPermission: "request:view" },
+    { label: "Teklifler (RFQ)", href: "/rfq/liste", icon: "inbox", category: "Operasyon", requiredPermission: "rfq:read" },
+    { label: "Siparişler", href: "/siparis/liste", icon: "package", category: "Operasyon", requiredPermission: "order:read" },
+    { label: "Teslimatlar", href: "/teslimat/bekleyen", icon: "truck", category: "Operasyon", requiredPermission: "delivery:read" },
 
-    // Teslimat
-    { label: "Bekleyen Teslimatlar", href: "/teslimat/bekleyen", icon: "truck", category: "Teslimat", requiredPermission: "teslimat:read", moduleKey: "teslimat" },
-    { label: "Onay Bekleyenler", href: "/teslimat/onay", icon: "clipboard-check", category: "Teslimat", requiredPermission: "teslimat:read", moduleKey: "teslimat" },
-    { label: "Teslimat Geçmişi", href: "/teslimat/gecmis", icon: "history", category: "Teslimat", requiredPermission: "teslimat:read", moduleKey: "teslimat" },
+    // FİNANSAL (Kontrol ve Uyum)
+    { label: "Bütçe Konsolu", href: "/finans/butce", icon: "bar-chart", category: "Finans", requiredPermission: "budget:view" },
+    { label: "Faturalar", href: "/fatura/liste", icon: "receipt", category: "Finans", requiredPermission: "invoice:read" },
+    { label: "Sözleşmeler", href: "/finans/sozlesmeler", icon: "clipboard", category: "Finans", requiredPermission: "sozlesme:read" },
 
-    { label: "Sözleşme Oluştur", href: "/sozlesme/olustur", icon: "document", category: "Sözleşme", requiredPermission: "sozlesme:create", moduleKey: "sozlesme" },
-    { label: "Sözleşme Listesi", href: "/sozlesme/liste", icon: "clipboard", category: "Sözleşme", requiredPermission: "sozlesme:read", moduleKey: "sozlesme" },
-    { label: "Fatura Oluştur", href: "/fatura/olustur", icon: "receipt", category: "Fatura", requiredPermission: "fatura:create", moduleKey: "fatura" },
-    { label: "Fatura Listesi", href: "/fatura/liste", icon: "document", category: "Fatura", requiredPermission: "fatura:read", moduleKey: "fatura" },
-    { label: "Tedarikçi Oluştur", href: "/tedarikci/olustur", icon: "user-plus", category: "Tedarikçi", requiredPermission: "tedarikci:create", moduleKey: "tedarikci" },
-    { label: "Tedarikçi Listesi", href: "/tedarikci/liste", icon: "users", category: "Tedarikçi", requiredPermission: "tedarikci:read", moduleKey: "tedarikci" },
-    { label: "Sektörler / Kategoriler", href: "/tedarikci/kategoriler", icon: "folder", category: "Tedarikçi", requiredPermission: "tedarikci:read", moduleKey: "tedarikci" },
-    { label: "Tedarikçi Değerlendirme", href: "/tedarikci/degerlendirme", icon: "star", category: "Tedarikçi", requiredPermission: "evaluation:submit", moduleKey: "tedarikci" },
-    { label: "Değerlendirmeler", href: "/tedarikci/degerlendirmeler", icon: "bar-chart", category: "Tedarikçi", requiredPermission: "tedarikci:read", moduleKey: "tedarikci" },
-    { label: "Kayıt Onayları", href: "/tedarikci/onay-bekleyenler", icon: "clipboard-check", category: "Tedarikçi", requiredPermission: "tedarikci:create", moduleKey: "tedarikci" },
-    { label: "Raporlar", href: "/raporlama/raporlar", icon: "clipboard", category: "Raporlama", requiredPermission: "rapor:read", moduleKey: "raporlama" },
-    { label: "Dashboard", href: "/raporlama/dashboard", icon: "pie-chart", category: "Raporlama", requiredPermission: "rapor:read", moduleKey: "raporlama" },
+    // STRATEJİK (Tedarikçi ve Katalog)
+    { label: "Tedarikçi Havuzu", href: "/tedarikci/liste", icon: "users", category: "Stratejik", requiredPermission: "tedarikci:read" },
+    { label: "Onay Bekleyenler", href: "/tedarikci/onay-bekleyenler", icon: "clipboard-check", category: "Stratejik", requiredPermission: "supplier:verify" },
+    { label: "Katalog (UNSPSC)", href: "/urun/kategoriler", icon: "folder", category: "Stratejik", requiredPermission: "category:manage" },
+    { label: "Ürünler", href: "/urun/liste", icon: "package", category: "Stratejik", requiredPermission: "urun:read" },
 
-    // Ürün Katalog Modülü (Ayrı kategori)
-    { label: "Ürün Listesi", href: "/urun/liste", icon: "package", category: "Ürün", requiredPermission: "urun:read", moduleKey: "urun" },
-    { label: "Ürün Ekle", href: "/urun/olustur", icon: "plus-circle", category: "Ürün", requiredPermission: "urun:create", moduleKey: "urun" },
-    { label: "Kategoriler", href: "/urun/kategoriler", icon: "folder", category: "Ürün", requiredPermission: "urun:edit", moduleKey: "urun" },
+    // ANALİTİK (Raporlama)
+    { label: "Analiz Dashboard", href: "/analitik", icon: "pie-chart", category: "Analitik", requiredPermission: "report:view" },
+    { label: "Tüm Raporlar", href: "/raporlama/raporlar", icon: "clipboard", category: "Analitik", requiredPermission: "report:view" },
+
+    // SİSTEM (Yönetim)
+    { label: "Departmanlar", href: "/admin/departmanlar", icon: "users", category: "Sistem", requiredRole: ["admin"] },
+    { label: "Kullanıcılar", href: "/admin/kullanicilar", icon: "user-plus", category: "Sistem", requiredRole: ["admin"] },
+    { label: "Rol & Yetki", href: "/admin/roller", icon: "shield", category: "Sistem", requiredRole: ["admin"] },
+    { label: "Genel Ayarlar", href: "/admin/ayarlar", icon: "settings", category: "Sistem", requiredRole: ["admin"] },
 ];
 
-/**
- * Restricted menu for birim_evaluator role
- */
 export const evaluatorMenuItems: MenuItem[] = [
-    { label: "Dashboard", href: "/dashboard", icon: "home", category: "Ana" },
+    { label: "Dashboard", href: "/dashboard", icon: "home", category: "Genel" },
     { label: "Değerlendirmelerim", href: "/birim/degerlendirmeler", icon: "star", category: "Değerlendirme" },
-    { label: "Değerlendirme Yap", href: "/tedarikci/degerlendirme", icon: "check-square", category: "Değerlendirme" },
 ];
 
 /**
  * Category order for navigation
  */
-export const categories = ["Ana", "Talep", "Teklif", "Sipariş", "Teslimat", "Sözleşme", "Fatura", "Tedarikçi", "Ürün", "Raporlama"];
-export const evaluatorCategories = ["Ana", "Değerlendirme"];
+export const categories = ["Genel", "Operasyon", "Finans", "Stratejik", "Analitik", "Sistem", "Değerlendirme"];
 
 /**
- * Category gradient colors
+ * Category gradient colors - Ocean Blue Corporate Theme
+ * All categories use consistent blue tones for brand unity
  */
 export const categoryColors: Record<string, string> = {
-    "Ana": "from-blue-500 to-indigo-500",
-    "Talep": "from-emerald-500 to-teal-500",
-    "Sipariş": "from-orange-500 to-amber-500",
-    "Teslimat": "from-blue-600 to-cyan-600",
-    "Teklif": "from-violet-500 to-purple-600",
-    "Sözleşme": "from-purple-500 to-violet-500",
-    "Fatura": "from-rose-500 to-pink-500",
-    "Tedarikçi": "from-lime-500 to-green-500",
-    "Ürün": "from-amber-500 to-yellow-500",
-    "Raporlama": "from-fuchsia-500 to-purple-500",
-    "Ayarlar": "from-slate-500 to-gray-500",
-    "Değerlendirme": "from-emerald-500 to-green-500",
+    "Genel": "from-slate-600 to-slate-700",
+    "Operasyon": "from-sky-600 to-blue-700",
+    "Finans": "from-sky-700 to-blue-800",
+    "Stratejik": "from-blue-600 to-indigo-700",
+    "Analitik": "from-indigo-600 to-blue-700",
+    "Sistem": "from-slate-700 to-slate-800",
+    "Değerlendirme": "from-sky-600 to-blue-700",
 };
 
 /**
  * Category icons
  */
 export const categoryIcons: Record<string, string> = {
-    "Ana": "home",
-    "Talep": "file-plus",
-    "Sipariş": "cart",
-    "Teslimat": "truck",
-    "Teklif": "inbox",
-    "Sözleşme": "document",
-    "Fatura": "receipt",
-    "Tedarikçi": "users",
-    "Raporlama": "bar-chart",
-    "Ayarlar": "settings",
-    "Değerlendirme": "star",
-    "Ürün": "package",
+    "Genel": "home",
+    "Operasyon": "cart",
+    "Finans": "receipt",
+    "Stratejik": "users",
+    "Analitik": "bar-chart",
+    "Sistem": "settings",
 };

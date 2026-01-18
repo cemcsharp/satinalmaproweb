@@ -337,7 +337,7 @@ function FaturaOlusturContent() {
               </div>
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">Satıcı (Tedarikçi)</div>
-                <div className="text-sm font-bold text-slate-900">{example.supplier.name?.replace?.("Satın Alma Pro", "SatınalmaPRO")}</div>
+                <div className="text-sm font-bold text-slate-900">{example.supplier.name}</div>
                 <div className="text-xs text-slate-600 mt-1">Vergi No: <span className="font-medium">{example.supplier.taxId || '-'}</span></div>
                 <div className="text-xs text-slate-600">Adres: <span className="font-medium">{example.supplier.address || '-'}</span></div>
               </div>
@@ -415,7 +415,7 @@ function FaturaOlusturContent() {
                   <span>Genel Toplam</span>
                   <span>{new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(calc.grossTotal)} ₺</span>
                 </div>
-                <div className="flex justify-between text-sm font-semibold text-emerald-600">
+                <div className="flex justify-between text-sm font-semibold text-blue-600">
                   <span>Ödenecek Tutar</span>
                   <span>{new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(rule ? calc.netPayableTotal : calc.grossTotal)} ₺</span>
                 </div>

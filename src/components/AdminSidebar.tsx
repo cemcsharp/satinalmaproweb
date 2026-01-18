@@ -33,10 +33,11 @@ export default function AdminSidebar({ settings }: { settings?: SystemSettings }
     ];
 
     const categories = ["Genel", "Yönetim", "Sistem"];
+    // Ocean Blue Corporate Theme - consistent with main app
     const categoryColors: Record<string, string> = {
-        "Genel": "from-blue-500 to-indigo-500",
-        "Yönetim": "from-emerald-500 to-teal-500",
-        "Sistem": "from-red-500 to-rose-500",
+        "Genel": "from-slate-600 to-slate-700",
+        "Yönetim": "from-sky-600 to-blue-700",
+        "Sistem": "from-indigo-600 to-blue-700",
     };
     const categoryIcons: Record<string, string> = {
         "Genel": "home",
@@ -61,15 +62,15 @@ export default function AdminSidebar({ settings }: { settings?: SystemSettings }
                 <div className="p-4 border-b border-white/5 flex items-center justify-between">
                     <Link href="/admin" className="flex items-center gap-3 group overflow-hidden">
                         <div className="relative shrink-0">
-                            <div className="w-11 h-11 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/30 group-hover:shadow-red-500/50 transition-shadow">
+                            <div className="w-11 h-11 bg-gradient-to-br from-sky-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-sky-500/30 group-hover:shadow-sky-500/50 transition-shadow">
                                 <span className="text-white font-bold text-xl uppercase tracking-tighter">A</span>
                             </div>
-                            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-slate-900" />
+                            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-sky-500 rounded-full border-2 border-slate-900" />
                         </div>
                         {expanded && (
                             <div className="animate-in fade-in duration-300">
                                 <div className="text-lg font-bold text-white whitespace-nowrap leading-tight">{siteName}</div>
-                                <div className="text-[10px] text-red-400 font-bold whitespace-nowrap uppercase tracking-widest">{siteDescription}</div>
+                                <div className="text-[10px] text-sky-400 font-bold whitespace-nowrap uppercase tracking-widest">{siteDescription}</div>
                             </div>
                         )}
                     </Link>

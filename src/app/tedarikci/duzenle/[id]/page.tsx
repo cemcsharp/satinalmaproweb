@@ -296,7 +296,7 @@ export default function TedarikciDuzenlePage() {
 
         <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-slate-100">
           <Button variant="outline" onClick={() => router.push("/tedarikci/liste")} disabled={saving}>Vazgeç</Button>
-          <Button variant="gradient" onClick={handleSave} loading={saving} className="shadow-lg shadow-emerald-500/20">Değişiklikleri Kaydet</Button>
+          <Button variant="gradient" onClick={handleSave} loading={saving} className="shadow-lg shadow-sky-500/20">Değişiklikleri Kaydet</Button>
         </div>
       </Card>
     </section>

@@ -301,7 +301,18 @@ export async function POST(req: NextRequest) {
           vatRate,
           withholdingCode,
           tenantId: user.tenantId, // Multi-tenant
-          ...(orderId ? { order: { connect: { id: String(orderId) } } } : {}),
+          ...(orderId
+            ? {
+              order: {
+                connect: {
+                  id_tenantId: {
+                    id: String(orderId),
+                    tenantId: user.isSuperAdmin ? undefined : user.tenantId
+                  } as any
+                }
+              }
+            }
+            : {}),
           ...(responsibleUserId ? { responsible: { connect: { id: responsibleUserId } } } : {}),
           items: items && items.length > 0 ? {
             create: items.map((it: any) => ({
@@ -326,15 +337,30 @@ export async function POST(req: NextRequest) {
             },
           });
           if (tamamlandiStatus) {
+            // Verify order belongs to tenant
+            if (!user.isSuperAdmin) {
+              const orderCheck = await prisma.order.findFirst({
+                where: { id: String(orderId), tenantId: user.tenantId }
+              });
+              if (!orderCheck) return jsonError(403, "forbidden_order_tenant");
+            }
+
             await prisma.order.update({
-              where: { id: String(orderId) },
+              where: {
+                id: String(orderId),
+                tenantId: user.isSuperAdmin ? undefined : user.tenantId
+              },
               data: { statusId: tamamlandiStatus.id },
             });
           }
 
           // Send evaluation request email to unit
-          const order = await prisma.order.findUnique({
-            where: { id: String(orderId) },
+          // Verify Order (Tenant bound)
+          const order = await prisma.order.findFirst({
+            where: {
+              id: String(orderId),
+              tenantId: user.isSuperAdmin ? undefined : user.tenantId
+            },
             include: {
               request: { include: { unit: true, owner: true } },
               supplier: true,

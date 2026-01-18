@@ -14,7 +14,9 @@ export async function GET(req: NextRequest) {
             include: {
                 rfq: {
                     include: {
-                        items: true
+                        items: {
+                            include: { category: true }
+                        }
                     }
                 },
                 offer: {
@@ -87,7 +89,9 @@ export async function GET(req: NextRequest) {
                     name: i.name,
                     quantity: Number(i.quantity),
                     unit: i.unit,
-                    description: i.description
+                    categoryId: i.categoryId,
+                    categoryName: i.category?.name || null,
+                    categoryCode: i.category?.code || null
                 }))
             },
             supplier: supplierData ? {

@@ -64,22 +64,22 @@ export default function SiparisRaporu() {
                 <Card variant="glass" className="p-6 flex items-center justify-between">
                     <div>
                         <p className="text-sm text-slate-500 font-medium">Toplam Tutar</p>
-                        <h3 className="text-3xl font-bold text-emerald-600 mt-1">
+                        <h3 className="text-3xl font-bold text-blue-600 mt-1">
                             {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(data.summary.totalAmount)}
                         </h3>
                     </div>
-                    <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                    <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center text-blue-600">
                         💰
                     </div>
                 </Card>
                 <Card variant="glass" className="p-6 flex items-center justify-between">
                     <div>
                         <p className="text-sm text-slate-500 font-medium">Bütçe Farkı</p>
-                        <h3 className={`text-3xl font-bold mt-1 ${data.summary.budgetGap < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                        <h3 className={`text-3xl font-bold mt-1 ${data.summary.budgetGap < 0 ? "text-red-600" : "text-blue-600"}`}>
                             {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(data.summary.budgetGap)}
                         </h3>
                     </div>
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${data.summary.budgetGap < 0 ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"}`}>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${data.summary.budgetGap < 0 ? "bg-red-100 text-red-600" : "bg-sky-100 text-blue-600"}`}>
                         📉
                     </div>
                 </Card>

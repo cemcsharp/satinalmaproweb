@@ -206,9 +206,9 @@ export default function SiparisDuzenlePage() {
             <div className="text-sm font-medium text-slate-500 mb-1">Sipariş Tutarı (Güncel)</div>
             <div className="text-2xl font-bold text-slate-800">{fmt(currentTotal)}</div>
           </Card>
-          <Card className={`p-4 border-l-4 ${isOverBudget ? 'border-red-500 bg-red-50/50' : 'border-emerald-500 bg-emerald-50/50'}`}>
+          <Card className={`p-4 border-l-4 ${isOverBudget ? 'border-red-500 bg-red-50/50' : 'border-sky-500 bg-sky-50/50'}`}>
             <div className="text-sm font-medium text-slate-500 mb-1">{isOverBudget ? "Bütçe Aşımı" : "Bütçe Avantajı"}</div>
-            <div className={`text-2xl font-bold ${isOverBudget ? 'text-red-700' : 'text-emerald-700'}`}>
+            <div className={`text-2xl font-bold ${isOverBudget ? 'text-red-700' : 'text-blue-700'}`}>
               {isOverBudget ? "-" : "+"}{fmt(Math.abs(difference))}
             </div>
           </Card>

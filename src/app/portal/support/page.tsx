@@ -13,8 +13,8 @@ type Ticket = {
 
 const statusColors: Record<string, string> = {
     "OPEN": "bg-blue-100 text-blue-700",
-    "IN_PROGRESS": "bg-amber-100 text-amber-700",
-    "RESOLVED": "bg-emerald-100 text-emerald-700",
+    "IN_PROGRESS": "bg-sky-100 text-amber-700",
+    "RESOLVED": "bg-sky-100 text-blue-700",
 };
 
 const statusLabels: Record<string, string> = {
@@ -123,7 +123,7 @@ export default function SupportPage() {
 
             {/* Success/Error Message */}
             {message && (
-                <div className={`p-4 rounded-xl text-sm font-medium ${message.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                <div className={`p-4 rounded-xl text-sm font-medium ${message.type === "success" ? "bg-sky-50 text-blue-700 border border-sky-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
                     {message.text}
                 </div>
             )}

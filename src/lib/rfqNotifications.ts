@@ -19,7 +19,6 @@ export async function notifySuppliersByCategory(rfqId: string) {
         });
 
         if (!rfq) {
-            console.error("RFQ not found for notification:", rfqId);
             return;
         }
 
@@ -31,7 +30,6 @@ export async function notifySuppliersByCategory(rfqId: string) {
         )];
 
         if (categoryIds.length === 0) {
-            console.log("No categories found for RFQ, skipping notification");
             return;
         }
 
@@ -61,7 +59,6 @@ export async function notifySuppliersByCategory(rfqId: string) {
         });
 
         if (suppliers.length === 0) {
-            console.log("No suppliers found for categories:", categoryIds);
             return;
         }
 
@@ -114,13 +111,12 @@ export async function notifySuppliersByCategory(rfqId: string) {
                     category: "rfq_notification"
                 });
 
-                console.log(`Notification sent to supplier: ${supplier.email}`);
             } catch (emailError) {
                 console.error(`Failed to send notification to ${supplier.email}:`, emailError);
             }
         }
 
-        console.log(`Notifications sent for RFQ ${rfq.rfxCode} to ${suppliers.length} suppliers`);
+        // Notifications complete
     } catch (error) {
         console.error("Error in notifySuppliersByCategory:", error);
     }

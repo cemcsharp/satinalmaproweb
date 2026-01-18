@@ -17,16 +17,10 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials, req) {
-        console.log('[Auth Debug] ====== LOGIN ATTEMPT ======');
-        console.log('[Auth Debug] Credentials:', { email: credentials?.email, hasPassword: !!credentials?.password });
-
         const email = String(credentials?.email || "").trim().toLowerCase();
         const password = String(credentials?.password || "").trim();
 
-        console.log('[Auth Debug] Processed:', { email, passwordLength: password.length });
-
         if (!email || !password) {
-          console.log('[Auth Debug] FAIL: Empty email or password');
           return null;
         }
 
@@ -36,9 +30,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        console.log('[Auth Debug] Fetching user from DB...');
         const user = await prisma.user.findUnique({ where: { email } });
-        console.log('[Auth Debug] User found:', user ? `Yes (${user.username})` : 'No');
 
         // Get request metadata for logging
         let ip = null;
@@ -70,12 +62,9 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        console.log('[Auth Debug] Verifying password...');
         const ok = await verifyPassword(password, user.passwordHash);
-        console.log('[Auth Debug] Password verify result:', ok);
 
         if (!ok) {
-          console.log('[Auth Debug] FAIL: Invalid password');
           // Record failed attempt - invalid password
           loginLimiter.recordAttempt(email, false);
           try {

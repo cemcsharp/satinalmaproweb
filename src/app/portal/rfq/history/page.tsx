@@ -68,12 +68,12 @@ export default function RfqHistoryPage() {
     const getResultBadge = (entry: HistoryEntry) => {
         if (!entry.offer) return null;
         if (entry.offer.isWinner) {
-            return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">🏆 Kazandınız</span>;
+            return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-blue-700">🏆 Kazandınız</span>;
         }
         if (entry.rfqStatus === "COMPLETED" || entry.rfqStatus === "CLOSED") {
             return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">Kaybettiniz</span>;
         }
-        return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Değerlendiriliyor</span>;
+        return <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-sky-100 text-amber-700">Değerlendiriliyor</span>;
     };
 
     return (

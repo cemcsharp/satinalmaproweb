@@ -180,7 +180,7 @@ export default function SupplierLoginPage() {
                             fullWidth
                             size="lg"
                             loading={loading}
-                            className="h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-200"
+                            className="h-12 rounded-xl bg-blue-700 hover:bg-indigo-700 shadow-xl shadow-indigo-200"
                         >
                             Portala Giriş Yap
                         </Button>

@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
             where.active = active === "true";
         }
 
-        const [items, total] = await Promise.all([
+        const [items, total, inactiveTotal, totalCategories] = await Promise.all([
             prisma.product.findMany({
                 where,
                 skip,
@@ -52,12 +52,25 @@ export async function GET(req: NextRequest) {
                     preferredSupplier: { select: { id: true, name: true } }
                 }
             }),
-            prisma.product.count({ where })
+            prisma.product.count({ where }),
+            prisma.product.count({ where: { ...where, active: false } }),
+            prisma.supplierCategory.count({
+                where: (user.isSuperAdmin ? {} : {
+                    // In a real scenario, categories might also be tenant-specific,
+                    // but here they are global. We can count products in categories for this tenant.
+                    products: { some: { tenantId: user.tenantId } }
+                }) as any
+            })
         ]);
 
         return NextResponse.json({
             items,
             total,
+            summary: {
+                total,
+                inactive: inactiveTotal,
+                categories: totalCategories
+            },
             page,
             pageSize,
             totalPages: Math.ceil(total / pageSize)
@@ -89,27 +102,56 @@ export async function POST(req: NextRequest) {
             return jsonError(400, "missing_fields", { message: "Ürün kodu ve adı zorunludur." });
         }
 
-        // SKU benzersizlik kontrolü
-        const existing = await prisma.product.findUnique({ where: { sku } });
+        // SKU benzersizlik kontrolü (Tenant bazlı)
+        const existing = await prisma.product.findFirst({
+            where: {
+                sku,
+                tenantId: user.isSuperAdmin ? undefined : user.tenantId
+            }
+        });
         if (existing) {
             return jsonError(400, "duplicate_sku", { message: "Bu ürün kodu zaten kullanılıyor." });
         }
 
+        // Product artık doğrudan SupplierCategory kullanıyor (UNSPSC)
+        const productData: any = {
+            sku,
+            name,
+            description,
+            defaultUnit,
+            currency: currency || "TRY",
+            active: true
+        };
+
+        if (user.tenantId) {
+            productData.tenant = { connect: { id: user.tenantId } };
+        }
+
+        if (categoryId) {
+            productData.category = { connect: { id: categoryId } };
+        }
+
+        if (preferredSupplierId) {
+            productData.preferredSupplier = { connect: { id: preferredSupplierId } };
+        }
+
+        if (estimatedPrice !== undefined && estimatedPrice !== null && estimatedPrice !== "") {
+            const val = Number(estimatedPrice);
+            if (!isNaN(val)) productData.estimatedPrice = val;
+        }
+
+        if (minStock !== undefined && minStock !== null && minStock !== "") {
+            const val = Number(minStock);
+            if (!isNaN(val)) productData.minStock = val;
+        }
+
+        if (leadTimeDays !== undefined && leadTimeDays !== null && leadTimeDays !== "") {
+            const val = Number(leadTimeDays);
+            if (!isNaN(val)) productData.leadTimeDays = Math.floor(val);
+        }
+
         const product = await prisma.product.create({
-            data: {
-                sku,
-                name,
-                description,
-                categoryId: categoryId || null,
-                defaultUnit,
-                estimatedPrice: estimatedPrice ? Number(estimatedPrice) : null,
-                currency: currency || "TRY",
-                preferredSupplierId: preferredSupplierId || null,
-                minStock: minStock ? Number(minStock) : null,
-                leadTimeDays: leadTimeDays ? Number(leadTimeDays) : null,
-                tenantId: user.tenantId, // Multi-tenant
-                active: true
-            } as any,
+            data: productData,
             include: {
                 category: { select: { id: true, name: true, code: true } }
             }
@@ -118,8 +160,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(product, { status: 201 });
 
     } catch (e: any) {
-        console.error("Product POST Error:", e);
-        return jsonError(500, "server_error", { message: e.message });
+        console.error("DEBUG - Product POST Error:", e);
+        return jsonError(500, "server_error", {
+            message: e.message
+        });
     }
 }
 
@@ -151,43 +195,53 @@ export async function PUT(req: NextRequest) {
                     continue;
                 }
 
-                // Kategori bul (varsa)
+                // Kategori bul (varsa) - Artık SupplierCategory (UNSPSC) kullanıyoruz
                 let categoryId = null;
                 if (p.categoryCode) {
-                    const cat = await prisma.productCategory.findUnique({ where: { code: p.categoryCode } });
+                    const cat = await prisma.supplierCategory.findFirst({ where: { code: p.categoryCode } } as any) as any;
                     if (cat) categoryId = cat.id;
                 }
 
-                // Upsert
-                const existing = await prisma.product.findUnique({ where: { sku: p.sku } });
+                // Upsert (Tenant bazlı SKU kontrolü)
+                const existing = await prisma.product.findFirst({
+                    where: {
+                        sku: p.sku,
+                        tenantId: user.isSuperAdmin ? undefined : user.tenantId
+                    }
+                });
+
+                const commonData: any = {
+                    name: p.name,
+                    description: p.description,
+                    defaultUnit: p.defaultUnit,
+                    estimatedPrice: p.estimatedPrice ? Number(p.estimatedPrice) : null,
+                    currency: p.currency || "TRY",
+                    active: p.active !== false
+                };
+
+                if (categoryId) {
+                    commonData.category = { connect: { id: categoryId } };
+                }
+
+                if (user.tenantId) {
+                    commonData.tenant = { connect: { id: user.tenantId } };
+                }
+
                 if (existing) {
                     await prisma.product.update({
-                        where: { sku: p.sku },
-                        data: {
-                            name: p.name,
-                            description: p.description,
-                            categoryId,
-                            defaultUnit: p.defaultUnit,
-                            estimatedPrice: p.estimatedPrice ? Number(p.estimatedPrice) : null,
-                            currency: p.currency || "TRY",
-                            tenantId: user.tenantId, // Multi-tenant
-                            active: p.active !== false
-                        } as any
+                        where: {
+                            sku: p.sku,
+                            tenantId: user.isSuperAdmin ? undefined : user.tenantId // Ensure tenant isolation for update
+                        },
+                        data: commonData
                     });
                     results.updated++;
                 } else {
                     await prisma.product.create({
                         data: {
                             sku: p.sku,
-                            name: p.name,
-                            description: p.description,
-                            categoryId,
-                            defaultUnit: p.defaultUnit,
-                            estimatedPrice: p.estimatedPrice ? Number(p.estimatedPrice) : null,
-                            currency: p.currency || "TRY",
-                            tenantId: user.tenantId, // Multi-tenant
-                            active: true
-                        } as any
+                            ...commonData
+                        }
                     });
                     results.created++;
                 }

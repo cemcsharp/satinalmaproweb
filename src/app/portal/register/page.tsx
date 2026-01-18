@@ -115,11 +115,11 @@ export default function SupplierRegisterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-6 py-12">
+        <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 flex items-center justify-center p-6 py-12">
             <div className="w-full max-w-2xl">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+                    <div className="w-16 h-16 bg-sky-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-sky-500/30">
                         <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                         </svg>
@@ -133,7 +133,7 @@ export default function SupplierRegisterPage() {
                         {/* Company Info Section */}
                         <div className="space-y-6">
                             <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide flex items-center gap-2">
-                                <span className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 text-xs font-bold">1</span>
+                                <span className="w-6 h-6 bg-sky-100 rounded-full flex items-center justify-center text-blue-600 text-xs font-bold">1</span>
                                 Firma Bilgileri
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -141,7 +141,7 @@ export default function SupplierRegisterPage() {
                                     <label className="text-sm font-medium text-slate-700">Firma Sektörü / Kategorisi *</label>
                                     <select
                                         name="categoryId"
-                                        className="w-full h-10 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                                        className="w-full h-10 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 bg-white"
                                         value={formData.categoryId}
                                         onChange={handleChange}
                                         required
@@ -217,7 +217,7 @@ export default function SupplierRegisterPage() {
                         {/* Bank Info Section */}
                         <div className="space-y-6 pt-4 border-t border-slate-100">
                             <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide flex items-center gap-2">
-                                <span className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 text-xs font-bold">2</span>
+                                <span className="w-6 h-6 bg-sky-100 rounded-full flex items-center justify-center text-indigo-600 text-xs font-bold">2</span>
                                 Banka Bilgileri
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -320,7 +320,7 @@ export default function SupplierRegisterPage() {
                         {/* Info Box */}
                         <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                             <div className="flex items-start gap-3">
-                                <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                <svg className="w-5 h-5 text-sky-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                 </svg>
                                 <p className="text-sm text-amber-700 font-medium">
@@ -344,7 +344,7 @@ export default function SupplierRegisterPage() {
                             fullWidth
                             size="lg"
                             loading={loading}
-                            className="h-12 bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20"
+                            className="h-12 bg-sky-600 hover:bg-sky-700 shadow-lg shadow-sky-500/20"
                         >
                             Kaydı Tamamla
                         </Button>
@@ -354,7 +354,7 @@ export default function SupplierRegisterPage() {
                 {/* Login Link */}
                 <p className="text-center text-sm text-slate-500 mt-8">
                     Zaten hesabınız var mı?{" "}
-                    <Link href="/portal/login" className="text-emerald-600 font-semibold hover:underline decoration-2 underline-offset-4">
+                    <Link href="/portal/login" className="text-blue-600 font-semibold hover:underline decoration-2 underline-offset-4">
                         Giriş Yap
                     </Link>
                 </p>

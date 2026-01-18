@@ -228,7 +228,7 @@ type InvoicePdfProps = {
     siteName?: string;
 };
 
-export default function InvoicePdf({ invoice, company, siteName = 'SatınalmaPRO' }: InvoicePdfProps) {
+export default function InvoicePdf({ invoice, company, siteName = 'satinalma.app' }: InvoicePdfProps) {
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('tr-TR', {
             minimumFractionDigits: 2,

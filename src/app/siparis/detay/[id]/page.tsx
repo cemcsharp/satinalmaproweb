@@ -12,6 +12,8 @@ import { useToast } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import PriceTrendChart from "@/components/analytics/PriceTrendChart";
 
+import ThreeWayMatch from "@/components/ThreeWayMatch";
+
 type OrderItem = { id: string; name: string; sku?: string | null; quantity: number; unitPrice: number };
 type OrderDetail = {
   id: string;
@@ -41,13 +43,14 @@ function SiparisDetayContent() {
   const [error, setError] = useState<string | null>(null);
   const [requestBudget, setRequestBudget] = useState<number | null>(null);
   const [requestCurrency, setRequestCurrency] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"detay" | "teslimat">("detay");
+  const [activeTab, setActiveTab] = useState<"detay" | "teslimat" | "match">("detay");
   const [notifying, setNotifying] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{ name: string, sku?: string | null } | null>(null);
 
   useEffect(() => {
     const t = searchParams.get("tab");
     if (t === "teslimat") setActiveTab("teslimat");
+    if (t === "match") setActiveTab("match");
   }, [searchParams]);
 
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -187,7 +190,7 @@ function SiparisDetayContent() {
                 onClick={handleNotifySupplier}
                 disabled={notifying}
                 title="Tedarikçiye sipariş hakkında e-posta gönder"
-                className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+                className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-sky-100"
               >
                 {notifying ? (
                   <span className="flex items-center gap-2">
@@ -221,6 +224,7 @@ function SiparisDetayContent() {
       <div className="mb-6 flex space-x-2 border-b border-slate-200">
         <button onClick={() => setActiveTab("detay")} className={`px-4 py-2 border-b-2 font-medium text-sm transition-colors ${activeTab === "detay" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"}`}>Sipariş Detayı</button>
         <button onClick={() => setActiveTab("teslimat")} className={`px-4 py-2 border-b-2 font-medium text-sm transition-colors ${activeTab === "teslimat" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"}`}>Teslimatlar</button>
+        <button onClick={() => setActiveTab("match")} className={`px-4 py-2 border-b-2 font-medium text-sm transition-colors ${activeTab === "match" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"}`}>Analiz & Eşleşme</button>
       </div>
 
       {activeTab === "detay" && (
@@ -352,7 +356,7 @@ function SiparisDetayContent() {
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Bütçe Farkı</label>
-                      <div className={`text-sm font-bold ${Number(budgetDiff) < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                      <div className={`text-sm font-bold ${Number(budgetDiff) < 0 ? "text-red-600" : "text-blue-600"}`}>
                         {Number(budgetDiff).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}{totalCurrency}
                         {Number(budgetDiff) < 0 && <span className="text-xs font-normal ml-1">(Aşım)</span>}
                       </div>
@@ -411,6 +415,10 @@ function SiparisDetayContent() {
           orderItems={data.items}
           onUpdate={loadOrder}
         />
+      )}
+
+      {activeTab === "match" && data && (
+        <ThreeWayMatch orderId={data.id} />
       )}
 
       {/* Fiyat Analizi Modalı */}

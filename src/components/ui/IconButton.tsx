@@ -77,8 +77,8 @@ export default function IconButton({ icon, label, size = "sm", variant = "outlin
     const ghostTones = {
       default: "text-slate-600 hover:text-slate-900 hover:bg-slate-100",
       info: "text-blue-600 hover:text-blue-700 hover:bg-blue-50",
-      success: "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50",
-      warning: "text-amber-600 hover:text-amber-700 hover:bg-amber-50",
+      success: "text-blue-600 hover:text-blue-700 hover:bg-sky-50",
+      warning: "text-blue-600 hover:text-amber-700 hover:bg-amber-50",
       danger: "text-red-600 hover:text-red-700 hover:bg-red-50",
     };
     variantClasses = ghostTones[tone] || ghostTones.default;
@@ -86,15 +86,15 @@ export default function IconButton({ icon, label, size = "sm", variant = "outlin
     variantClasses = "bg-white/50 backdrop-blur-sm border border-white/20 text-slate-700 hover:bg-white/80 shadow-sm";
     if (tone === "danger") variantClasses += " text-red-600 hover:text-red-700";
     else if (tone === "info") variantClasses += " text-blue-600 hover:text-blue-700";
-    else if (tone === "success") variantClasses += " text-emerald-600 hover:text-emerald-700";
-    else if (tone === "warning") variantClasses += " text-amber-600 hover:text-amber-700";
+    else if (tone === "success") variantClasses += " text-blue-600 hover:text-blue-700";
+    else if (tone === "warning") variantClasses += " text-blue-600 hover:text-amber-700";
   } else {
     // Default / Outline
     const outlineTones = {
       default: "text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200",
       info: "text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200",
-      success: "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border border-emerald-200",
-      warning: "text-amber-600 hover:text-amber-700 hover:bg-amber-50 border border-amber-200",
+      success: "text-blue-600 hover:text-blue-700 hover:bg-sky-50 border border-sky-200",
+      warning: "text-blue-600 hover:text-amber-700 hover:bg-amber-50 border border-amber-200",
       danger: "text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200",
     };
     variantClasses = outlineTones[tone] || outlineTones.default;

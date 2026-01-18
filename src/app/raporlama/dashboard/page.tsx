@@ -88,9 +88,9 @@ export default function DashboardPage() {
     const spendGrowth = ((totalSpend - prevSpend) / prevSpend) * 100;
 
     return [
-      { label: "Toplam Harcama", value: new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(totalSpend), trend: `+${spendGrowth.toFixed(1)}%`, color: "text-emerald-400", bg: "from-emerald-500/20 to-emerald-600/5", icon: "💰" },
+      { label: "Toplam Harcama", value: new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(totalSpend), trend: `+${spendGrowth.toFixed(1)}%`, color: "text-sky-400", bg: "from-sky-500/20 to-sky-600/5", icon: "💰" },
       { label: "Toplam Sipariş", value: data.totals.orders, trend: "+12%", color: "text-blue-400", bg: "from-blue-500/20 to-blue-600/5", icon: "📦" },
-      { label: "Açık Talepler", value: data.totals.requests, trend: "-5%", color: "text-amber-400", bg: "from-amber-500/20 to-amber-600/5", icon: "📝" },
+      { label: "Açık Talepler", value: data.totals.requests, trend: "-5%", color: "text-amber-400", bg: "from-sky-500/20 to-sky-600/5", icon: "📝" },
       { label: "Aktif Sözleşmeler", value: data.totals.contracts, trend: "+2", color: "text-violet-400", bg: "from-violet-500/20 to-violet-600/5", icon: "🤝" },
     ];
   }, [data]);
@@ -157,7 +157,7 @@ export default function DashboardPage() {
               </div>
               <div className="text-2xl opacity-80">{stat.icon}</div>
             </div>
-            <div className={`mt-4 text-xs font-medium ${stat.trend.startsWith("+") ? "text-emerald-400" : "text-red-400"} flex items-center gap-1`}>
+            <div className={`mt-4 text-xs font-medium ${stat.trend.startsWith("+") ? "text-sky-400" : "text-red-400"} flex items-center gap-1`}>
               <span>{stat.trend}</span>
               <span className="text-slate-500">geçen döneme göre</span>
             </div>
@@ -212,7 +212,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-1">
           <Card variant="glass" className="h-[450px] p-6">
             <h3 className="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
-              <span className="w-1 h-6 bg-purple-500 rounded-full"></span>
+              <span className="w-1 h-6 bg-sky-500 rounded-full"></span>
               Kaynak Dağılımı
             </h3>
             <div className="w-full">
@@ -249,7 +249,7 @@ export default function DashboardPage() {
         {/* Request Status */}
         <Card variant="glass" className="h-[350px] p-6">
           <h3 className="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
-            <span className="w-1 h-6 bg-amber-500 rounded-full"></span>
+            <span className="w-1 h-6 bg-sky-500 rounded-full"></span>
             Talep Durumları
           </h3>
           <div className="w-full">
@@ -281,7 +281,7 @@ export default function DashboardPage() {
         {/* Invoice Status */}
         <Card variant="glass" className="h-[350px] p-6">
           <h3 className="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
-            <span className="w-1 h-6 bg-emerald-500 rounded-full"></span>
+            <span className="w-1 h-6 bg-sky-500 rounded-full"></span>
             Fatura Durumları
           </h3>
           <div className="w-full">

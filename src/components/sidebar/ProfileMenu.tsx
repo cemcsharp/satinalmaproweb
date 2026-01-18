@@ -61,7 +61,7 @@ export default function ProfileMenu({ expanded, profileLink = "/profile", settin
                     ${expanded ? "px-3 py-2.5" : "px-2 py-2.5 justify-center"}
                 `}
             >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-lg shadow-emerald-500/20">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-lg shadow-sky-500/20">
                     {userName.charAt(0).toUpperCase()}
                 </div>
                 {expanded && (

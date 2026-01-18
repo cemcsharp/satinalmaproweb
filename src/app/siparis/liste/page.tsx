@@ -290,12 +290,12 @@ function SiparisListeContent() {
           </button>
         )}
         {status && (
-          <button className="inline-flex items-center gap-1 rounded-full bg-purple-100 text-purple-700 px-3 py-1 text-xs font-medium hover:bg-purple-200 transition-colors" onClick={() => { setStatus(""); setPage(1); }} aria-label="Durum filtresini temizle">
+          <button className="inline-flex items-center gap-1 rounded-full bg-sky-100 text-purple-700 px-3 py-1 text-xs font-medium hover:bg-purple-200 transition-colors" onClick={() => { setStatus(""); setPage(1); }} aria-label="Durum filtresini temizle">
             Durum: {status} <span className="ml-1">×</span>
           </button>
         )}
         {method && (
-          <button className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-medium hover:bg-emerald-200 transition-colors" onClick={() => { setMethod(""); setPage(1); }} aria-label="Yöntem filtresini temizle">
+          <button className="inline-flex items-center gap-1 rounded-full bg-sky-100 text-blue-700 px-3 py-1 text-xs font-medium hover:bg-sky-200 transition-colors" onClick={() => { setMethod(""); setPage(1); }} aria-label="Yöntem filtresini temizle">
             Yöntem: {method} <span className="ml-1">×</span>
           </button>
         )}
@@ -305,7 +305,7 @@ function SiparisListeContent() {
           </button>
         )}
         {reviewOnly && (
-          <button className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-medium hover:bg-amber-200 transition-colors" onClick={() => { setReviewOnly(false); setPage(1); }} aria-label="Değerlendirme filtresini temizle">
+          <button className="inline-flex items-center gap-1 rounded-full bg-sky-100 text-amber-700 px-3 py-1 text-xs font-medium hover:bg-amber-200 transition-colors" onClick={() => { setReviewOnly(false); setPage(1); }} aria-label="Değerlendirme filtresini temizle">
             Değerlendirme bekliyor <span className="ml-1">×</span>
           </button>
         )}
@@ -442,8 +442,8 @@ function SiparisListeContent() {
                     </div>
                   </TD>
                   <TD>
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200">
-                      <span className="font-semibold text-emerald-700">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-50 to-green-50 border border-sky-200">
+                      <span className="font-semibold text-blue-700">
                         {r.total.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -466,7 +466,7 @@ function SiparisListeContent() {
                           onClick={() => openReview(r)}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${r.hasEvaluation
                             ? "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"
-                            : "bg-emerald-500 text-white shadow-md shadow-emerald-200 hover:bg-emerald-600"
+                            : "bg-sky-500 text-white shadow-md shadow-sky-200 hover:bg-sky-600"
                             }`}
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

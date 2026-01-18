@@ -82,7 +82,7 @@ export default function AdminLoginPage() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="admin@satinalmapro.com"
+                            placeholder="admin@satinalma.app"
                             autoComplete="email"
                         />
 

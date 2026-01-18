@@ -203,7 +203,7 @@ export default function InvoiceView({ item, onClose, onEdit }: InvoiceViewProps)
                         <span>Genel Toplam</span>
                         <span>{new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2 }).format(calc.grossTotal)} ₺</span>
                     </div>
-                    <div className="flex justify-between text-sm font-bold text-emerald-600">
+                    <div className="flex justify-between text-sm font-bold text-blue-600">
                         <span>Ödenecek Tutar</span>
                         <span>{new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2 }).format(applyWithholding ? calc.netPayableTotal : calc.grossTotal)} ₺</span>
                     </div>

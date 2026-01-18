@@ -197,6 +197,35 @@ export async function POST(req: NextRequest) {
                 });
 
                 createdOrderIds.push(order.id);
+
+                // Phase 3: Budget Transition (Reserved -> Spent)
+                // If the request has a department and budget, move the order total
+                if (mainRequestId && orderTotal > 0) {
+                    const request = await tx.request.findUnique({
+                        where: { id: mainRequestId },
+                        include: { department: true }
+                    });
+
+                    if (request?.departmentId) {
+                        const currentYear = new Date().getFullYear();
+                        const budgetRecord = await tx.budget.findFirst({
+                            where: {
+                                departmentId: request.departmentId,
+                                year: currentYear
+                            }
+                        });
+
+                        if (budgetRecord) {
+                            await tx.budget.update({
+                                where: { id: budgetRecord.id },
+                                data: {
+                                    reservedAmount: { decrement: orderTotal },
+                                    spentAmount: { increment: orderTotal }
+                                }
+                            });
+                        }
+                    }
+                }
             }
 
             // Update RFQ Status

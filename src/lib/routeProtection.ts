@@ -3,6 +3,7 @@
  * Bu sayfalar oturum olmadan erişilemez.
  */
 export const protectedPrefixes = [
+  "/dashboard",
   "/raporlama",
   "/talep",
   "/siparis",
@@ -11,12 +12,27 @@ export const protectedPrefixes = [
   "/tedarikci",
   "/ayarlar",
   "/profile",
+  "/admin",
+  "/finans",
+  "/analitik",
+  "/rfq",
+  "/teslimat",
+  "/urun",
+  "/birim",
+  "/audit",
+  "/api-docs",
 ];
 
 export function isProtectedPath(pathname: string): boolean {
-  if (pathname.startsWith("/login") || pathname.startsWith("/register")) return false;
-  // Dashboard is also protected now (handled by page.tsx but good to enforce here too)
-  if (pathname === "/") return true;
+  // Public paths
+  if (pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/portal")) {
+    return false;
+  }
+
+  // Dashboard is protected
+  if (pathname === "/dashboard" || pathname === "/api-docs") {
+    return true;
+  }
 
   return protectedPrefixes.some((p) => pathname.startsWith(p));
 }

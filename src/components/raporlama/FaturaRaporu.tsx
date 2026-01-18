@@ -63,18 +63,18 @@ export default function FaturaRaporu() {
                 <Card variant="glass" className="p-6 flex items-center justify-between">
                     <div>
                         <p className="text-sm text-slate-500 font-medium">Ödenen</p>
-                        <h3 className="text-3xl font-bold text-emerald-600 mt-1">{data.summary.paid}</h3>
+                        <h3 className="text-3xl font-bold text-blue-600 mt-1">{data.summary.paid}</h3>
                     </div>
-                    <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                    <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center text-blue-600">
                         ✅
                     </div>
                 </Card>
                 <Card variant="glass" className="p-6 flex items-center justify-between">
                     <div>
                         <p className="text-sm text-slate-500 font-medium">Bekleyen</p>
-                        <h3 className="text-3xl font-bold text-amber-600 mt-1">{data.summary.unpaid}</h3>
+                        <h3 className="text-3xl font-bold text-blue-600 mt-1">{data.summary.unpaid}</h3>
                     </div>
-                    <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                    <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center text-blue-600">
                         ⏳
                     </div>
                 </Card>
@@ -170,10 +170,10 @@ export default function FaturaRaporu() {
                                     {data.statusTrend.map((item, idx) => (
                                         <TR key={idx}>
                                             <TD className="font-medium text-slate-700">{item.date}</TD>
-                                            <TD className="text-right text-emerald-600">
+                                            <TD className="text-right text-blue-600">
                                                 {new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.paid)}
                                             </TD>
-                                            <TD className="text-right text-amber-600">
+                                            <TD className="text-right text-blue-600">
                                                 {new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.unpaid)}
                                             </TD>
                                         </TR>

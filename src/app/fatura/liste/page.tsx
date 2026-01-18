@@ -175,7 +175,7 @@ function InvoiceListContent() {
               title="Fatura Listesi"
             />
             {canCreate && (
-              <Button onClick={() => setDialog({ type: "edit", item: null })} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">
+              <Button onClick={() => router.push("/fatura/yeni")} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">
                 <span className="text-lg font-light leading-none">+</span>
                 Fatura Ekle
               </Button>
@@ -199,7 +199,7 @@ function InvoiceListContent() {
         <button
           onClick={() => { setDueOnly(true); setPage(1); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${dueOnly
-            ? "border-amber-500 text-amber-600"
+            ? "border-amber-500 text-blue-600"
             : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
         >
@@ -305,7 +305,7 @@ function InvoiceListContent() {
                 <TD><Badge variant={statusVariant(c.status)} className="shadow-sm font-medium">{c.status}</Badge></TD>
                 <TD>{(() => { const info = dueInfo(c); return (<Badge variant={info.variant}>{info.label}</Badge>); })()}</TD>
                 <TD>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-50 to-sky-50 border border-green-200">
                     <span className="font-semibold text-green-700">
                       {Number(c.amount).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>

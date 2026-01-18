@@ -84,16 +84,9 @@ export default function ForgotPasswordPage() {
               <div>
                 <h3 className="text-xl font-bold text-slate-800 mb-2">Talep Alındı</h3>
                 <p className="text-slate-600">
-                  Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.
+                  Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Güvenliğiniz için lütfen gelen kutunuzu kontrol edin.
                 </p>
               </div>
-
-              {resetUrl && (
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-left break-all">
-                  <p className="text-xs text-slate-500 font-semibold uppercase mb-1">Demo Bağlantısı:</p>
-                  <a href={resetUrl} className="text-sm text-blue-600 hover:underline">{resetUrl}</a>
-                </div>
-              )}
             </div>
           )}
 
@@ -110,7 +103,7 @@ export default function ForgotPasswordPage() {
 
         <div className="text-center">
           <p className="text-sm text-slate-500">
-            © 2024 Satın Alma Pro. Tüm hakları saklıdır.
+            © {new Date().getFullYear()} satinalma.app. Tüm hakları saklıdır.
           </p>
         </div>
       </div>

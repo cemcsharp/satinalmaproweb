@@ -230,11 +230,11 @@ export default function ProfilePage() {
               <div className="text-[10px] text-slate-500 uppercase tracking-wide">Talep</div>
             </div>
             <div className="text-center p-3 bg-slate-50 rounded-xl">
-              <div className="text-2xl font-bold text-emerald-600">{stats.orders}</div>
+              <div className="text-2xl font-bold text-blue-600">{stats.orders}</div>
               <div className="text-[10px] text-slate-500 uppercase tracking-wide">Sipariş</div>
             </div>
             <div className="text-center p-3 bg-slate-50 rounded-xl">
-              <div className="text-2xl font-bold text-purple-600">{stats.rfqs}</div>
+              <div className="text-2xl font-bold text-blue-600">{stats.rfqs}</div>
               <div className="text-[10px] text-slate-500 uppercase tracking-wide">Teklif</div>
             </div>
           </div>
@@ -246,8 +246,8 @@ export default function ProfilePage() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-500">Durum</span>
-              <span className="font-medium text-emerald-600 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="font-medium text-blue-600 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
                 Çevrimiçi
               </span>
             </div>
@@ -329,7 +329,7 @@ export default function ProfilePage() {
 
               <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 border border-slate-100">
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${emailNotifications ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${emailNotifications ? "bg-sky-100 text-blue-600" : "bg-slate-100 text-slate-400"}`}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                   </div>
                   <div>
@@ -339,7 +339,7 @@ export default function ProfilePage() {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" className="sr-only peer" checked={emailNotifications} onChange={(e) => { setEmailNotifications(e.target.checked); savePreference("emailNotifications", e.target.checked); }} />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
                 </label>
               </div>
             </div>
@@ -349,7 +349,7 @@ export default function ProfilePage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 border border-slate-100">
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${compactView ? "bg-purple-100 text-purple-600" : "bg-slate-100 text-slate-400"}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${compactView ? "bg-sky-100 text-blue-600" : "bg-slate-100 text-slate-400"}`}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
                   </div>
                   <div>
@@ -359,7 +359,7 @@ export default function ProfilePage() {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" className="sr-only peer" checked={compactView} onChange={(e) => { setCompactView(e.target.checked); savePreference("compactView", e.target.checked); }} />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
                 </label>
               </div>
             </div>

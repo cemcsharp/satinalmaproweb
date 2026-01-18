@@ -63,11 +63,12 @@ export default function PortalSidebar() {
     ];
 
     const categories = ["Genel", "Süreçler", "Arşiv", "Yönetim"];
+    // Ocean Blue Corporate Theme - consistent with main app
     const categoryColors: Record<string, string> = {
-        "Genel": "from-blue-500 to-indigo-500",
-        "Süreçler": "from-emerald-500 to-teal-500",
-        "Arşiv": "from-orange-500 to-amber-500",
-        "Yönetim": "from-slate-500 to-gray-500",
+        "Genel": "from-slate-600 to-slate-700",
+        "Süreçler": "from-sky-600 to-blue-700",
+        "Arşiv": "from-blue-600 to-indigo-700",
+        "Yönetim": "from-slate-700 to-slate-800",
     };
     const categoryIcons: Record<string, string> = {
         "Genel": "home",
@@ -93,10 +94,10 @@ export default function PortalSidebar() {
                 <div className="p-4 border-b border-white/5 flex items-center justify-between">
                     <Link href="/portal" className="flex items-center gap-3 group overflow-hidden">
                         <div className="relative shrink-0">
-                            <div className="w-11 h-11 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-shadow">
+                            <div className="w-11 h-11 bg-gradient-to-br from-sky-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg shadow-sky-500/30 group-hover:shadow-sky-500/50 transition-shadow">
                                 <span className="text-white font-bold text-xl uppercase tracking-tighter">S</span>
                             </div>
-                            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-slate-900" />
+                            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-sky-500 rounded-full border-2 border-slate-900" />
                         </div>
                         {expanded && (
                             <div className="animate-in fade-in duration-300">
@@ -206,7 +207,7 @@ export default function PortalSidebar() {
                                                         <span className="text-sm truncate flex items-center gap-2">
                                                             {item.label}
                                                             {item.badge && (
-                                                                <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-full animate-pulse">
+                                                                <span className="px-1.5 py-0.5 bg-sky-500 text-white text-[10px] font-bold rounded-full animate-pulse">
                                                                     {item.badge}
                                                                 </span>
                                                             )}

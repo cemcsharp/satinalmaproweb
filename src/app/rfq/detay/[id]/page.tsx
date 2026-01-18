@@ -19,6 +19,9 @@ export default function RfqDetayPage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [converting, setConverting] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const refresh = () => setRefreshTrigger(prev => prev + 1);
 
     // Modal State
     const [selectedOffer, setSelectedOffer] = useState<any>(null);
@@ -61,7 +64,7 @@ export default function RfqDetayPage() {
             })
             .catch(e => console.error(e))
             .finally(() => setLoading(false));
-    }, [id]);
+    }, [id, refreshTrigger]);
 
     const handleSplitOrderClick = () => {
         if (Object.keys(matrixSelections).length === 0) return show({ title: "Seçim Yapmadınız", variant: "warning" });
@@ -97,13 +100,31 @@ export default function RfqDetayPage() {
             if (!res.ok) throw new Error(json.error || "Failed");
 
             show({ title: "Siparişler Oluşturuldu", description: `${json.orderIds.length} adet sipariş oluşturuldu.`, variant: "success" });
-            // Redirect to order list or refresh
-            window.location.href = "/siparis/liste";
+            refresh();
+            setShowSplitConfirm(false);
         } catch (e: any) {
             show({ title: "Hata", description: e.message, variant: "error" });
         } finally {
             setConverting(false);
-            setShowSplitConfirm(false);
+        }
+    };
+
+    const handleApprove = async () => {
+        if (!confirm("Bu RFQ'yu onay sürecine göndermek istediğinize emin misiniz?")) return;
+        setConverting(true);
+        try {
+            const res = await fetch(`/api/rfq/${id}/approve`, { method: "POST" });
+            const json = await res.json();
+            if (res.ok) {
+                show({ title: "İşlem Başarılı", description: json.message, variant: "success" });
+                refresh();
+            } else {
+                throw new Error(json.error || "Onay süreci başlatılamadı.");
+            }
+        } catch (e: any) {
+            show({ title: "Hata", description: e.message, variant: "error" });
+        } finally {
+            setConverting(false);
         }
     };
 
@@ -146,7 +167,22 @@ export default function RfqDetayPage() {
                 title={`RFQ: ${data.rfxCode}`}
                 description={data.title}
                 actions={
-                    <Badge variant={data.status === "ACTIVE" ? "success" : "default"}>{data.status}</Badge>
+                    <div className="flex gap-2 items-center">
+                        {data.status === "ACTIVE" && (
+                            <Button
+                                onClick={handleApprove}
+                                loading={converting}
+                                variant="outline"
+                                className="border-blue-200 text-blue-700 hover:bg-blue-50 !gap-2"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Onaya Gönder
+                            </Button>
+                        )}
+                        <Badge variant={data.status === "ACTIVE" ? "success" : data.status === "WAITING_APPROVAL" ? "warning" : "default"}>{data.status}</Badge>
+                    </div>
                 }
             />
 
@@ -267,49 +303,84 @@ export default function RfqDetayPage() {
                                 <table className="w-full text-sm border-collapse">
                                     <thead>
                                         <tr>
-                                            <th className="p-3 bg-slate-100 border text-left min-w-[150px]">Ürün</th>
-                                            <th className="p-3 bg-slate-100 border text-center w-[80px]">Miktar</th>
+                                            <th className="p-4 bg-slate-100/80 backdrop-blur-sm border-b text-left min-w-[200px] text-slate-500 font-bold uppercase tracking-wider text-[10px]">Kalem Detayları</th>
+                                            <th className="p-4 bg-slate-100/80 backdrop-blur-sm border-b text-center w-[100px] text-slate-500 font-bold uppercase tracking-wider text-[10px]">Talep Miktarı</th>
                                             {suppliers.filter((s: any) => s.offer).map((s: any) => (
-                                                <th key={s.id} className="p-3 bg-slate-50 border text-center min-w-[120px]">
-                                                    <div className="font-bold">{s.contactName || s.supplier?.name}</div>
-                                                    <div className="text-xs font-normal text-slate-500">{s.offer.currency}</div>
+                                                <th key={s.id} className="p-4 bg-slate-50/80 backdrop-blur-sm border-b border-l text-center min-w-[160px]">
+                                                    <div className="font-black text-slate-800 text-sm tracking-tight">{s.contactName || s.supplier?.name}</div>
+                                                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[9px] font-black mt-1 uppercase">
+                                                        {s.offer.currency} Teklifi
+                                                    </div>
                                                 </th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {data.items.map((item: any) => (
-                                            <tr key={item.id}>
-                                                <td className="p-3 border font-medium">{item.name}</td>
-                                                <td className="p-3 border text-center text-slate-500">{item.quantity} {item.unit}</td>
-                                                {suppliers.filter((s: any) => s.offer).map((s: any) => {
-                                                    const offerItem = s.offer.items.find((oi: any) => oi.rfqItemId === item.id);
-                                                    const isSelected = matrixSelections[item.id] === s.offer.id;
-                                                    const price = offerItem ? Number(offerItem.unitPrice) : 0;
+                                        {data.items.map((item: any) => {
+                                            // Calculate min price for heatmap
+                                            const prices = suppliers
+                                                .filter((s: any) => s.offer)
+                                                .map((s: any) => {
+                                                    const oi = s.offer.items.find((oi: any) => oi.rfqItemId === item.id);
+                                                    return oi ? Number(oi.unitPrice) : null;
+                                                })
+                                                .filter((p: number | null): p is number => p !== null);
 
-                                                    // Am I the cheapest for this row?
-                                                    // Logic already captured in matrixSelections initial state for highlighting best price
-                                                    // But user can change selection.
+                                            const minPrice = prices.length > 0 ? Math.min(...prices) : null;
 
-                                                    return (
-                                                        <td
-                                                            key={s.id}
-                                                            className={`p-3 border text-center cursor-pointer hover:bg-blue-50 transition-colors ${isSelected ? "bg-green-50 ring-2 ring-inset ring-green-500" : ""}`}
-                                                            onClick={() => setMatrixSelections(prev => ({ ...prev, [item.id]: s.offer.id }))}
-                                                        >
-                                                            {offerItem ? (
-                                                                <div>
-                                                                    <div className="font-bold">{formatNumberTR(price)}</div>
-                                                                    {isSelected && <div className="text-[10px] text-green-600 font-bold">SEÇİLDİ</div>}
-                                                                </div>
-                                                            ) : (
-                                                                <span className="text-slate-300">-</span>
-                                                            )}
-                                                        </td>
-                                                    );
-                                                })}
-                                            </tr>
-                                        ))}
+                                            return (
+                                                <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors">
+                                                    <td className="p-4 border-b">
+                                                        <div className="font-bold text-slate-900">{item.name}</div>
+                                                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">ID: {item.id.slice(-8)}</div>
+                                                    </td>
+                                                    <td className="p-4 border-b text-center">
+                                                        <div className="font-black text-slate-700">{item.quantity}</div>
+                                                        <div className="text-[10px] text-slate-400 font-bold uppercase">{item.unit}</div>
+                                                    </td>
+                                                    {suppliers.filter((s: any) => s.offer).map((s: any) => {
+                                                        const offerItem = s.offer.items.find((oi: any) => oi.rfqItemId === item.id);
+                                                        const isSelected = matrixSelections[item.id] === s.offer.id;
+                                                        const price = offerItem ? Number(offerItem.unitPrice) : 0;
+                                                        const isMin = price > 0 && price === minPrice;
+
+                                                        return (
+                                                            <td
+                                                                key={s.id}
+                                                                className={`p-4 border-b border-l text-center cursor-pointer transition-all relative ${isSelected ? "bg-blue-600 shadow-[inset_0_0_0_2px_rgba(255,255,255,0.2)]" : isMin ? "bg-sky-50/50" : "hover:bg-slate-50"}`}
+                                                                onClick={() => setMatrixSelections(prev => ({ ...prev, [item.id]: s.offer.id }))}
+                                                            >
+                                                                {offerItem ? (
+                                                                    <div className="space-y-2">
+                                                                        <div className={`font-black text-lg tracking-tighter ${isSelected ? "text-white" : "text-slate-900"}`}>
+                                                                            {formatNumberTR(price)}
+                                                                        </div>
+
+                                                                        {(offerItem.brand || offerItem.notes) && (
+                                                                            <div className={`text-[10px] p-1.5 rounded-lg border leading-tight text-left ${isSelected ? "bg-white/10 border-white/20 text-blue-50" : "bg-slate-50 border-slate-100 text-slate-500"}`}>
+                                                                                {offerItem.brand && <div className="font-bold uppercase tracking-tighter truncate">MB: {offerItem.brand}</div>}
+                                                                                {offerItem.notes && <div className="mt-0.5 line-clamp-2 italic">{offerItem.notes}</div>}
+                                                                            </div>
+                                                                        )}
+
+                                                                        <div className="flex justify-center gap-1">
+                                                                            {isMin && !isSelected && (
+                                                                                <span className="px-1.5 py-0.5 bg-sky-500 text-white text-[8px] font-black rounded-sm uppercase">Lider</span>
+                                                                            )}
+                                                                            {isSelected && (
+                                                                                <span className="px-1.5 py-0.5 bg-white text-blue-700 text-[8px] font-black rounded-sm uppercase shadow-sm">Seçildi</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-slate-200">Teklif Yok</span>
+                                                                )}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -327,49 +398,51 @@ export default function RfqDetayPage() {
                 </div>
             </div>
 
-            {showSplitConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden">
-                        <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
-                            <h3 className="font-bold text-lg text-slate-800">Sipariş Oluşturma Onayı</h3>
-                            <button onClick={() => setShowSplitConfirm(false)} className="text-slate-400 hover:text-red-500">✕</button>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <p className="text-sm text-slate-600">
-                                Aşağıdaki tedarikçiler için ayrı ayrı siparişler oluşturulacak. Dilerseniz <strong>Sipariş Barkodu</strong> (Özel Numara) girebilirsiniz. Boş bırakırsanız sadece sistem numarası üretilir.
-                            </p>
-                            <div className="space-y-3">
-                                {Object.keys(matrixSelections).reduce((acc: string[], curr) => {
-                                    const oid = matrixSelections[curr];
-                                    if (!acc.includes(oid)) acc.push(oid);
-                                    return acc;
-                                }, []).map(offerId => {
-                                    const supplierName = suppliers.find((s: any) => s.offer?.id === offerId)?.supplier?.name ||
-                                        suppliers.find((s: any) => s.offer?.id === offerId)?.contactName || "Tedarikçi";
-                                    return (
-                                        <div key={offerId} className="flex flex-col gap-1">
-                                            <label className="text-xs font-semibold text-slate-700">{supplierName} - Sipariş Barkodu</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Örn: 2025-001 (Opsiyonel)"
-                                                className="border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                                value={customOrderNumbers[offerId] || ""}
-                                                onChange={(e) => setCustomOrderNumbers(prev => ({ ...prev, [offerId]: e.target.value }))}
-                                            />
-                                        </div>
-                                    );
-                                })}
+            {
+                showSplitConfirm && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden">
+                            <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
+                                <h3 className="font-bold text-lg text-slate-800">Sipariş Oluşturma Onayı</h3>
+                                <button onClick={() => setShowSplitConfirm(false)} className="text-slate-400 hover:text-red-500">✕</button>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <p className="text-sm text-slate-600">
+                                    Aşağıdaki tedarikçiler için ayrı ayrı siparişler oluşturulacak. Dilerseniz <strong>Sipariş Barkodu</strong> (Özel Numara) girebilirsiniz. Boş bırakırsanız sadece sistem numarası üretilir.
+                                </p>
+                                <div className="space-y-3">
+                                    {Object.keys(matrixSelections).reduce((acc: string[], curr) => {
+                                        const oid = matrixSelections[curr];
+                                        if (!acc.includes(oid)) acc.push(oid);
+                                        return acc;
+                                    }, []).map(offerId => {
+                                        const supplierName = suppliers.find((s: any) => s.offer?.id === offerId)?.supplier?.name ||
+                                            suppliers.find((s: any) => s.offer?.id === offerId)?.contactName || "Tedarikçi";
+                                        return (
+                                            <div key={offerId} className="flex flex-col gap-1">
+                                                <label className="text-xs font-semibold text-slate-700">{supplierName} - Sipariş Barkodu</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Örn: 2025-001 (Opsiyonel)"
+                                                    className="border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                    value={customOrderNumbers[offerId] || ""}
+                                                    onChange={(e) => setCustomOrderNumbers(prev => ({ ...prev, [offerId]: e.target.value }))}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
+                                <Button variant="secondary" onClick={() => setShowSplitConfirm(false)}>Vazgeç</Button>
+                                <Button variant="primary" onClick={handleSplitOrderConfirm} disabled={converting}>
+                                    {converting ? "Oluşturuluyor..." : "Onayla ve Oluştur"}
+                                </Button>
                             </div>
                         </div>
-                        <div className="p-4 bg-slate-50 border-t flex justify-end gap-2">
-                            <Button variant="secondary" onClick={() => setShowSplitConfirm(false)}>Vazgeç</Button>
-                            <Button variant="primary" onClick={handleSplitOrderConfirm} disabled={converting}>
-                                {converting ? "Oluşturuluyor..." : "Onayla ve Oluştur"}
-                            </Button>
-                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Offer Detail Modal */}
             <Modal
@@ -441,6 +514,6 @@ export default function RfqDetayPage() {
                     </div>
                 </div>
             </Modal>
-        </div>
+        </div >
     );
 }

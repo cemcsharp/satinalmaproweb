@@ -2,11 +2,11 @@ import Link from "next/link";
 
 export default function RegistrationPendingPage() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-6">
+        <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 flex items-center justify-center p-6">
             <div className="w-full max-w-md text-center">
                 {/* Success Icon */}
-                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-20 h-20 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
@@ -46,7 +46,7 @@ export default function RegistrationPendingPage() {
                     </Link>
                     <Link
                         href="/portal/login"
-                        className="text-sm text-emerald-600 font-semibold hover:underline"
+                        className="text-sm text-blue-600 font-semibold hover:underline"
                     >
                         Giriş Sayfasına Git
                     </Link>

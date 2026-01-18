@@ -4,6 +4,7 @@ import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import Script from "next/script";
+import CookieConsent from "@/components/CookieConsent";
 
 import { getSystemSettings, defaultSettings } from "@/lib/settings";
 
@@ -121,6 +122,7 @@ export default async function RootLayout({
         <a href="#main-content" className="skip-link">İçeriğe atla</a>
         <Providers>
           <Shell settings={settings}>{children}</Shell>
+          <CookieConsent />
         </Providers>
       </body>
     </html>

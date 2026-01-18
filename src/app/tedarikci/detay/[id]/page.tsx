@@ -9,6 +9,8 @@ import { fetchJsonWithRetry } from "@/lib/http";
 import Skeleton from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 
+import SupplierPerformanceScore from "@/components/SupplierPerformanceScore";
+
 type SupplierDetail = {
   id: string;
   name: string;
@@ -70,10 +72,12 @@ export default function TedarikciDetayPage() {
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push("/tedarikci/liste")}>Listeye Dön</Button>
-            <Button variant="gradient" onClick={() => router.push(`/tedarikci/duzenle/${data.id}`)} className="shadow-lg shadow-emerald-500/20">Düzenle</Button>
+            <Button variant="gradient" onClick={() => router.push(`/tedarikci/duzenle/${data.id}`)} className="shadow-lg shadow-sky-500/20">Düzenle</Button>
           </div>
         }
       />
+
+      <SupplierPerformanceScore supplierId={data.id} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">

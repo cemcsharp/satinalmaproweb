@@ -24,9 +24,12 @@ export async function POST(req: NextRequest) {
             return jsonError(400, "missing_fields");
         }
 
-        // 1. Fetch Requests and their Items
+        // 1. Fetch Requests and their Items (Filtered by Tenant)
         const requests = await prisma.request.findMany({
-            where: { id: { in: requestIds } },
+            where: {
+                id: { in: requestIds },
+                tenantId: user.isSuperAdmin ? undefined : user.tenantId
+            },
             include: { items: true, unit: true }
         });
 
@@ -88,14 +91,19 @@ export async function POST(req: NextRequest) {
             include: { unit: true }
         });
 
-        const finalRfqItems = requestItemsWithUnit.map(ri => ({
-            name: ri.name,
-            quantity: ri.quantity,
-            unit: ri.unit?.label || "Birim",
-            description: `Talep No: ${requests.find(r => r.id === ri.requestId)?.barcode}`,
-            requestItemId: ri.id,
-            categoryId: itemCategories ? itemCategories[ri.id] || null : null
-        }));
+        const finalRfqItems = requestItemsWithUnit.map(ri => {
+            // Priority: body.itemCategories map > requestItem.categoryId
+            const categoryId = (itemCategories && itemCategories[ri.id]) ? itemCategories[ri.id] : ri.categoryId;
+
+            return {
+                name: ri.name,
+                quantity: ri.quantity,
+                unit: ri.unit?.label || "Birim",
+                description: `Talep No: ${requests.find(r => r.id === ri.requestId)?.barcode}`,
+                requestItemId: ri.id,
+                categoryId: categoryId || null
+            };
+        });
 
         const result = await prisma.$transaction(async (tx) => {
             // Create RFQ

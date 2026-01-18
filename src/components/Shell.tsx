@@ -5,6 +5,8 @@ import { useSession } from "next-auth/react";
 import Sidebar from "./Sidebar";
 import NotificationBell from "./NotificationBell";
 import GlobalSearch from "./GlobalSearch";
+import ProcurementCopilot from "./ProcurementCopilot";
+import CommandCenter from "./CommandCenter";
 import { SystemSettings, defaultSettings } from "@/lib/settings";
 
 export default function Shell({
@@ -22,7 +24,7 @@ export default function Shell({
     setSidebarOpen(false);
   }, [pathname]);
 
-  const isAuthPage = ["/", "/login", "/register"].includes(pathname) || pathname.startsWith("/portal") || pathname.startsWith("/admin");
+  const isAuthPage = ["/", "/login", "/register", "/yardim"].includes(pathname) || pathname.startsWith("/portal") || pathname.startsWith("/admin");
   // Public detail logic removed per request
   const userName = session?.user?.name || "Kullanıcı";
   const siteName = settings?.siteName || defaultSettings.siteName;
@@ -33,7 +35,7 @@ export default function Shell({
         <a href="#main-content" className="skip-link">İçeriğe geç</a>
 
         {/* Sidebar - Full Height */}
-        {!isAuthPage && (
+        {!isAuthPage && session && (
           <>
             <div className="hidden md:block">
               <Sidebar settings={settings} />
@@ -56,7 +58,7 @@ export default function Shell({
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {/* Top Navbar */}
-          {!isAuthPage && (
+          {!isAuthPage && session && (
             <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-slate-200/50">
               <nav aria-label="Ana gezinme" className="flex items-center justify-between h-16 px-4 md:px-6">
                 {/* Left side - Mobile hamburger */}
@@ -113,6 +115,14 @@ export default function Shell({
             {children}
           </main>
         </div>
+
+        {/* Global Experiences */}
+        {!isAuthPage && session && (
+          <>
+            <ProcurementCopilot />
+            <CommandCenter />
+          </>
+        )}
       </div>
     </div>
   );

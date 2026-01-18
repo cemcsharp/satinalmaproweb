@@ -183,7 +183,7 @@ export default function ResetPasswordPage() {
 
         <div className="text-center">
           <p className="text-sm text-slate-500">
-            © 2024 Satın Alma Pro. Tüm hakları saklıdır.
+            © {new Date().getFullYear()} satinalma.app. Tüm hakları saklıdır.
           </p>
         </div>
       </div>

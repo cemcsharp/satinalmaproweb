@@ -60,9 +60,9 @@ export default function InvoiceEdit({ item, onSave, onCancel }: InvoiceEditProps
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-2xl border border-amber-100">
+            <div className="bg-gradient-to-r from-sky-50 to-orange-50 p-6 rounded-2xl border border-amber-100">
                 <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-sky-100 text-blue-600 flex items-center justify-center">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     </div>
                     <div>

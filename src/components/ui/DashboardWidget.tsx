@@ -18,14 +18,14 @@ const colorStyles = {
         text: "text-blue-700",
     },
     green: {
-        bg: "bg-emerald-50",
-        icon: "bg-emerald-100 text-emerald-600",
-        text: "text-emerald-700",
+        bg: "bg-sky-50",
+        icon: "bg-sky-100 text-blue-600",
+        text: "text-blue-700",
     },
     amber: {
-        bg: "bg-amber-50",
-        icon: "bg-amber-100 text-amber-600",
-        text: "text-amber-700",
+        bg: "bg-blue-50",
+        icon: "bg-blue-100 text-blue-600",
+        text: "text-blue-700",
     },
     red: {
         bg: "bg-red-50",
@@ -33,9 +33,9 @@ const colorStyles = {
         text: "text-red-700",
     },
     purple: {
-        bg: "bg-purple-50",
-        icon: "bg-purple-100 text-purple-600",
-        text: "text-purple-700",
+        bg: "bg-indigo-50",
+        icon: "bg-sky-100 text-indigo-600",
+        text: "text-indigo-700",
     },
     slate: {
         bg: "bg-slate-50",
@@ -80,8 +80,8 @@ export default function DashboardWidget({
                             {trend !== undefined && (
                                 <span
                                     className={`inline-flex items-center text-xs font-medium px-1.5 py-0.5 rounded ${trend >= 0
-                                            ? "bg-emerald-100 text-emerald-700"
-                                            : "bg-red-100 text-red-700"
+                                        ? "bg-sky-100 text-blue-700"
+                                        : "bg-red-100 text-red-700"
                                         }`}
                                 >
                                     {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)}%
@@ -116,12 +116,12 @@ export function ActivityItem({
     time?: string;
 }) {
     const statusColors: Record<string, string> = {
-        Beklemede: "bg-amber-100 text-amber-700",
-        Pending: "bg-amber-100 text-amber-700",
-        Onaylandı: "bg-emerald-100 text-emerald-700",
-        Approved: "bg-emerald-100 text-emerald-700",
-        Tamamlandı: "bg-blue-100 text-blue-700",
-        Completed: "bg-blue-100 text-blue-700",
+        Beklemede: "bg-blue-100 text-blue-700",
+        Pending: "bg-blue-100 text-blue-700",
+        Onaylandı: "bg-sky-100 text-blue-700",
+        Approved: "bg-sky-100 text-blue-700",
+        Tamamlandı: "bg-sky-600 text-white",
+        Completed: "bg-sky-600 text-white",
         İptal: "bg-red-100 text-red-700",
         Cancelled: "bg-red-100 text-red-700",
     };

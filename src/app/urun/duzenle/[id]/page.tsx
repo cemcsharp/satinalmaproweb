@@ -81,7 +81,7 @@ function UrunDuzenleContent() {
                 // Fetch suppliers
                 const supRes = await fetch("/api/tedarikci?pageSize=100&active=true");
                 const supData = await supRes.json();
-                setSuppliers(supData.items || supData || []);
+                setSuppliers(Array.isArray(supData.items) ? supData.items : []);
 
             } catch (e: any) {
                 show({ title: "Hata", description: e.message, variant: "error" });

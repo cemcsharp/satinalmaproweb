@@ -55,7 +55,7 @@ export function renderEmailTemplate(name: string, vars: Record<string, unknown>)
       const body = String(v.body || "");
       const actionUrl = v.actionUrl ? String(v.actionUrl) : "";
       const actionText = v.actionText ? String(v.actionText) : "Görüntüle";
-      const footerText = String(v.footerText || "Satınalma Pro");
+      const footerText = String(v.footerText || "satinalma.app");
       const brandColor = String(v.brandColor || "#0f172a"); // Corporate Slate 900
       const logoUrl = v.logoUrl ? String(v.logoUrl) : "";
       const btn = actionUrl
@@ -78,7 +78,7 @@ export function renderEmailTemplate(name: string, vars: Record<string, unknown>)
             <td style="padding:32px;background:#ffffff;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:center;">
               <div style="text-align:center">
                 ${logoUrl ? `<img src="${logoUrl}" alt="Logo" style="height:32px;width:auto;display:block;margin:0 auto 12px auto"/>` : ""}
-                <span style="color:${brandColor};font-weight:800;font-size:20px;letter-spacing:-0.025em">SatınalmaPro</span>
+                <span style="color:${brandColor};font-weight:800;font-size:20px;letter-spacing:-0.025em">satinalma.app</span>
               </div>
             </td>
           </tr>
@@ -110,7 +110,7 @@ export function renderEmailTemplate(name: string, vars: Record<string, unknown>)
       const intro = String(v.intro || "");
       const actionUrl = v.actionUrl ? String(v.actionUrl) : "";
       const actionText = v.actionText ? String(v.actionText) : "Görüntüle";
-      const footerText = String(v.footerText || "Satınalma Pro");
+      const footerText = String(v.footerText || "satinalma.app");
       const brandColor = String(v.brandColor || "#0f172a"); // Corporate Slate 900
       const logoUrl = v.logoUrl ? String(v.logoUrl) : "";
       const fields = Array.isArray((v as any).fields) ? ((v as any).fields as Array<{ label: string; value: string }>) : [];
@@ -143,7 +143,7 @@ export function renderEmailTemplate(name: string, vars: Record<string, unknown>)
             <td style="padding:32px;background:#ffffff;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:center;">
               <div style="text-align:center">
                 ${logoUrl ? `<img src="${logoUrl}" alt="Logo" style="height:32px;width:auto;display:block;margin:0 auto 12px auto"/>` : ""}
-                <span style="color:${brandColor};font-weight:800;font-size:20px;letter-spacing:-0.025em">SatınalmaPro</span>
+                <span style="color:${brandColor};font-weight:800;font-size:20px;letter-spacing:-0.025em">satinalma.app</span>
               </div>
             </td>
           </tr>

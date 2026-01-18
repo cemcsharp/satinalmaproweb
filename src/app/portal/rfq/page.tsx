@@ -38,8 +38,8 @@ export default async function SupplierRfqList() {
         switch (stage) {
             case "PENDING": return "bg-slate-100 text-slate-600";
             case "SENT": return "bg-blue-100 text-blue-600";
-            case "VIEWED": return "bg-amber-100 text-amber-600";
-            case "OFFERED": return "bg-emerald-100 text-emerald-600";
+            case "VIEWED": return "bg-sky-100 text-blue-600";
+            case "OFFERED": return "bg-sky-100 text-blue-600";
             case "DECLINED": return "bg-rose-100 text-rose-600";
             default: return "bg-slate-100 text-slate-600";
         }

@@ -191,7 +191,7 @@ export default function SupplierCreatePage() {
           {/* Banka Bilgileri */}
           <div className="col-span-1 md:col-span-2 space-y-4 pt-4">
             <h3 className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2 mb-4 flex items-center gap-2">
-              <div className="w-1 h-4 bg-indigo-500 rounded-full"></div>
+              <div className="w-1 h-4 bg-blue-600 rounded-full"></div>
               Banka ve Ödeme Bilgileri
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -240,7 +240,7 @@ export default function SupplierCreatePage() {
           {/* İletişim Bilgileri */}
           <div className="col-span-1 md:col-span-2 space-y-4 pt-4">
             <h3 className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2 mb-4 flex items-center gap-2">
-              <div className="w-1 h-4 bg-emerald-500 rounded-full"></div>
+              <div className="w-1 h-4 bg-sky-500 rounded-full"></div>
               İletişim Bilgileri
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -284,7 +284,7 @@ export default function SupplierCreatePage() {
 
           <div className="col-span-1 md:col-span-2 pt-4">
             <h3 className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2 mb-4 flex items-center gap-2">
-              <div className="w-1 h-4 bg-amber-500 rounded-full"></div>
+              <div className="w-1 h-4 bg-sky-500 rounded-full"></div>
               Diğer Bilgiler
             </h3>
             <div className="space-y-4">
