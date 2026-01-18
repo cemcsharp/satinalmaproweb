@@ -118,7 +118,7 @@ export default function DashboardClient() {
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400 uppercase tracking-widest">
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-              Procurement Control Tower v2.0
+              Satınalma Yönetim Paneli
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight text-white">
               {getGreeting()}, <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">{userName}</span>
@@ -203,7 +203,7 @@ export default function DashboardClient() {
         <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 p-8">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-xl font-extrabold text-slate-800">Operasyonel Nabız</h2>
+              <h2 className="text-xl font-extrabold text-slate-800">Süreç Durumu</h2>
               <p className="text-sm text-slate-500 font-medium">Satınalma yaşam döngüsü durumu</p>
             </div>
             <div className="flex gap-2">

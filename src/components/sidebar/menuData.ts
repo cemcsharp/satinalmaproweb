@@ -47,7 +47,7 @@ export const menuItems: MenuItem[] = [
     { label: "Departmanlar", href: "/admin/departmanlar", icon: "users", category: "Sistem", requiredRole: ["admin"] },
     { label: "Kullanıcılar", href: "/admin/kullanicilar", icon: "user-plus", category: "Sistem", requiredRole: ["admin"] },
     { label: "Rol & Yetki", href: "/admin/roller", icon: "shield", category: "Sistem", requiredRole: ["admin"] },
-    { label: "Genel Ayarlar", href: "/admin/ayarlar", icon: "settings", category: "Sistem", requiredRole: ["admin"] },
+    { label: "Genel Ayarlar", href: "/admin/genel", icon: "settings", category: "Sistem", requiredRole: ["admin"] },
 ];
 
 export const evaluatorMenuItems: MenuItem[] = [

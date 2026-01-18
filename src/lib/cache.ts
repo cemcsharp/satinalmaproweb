@@ -1,73 +1,124 @@
 /**
- * Simple In-Memory Cache Utility
- * Provides TTL-based caching for server-side operations.
+ * Simple in-memory cache for API responses
+ * Useful for frequently accessed, rarely changing data
  */
 
 type CacheEntry<T> = {
-    value: T;
+    data: T;
+    timestamp: number;
     expiresAt: number;
 };
 
-class SimpleCache {
+class APICache {
     private cache: Map<string, CacheEntry<any>> = new Map();
-    private defaultTtl: number;
-
-    constructor(defaultTtlSeconds: number = 300) {
-        this.defaultTtl = defaultTtlSeconds * 1000;
-    }
+    private defaultTTL: number = 60 * 1000; // 1 minute default
 
     /**
-     * Get a value from the cache
+     * Get cached data or fetch new data
      */
-    get<T>(key: string): T | null {
-        const entry = this.cache.get(key);
-        if (!entry) return null;
+    async getOrFetch<T>(
+        key: string,
+        fetcher: () => Promise<T>,
+        ttlMs?: number
+    ): Promise<T> {
+        const cached = this.cache.get(key);
+        const now = Date.now();
 
-        if (Date.now() > entry.expiresAt) {
-            this.cache.delete(key);
-            return null;
+        // Return cached data if valid
+        if (cached && cached.expiresAt > now) {
+            return cached.data as T;
         }
 
-        return entry.value as T;
+        // Fetch fresh data
+        const data = await fetcher();
+
+        // Store in cache
+        this.cache.set(key, {
+            data,
+            timestamp: now,
+            expiresAt: now + (ttlMs || this.defaultTTL)
+        });
+
+        return data;
     }
 
     /**
-     * Set a value in the cache
+     * Manually set cache entry
      */
-    set<T>(key: string, value: T, ttlSeconds?: number): void {
-        const ttl = (ttlSeconds !== undefined ? ttlSeconds * 1000 : this.defaultTtl);
+    set<T>(key: string, data: T, ttlMs?: number): void {
+        const now = Date.now();
         this.cache.set(key, {
-            value,
-            expiresAt: Date.now() + ttl,
+            data,
+            timestamp: now,
+            expiresAt: now + (ttlMs || this.defaultTTL)
         });
     }
 
     /**
-     * Remove a value from the cache
+     * Get cached data if exists and valid
      */
-    delete(key: string): void {
+    get<T>(key: string): T | null {
+        const cached = this.cache.get(key);
+        if (cached && cached.expiresAt > Date.now()) {
+            return cached.data as T;
+        }
+        return null;
+    }
+
+    /**
+     * Invalidate specific cache key
+     */
+    invalidate(key: string): void {
         this.cache.delete(key);
     }
 
     /**
-     * Clear all values that match a prefix
+     * Invalidate cache keys matching a pattern
      */
-    invalidatePrefix(prefix: string): void {
+    invalidatePattern(pattern: string): void {
+        const regex = new RegExp(pattern);
         for (const key of this.cache.keys()) {
-            if (key.startsWith(prefix)) {
+            if (regex.test(key)) {
                 this.cache.delete(key);
             }
         }
     }
 
     /**
-     * Clear the entire cache
+     * Clear all cache
      */
     clear(): void {
         this.cache.clear();
     }
+
+    /**
+     * Get cache stats
+     */
+    stats(): { size: number; keys: string[] } {
+        return {
+            size: this.cache.size,
+            keys: Array.from(this.cache.keys())
+        };
+    }
 }
 
-// Global instance for the application
-// In Next.js dev mode, this might be recreated on HMR, but in production it persists.
-export const apiCache = new SimpleCache(600); // Default 10 minutes
+// Singleton instance
+export const apiCache = new APICache();
+
+// Pre-defined cache keys
+export const CACHE_KEYS = {
+    CATEGORIES: 'categories',
+    CURRENCIES: 'currencies',
+    UNITS: 'units',
+    OPTIONS: 'options',
+    DASHBOARD_STATS: 'dashboard_stats',
+    SUPPLIERS_LIST: 'suppliers_list',
+} as const;
+
+// Pre-defined TTLs (in milliseconds)
+export const CACHE_TTL = {
+    SHORT: 30 * 1000,      // 30 seconds
+    MEDIUM: 5 * 60 * 1000, // 5 minutes
+    LONG: 30 * 60 * 1000,  // 30 minutes
+    HOUR: 60 * 60 * 1000,  // 1 hour
+} as const;

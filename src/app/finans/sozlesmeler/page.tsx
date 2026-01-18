@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import Card from "@/components/ui/Card";
 import Icon from "@/components/ui/Icon";
@@ -22,6 +23,7 @@ interface Contract {
 }
 
 export default function SozlesmeYonetimiPage() {
+    const router = useRouter();
     const [data, setData] = useState<Contract[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -36,7 +38,7 @@ export default function SozlesmeYonetimiPage() {
     }, []);
 
     const getStatusBadge = (c: Contract) => {
-        if (c.status === "EXPIRED") return <Badge variant="destructive">SÜRESİ DOLDU</Badge>;
+        if (c.status === "EXPIRED") return <Badge variant="error">SÜRESİ DOLDU</Badge>;
         if (c.isExpiringSoon) return <Badge variant="warning">KRİTİK (AZ KALDI)</Badge>;
         if (c.status === "ACTIVE") return <Badge variant="success">AKTİF</Badge>;
         return <Badge variant="default">{c.status}</Badge>;
@@ -53,13 +55,14 @@ export default function SozlesmeYonetimiPage() {
                     <Button
                         variant="primary"
                         className="!gap-2"
-                        onClick={() => alert("Sözleşme ekleme modülü hazırlanıyor. Sipariş onaylandığında sözleşme otomatik oluşturulur.")}
+                        onClick={() => router.push("/finans/sozlesmeler/olustur")}
                     >
                         <Icon name="plus" className="w-4 h-4" />
                         Yeni Sözleşme Ekle
                     </Button>
                 }
             />
+
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card className="p-4 border-slate-100 flex items-center gap-4 bg-white/50 backdrop-blur-sm">
@@ -151,7 +154,7 @@ export default function SozlesmeYonetimiPage() {
                                         </td>
                                         <td className="p-4 text-center">
                                             {s.orderNo ? (
-                                                <Badge variant="outline" className="text-blue-600 border-blue-100 bg-blue-50 font-mono text-[10px]">
+                                                <Badge variant="info" className="text-blue-600 border-blue-100 bg-blue-50 font-mono text-[10px]">
                                                     {s.orderNo}
                                                 </Badge>
                                             ) : (

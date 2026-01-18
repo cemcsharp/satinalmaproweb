@@ -175,7 +175,7 @@ function InvoiceListContent() {
               title="Fatura Listesi"
             />
             {canCreate && (
-              <Button onClick={() => router.push("/fatura/yeni")} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">
+              <Button onClick={() => router.push("/fatura/olustur")} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">
                 <span className="text-lg font-light leading-none">+</span>
                 Fatura Ekle
               </Button>

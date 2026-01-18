@@ -20,7 +20,7 @@ export default function CommandCenter() {
     const inputRef = useRef<HTMLInputElement>(null);
 
     const commands: CommandItem[] = [
-        { id: "nav-dash", label: "Dashboard", description: "Control Tower paneline git", icon: "home", category: "Navigasyon", action: () => router.push("/dashboard") },
+        { id: "nav-dash", label: "Dashboard", description: "Yönetim Paneline git", icon: "home", category: "Navigasyon", action: () => router.push("/dashboard") },
         { id: "nav-analiz", label: "Analiz Dashboard", description: "Analitik ve AI tahminlerine git", icon: "bar-chart", category: "Navigasyon", action: () => router.push("/analitik") },
         { id: "nav-talep", label: "Yeni Talep Oluştur", description: "Hızlıca yeni bir satın alma talebi aç", icon: "file-plus", category: "Aksiyon", action: () => router.push("/talep/olustur") },
         { id: "nav-orders", label: "Siparişlerim", description: "Tüm siparişleri listele", icon: "package", category: "Navigasyon", action: () => router.push("/siparis/liste") },
