@@ -312,7 +312,8 @@ model DeliveryAddress {
 
 model Request {
   id                String        @id @default(cuid())
-  barcode           String        @unique
+  requestNumber     Int           @default(autoincrement())
+  barcode           String?       // Opsiyonel manuel giriş
   createdAt         DateTime      @default(now())
   subject           String        @db.VarChar(500)
   budget            Decimal       @db.Decimal(18, 2)
@@ -341,9 +342,12 @@ model Request {
   unit              OptionItem    @relation("RequestUnit", fields: [unitId], references: [id])
   items             RequestItem[]
 
+  @@unique([requestNumber])
   @@index([tenantId])
   @@index([departmentId])
+  @@index([barcode])
 }
+
 
 model Attachment {
   id         String           @id @default(cuid())

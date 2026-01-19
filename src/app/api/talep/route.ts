@@ -97,11 +97,17 @@ export async function POST(req: NextRequest) {
     if (!user) return jsonError(403, "forbidden", { message: "Talep oluşturma yetkiniz yok." });
 
     const body = (await req.json()) as CreateRequestBody;
-    if (!body?.barcode || !body.subject || !body.budget || !body.relatedPersonId || !body.unitId || !body.statusId || !body.currencyId) {
+    // barcode artık opsiyonel - sadece konu, bütçe ve diğer zorunlu alanlar kontrol edilir
+    if (!body.subject || !body.budget || !body.relatedPersonId || !body.unitId || !body.statusId || !body.currencyId) {
       return jsonError(400, "missing_fields");
     }
-    const existing = await prisma.request.findUnique({ where: { barcode: body.barcode.trim() } });
-    if (existing) return jsonError(409, "duplicate_barcode");
+
+    // Eğer barcode girilmişse benzersizlik kontrolü yap
+    if (body.barcode && body.barcode.trim()) {
+      const existing = await prisma.request.findFirst({ where: { barcode: body.barcode.trim() } });
+      if (existing) return jsonError(409, "duplicate_barcode");
+    }
+
 
     const unitEmail = typeof body.unitEmail === "string" ? body.unitEmail.trim() : "";
     if (unitEmail && !/^\S+@\S+\.\S+$/.test(unitEmail)) {
@@ -135,7 +141,7 @@ export async function POST(req: NextRequest) {
         // 1. Create the request
         const req = await tx.request.create({
           data: {
-            barcode: body.barcode.trim(),
+            barcode: body.barcode?.trim() || null, // Opsiyonel - null olabilir
             subject: body.subject.trim(),
             budget: body.budget,
             relatedPersonId: body.relatedPersonId,
@@ -159,7 +165,7 @@ export async function POST(req: NextRequest) {
               }))
             } : undefined,
           } as any,
-          select: { id: true, barcode: true }
+          select: { id: true, barcode: true, requestNumber: true }
         });
 
         // 2. Reserve Budget if department and budget exist

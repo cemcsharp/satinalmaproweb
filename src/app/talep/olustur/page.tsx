@@ -251,8 +251,9 @@ export default function TalepOlusturPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (barcodeUnique !== "unique") {
-      show({ title: "Barkod benzersiz olmalıdır", description: "Farklı bir barkod girin.", variant: "warning" });
+    // Barcode artık opsiyonel - sadece girilmişse benzersizlik kontrolü yap
+    if (barcode.trim() && barcodeUnique === "duplicate") {
+      show({ title: "Barkod zaten kullanılıyor", description: "Farklı bir barkod girin veya boş bırakın.", variant: "warning" });
       return;
     }
     if (!subject.trim()) {
@@ -390,18 +391,19 @@ export default function TalepOlusturPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-1">
                 <Input
-                  label="Talep Barkodu"
+                  label="Talep Barkodu (Opsiyonel)"
                   value={barcode}
                   onChange={(e) => setBarcode(e.target.value)}
-                  placeholder="Manuel barkod giriniz"
+                  placeholder="Kurumsal barkod (boş bırakılabilir)"
                   description={
-                    barcodeUnique === "checking" ? "Kontrol ediliyor..." :
-                      barcodeUnique === "unique" ? "Benzersiz (demo)" :
-                        barcodeUnique === "duplicate" ? "Barkod zaten mevcut!" :
-                          "Benzersizlik kontrolü yapılacak"
+                    !barcode.trim() ? "Talep numarası otomatik oluşturulacak" :
+                      barcodeUnique === "checking" ? "Kontrol ediliyor..." :
+                        barcodeUnique === "unique" ? "✓ Barkod uygun" :
+                          barcodeUnique === "duplicate" ? "✗ Barkod zaten mevcut!" :
+                            "Benzersizlik kontrol edilecek"
                   }
                   error={barcodeUnique === "duplicate" ? "Bu barkod kullanılıyor" : undefined}
-                  success={barcodeUnique === "unique" ? "Barkod uygun" : undefined}
+                  success={barcode.trim() && barcodeUnique === "unique" ? "Barkod uygun" : undefined}
                 />
               </div>
 

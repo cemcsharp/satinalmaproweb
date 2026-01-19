@@ -48,6 +48,12 @@ export const menuItems: MenuItem[] = [
     { label: "Kullanıcılar", href: "/admin/kullanicilar", icon: "user-plus", category: "Sistem", requiredRole: ["admin"] },
     { label: "Rol & Yetki", href: "/admin/roller", icon: "shield", category: "Sistem", requiredRole: ["admin"] },
     { label: "Genel Ayarlar", href: "/admin/genel", icon: "settings", category: "Sistem", requiredRole: ["admin"] },
+
+    // AYARLAR ALT MENÜSÜ
+    { label: "Listeler", href: "/ayarlar/listeler", icon: "list", category: "Sistem", requiredRole: ["admin"] },
+    { label: "Teslimat Adresleri", href: "/ayarlar/adresler", icon: "map-pin", category: "Sistem", requiredRole: ["admin"] },
+    { label: "Değerlendirme Kriterleri", href: "/ayarlar/degerlendirme", icon: "star", category: "Sistem", requiredRole: ["admin"] },
+    { label: "E-posta Ayarları", href: "/ayarlar/e-posta", icon: "mail", category: "Sistem", requiredRole: ["admin"] },
 ];
 
 export const evaluatorMenuItems: MenuItem[] = [
