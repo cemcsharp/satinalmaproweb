@@ -16,12 +16,13 @@ export async function GET(req: NextRequest) {
 
   try {
     if (id) {
-      const one = await prisma.company.findUnique({ where: { id } });
+      const one = await prisma.tenant.findUnique({ where: { id, isBuyer: true } });
       if (!one) return jsonError(404, "not_found");
       return NextResponse.json(one);
     }
-    const where: Prisma.CompanyWhereInput = {
+    const where: Prisma.TenantWhereInput = {
       AND: [
+        { isBuyer: true },
         q
           ? {
             OR: [
@@ -29,15 +30,15 @@ export async function GET(req: NextRequest) {
             ],
           }
           : {},
-        active !== null && active !== "" ? { active: active === "true" } : {},
+        active !== null && active !== "" ? { isActive: active === "true" } : {},
       ],
     };
 
-    const orderBy: Prisma.CompanyOrderByWithRelationInput = sortBy === "date" ? { id: sortDir } : { name: sortDir };
+    const orderBy: Prisma.TenantOrderByWithRelationInput = sortBy === "date" ? { id: sortDir } : { name: sortDir };
 
     const [items, total] = await Promise.all([
-      prisma.company.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize }),
-      prisma.company.count({ where }),
+      prisma.tenant.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize }),
+      prisma.tenant.count({ where }),
     ]);
 
     return NextResponse.json({ items, total, page, pageSize });

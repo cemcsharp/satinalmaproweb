@@ -12,37 +12,53 @@ export default function AdminSidebar({ settings }: { settings?: SystemSettings }
     const pathname = usePathname();
     const [expanded, setExpanded] = useState(true);
     const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-        "Genel": true,
-        "Yönetim": true,
-        "Sistem": true
+        "Analiz & Raporlama": true,
+        "Organizasyonel Yapı": true,
+        "Yetkilendirme & Güvenlik": false,
+        "Veri Kaynakları": true,
+        "Konfigürasyon": false
     });
 
     const siteName = settings?.siteName || defaultSettings.siteName;
     const siteDescription = "Sistem Yönetimi";
 
     const menuItems = [
-        { label: "Dashboard", href: "/admin", icon: "home", category: "Genel" },
-        { label: "Tedarikçiler", href: "/admin/tedarikciler", icon: "truck", category: "Yönetim" },
-        { label: "Firmalar", href: "/admin/firmalar", icon: "building", category: "Yönetim" },
-        { label: "Kullanıcılar", href: "/admin/kullanicilar", icon: "users", category: "Yönetim" },
-        { label: "Roller & Yetkiler", href: "/admin/roller", icon: "settings", category: "Yönetim" },
-        { label: "E-posta Ayarları", href: "/admin/e-posta", icon: "mail", category: "Sistem" },
-        { label: "Modüller", href: "/admin/moduller", icon: "module", category: "Sistem" },
-        { label: "Sistem Logları", href: "/admin/loglar", icon: "history", category: "Sistem" },
-        { label: "Genel Ayarlar", href: "/admin/genel", icon: "settings", category: "Sistem" },
+        // Analiz & Raporlama
+        { label: "Dashboard", href: "/admin", icon: "home", category: "Analiz & Raporlama" },
+        { label: "Sistem Logları", href: "/admin/loglar", icon: "history", category: "Analiz & Raporlama" },
+
+        // Organizasyonel Yapı
+        { label: "Firmalar", href: "/admin/firmalar", icon: "business", category: "Organizasyonel Yapı" },
+        { label: "Departmanlar", href: "/admin/departmanlar", icon: "folder", category: "Organizasyonel Yapı" },
+        { label: "Kullanıcılar", href: "/admin/kullanicilar", icon: "users", category: "Organizasyonel Yapı" },
+
+        // Yetkilendirme & Güvenlik
+        { label: "Roller & Yetkiler", href: "/admin/roller", icon: "lock", category: "Yetkilendirme & Güvenlik" },
+        { label: "Modüller", href: "/admin/moduller", icon: "package", category: "Yetkilendirme & Güvenlik" },
+
+        // Veri Kaynakları
+        { label: "Tedarikçiler", href: "/admin/tedarikciler", icon: "truck", category: "Veri Kaynakları" },
+
+        // Konfigürasyon
+        { label: "Genel Ayarlar", href: "/admin/genel", icon: "settings", category: "Konfigürasyon" },
+        { label: "E-posta Sunucusu", href: "/admin/e-posta", icon: "mail", category: "Konfigürasyon" },
     ];
 
-    const categories = ["Genel", "Yönetim", "Sistem"];
+    const categories = ["Analiz & Raporlama", "Organizasyonel Yapı", "Yetkilendirme & Güvenlik", "Veri Kaynakları", "Konfigürasyon"];
     // Ocean Blue Corporate Theme - consistent with main app
     const categoryColors: Record<string, string> = {
-        "Genel": "from-slate-600 to-slate-700",
-        "Yönetim": "from-sky-600 to-blue-700",
-        "Sistem": "from-indigo-600 to-blue-700",
+        "Analiz & Raporlama": "from-slate-600 to-slate-700",
+        "Organizasyonel Yapı": "from-sky-600 to-blue-700",
+        "Yetkilendirme & Güvenlik": "from-emerald-600 to-teal-700",
+        "Veri Kaynakları": "from-indigo-600 to-blue-700",
+        "Konfigürasyon": "from-purple-600 to-pink-700",
     };
     const categoryIcons: Record<string, string> = {
-        "Genel": "home",
-        "Yönetim": "building",
-        "Sistem": "settings",
+        "Analiz & Raporlama": "pie-chart",
+        "Organizasyonel Yapı": "building",
+        "Yetkilendirme & Güvenlik": "shield-check",
+        "Veri Kaynakları": "database",
+        "Konfigürasyon": "settings",
     };
 
     const toggleCategory = (category: string) => {

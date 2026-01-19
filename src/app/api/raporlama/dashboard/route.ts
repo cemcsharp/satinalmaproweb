@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   const [requestsTotal, ordersTotal, suppliersTotal, contractsTotal, invoicesTotal] = await Promise.all([
     prisma.request.count(),
     prisma.order.count(),
-    prisma.supplier.count(),
+    prisma.tenant.count({ where: { isSupplier: true, isActive: true } }),
     prisma.contract.count(),
     prisma.invoice.count(),
   ]);

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json().catch(() => ({}));
-        const { emailEnabled, inAppEnabled, digestEnabled } = body;
+        const { emailEnabled, inAppEnabled, digestEnabled, compactView } = body;
 
         const prefs = await prisma.notificationPreference.upsert({
             where: { userId },
@@ -51,12 +51,14 @@ export async function POST(req: NextRequest) {
                 emailEnabled: emailEnabled !== undefined ? emailEnabled : undefined,
                 inAppEnabled: inAppEnabled !== undefined ? inAppEnabled : undefined,
                 digestEnabled: digestEnabled !== undefined ? digestEnabled : undefined,
+                compactView: compactView !== undefined ? compactView : undefined,
             },
             create: {
                 userId,
                 emailEnabled: emailEnabled !== undefined ? emailEnabled : true,
                 inAppEnabled: inAppEnabled !== undefined ? inAppEnabled : true,
                 digestEnabled: digestEnabled !== undefined ? digestEnabled : false,
+                compactView: compactView !== undefined ? compactView : false,
             }
         });
 

@@ -12,8 +12,10 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const status = searchParams.get("status") || "pending";
 
-        const suppliers = await prisma.supplier.findMany({
+        // Query tenants with isSupplier: true instead of supplier model
+        const suppliers = await prisma.tenant.findMany({
             where: {
+                isSupplier: true,
                 registrationStatus: status,
             },
             include: {

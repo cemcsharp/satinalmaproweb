@@ -6,7 +6,7 @@ import { requirePermissionApi } from "@/lib/apiAuth";
 /**
  * POST /api/rfq/suggest-suppliers
  * Body: { categoryIds: string[] }
- * Returns: List of suppliers matching the given categories
+ * Returns: List of suppliers (tenants) matching the given categories
  */
 export async function POST(req: NextRequest) {
     try {
@@ -21,28 +21,16 @@ export async function POST(req: NextRequest) {
         // Clean and deduplicate IDs
         const uniqueCategoryIds = Array.from(new Set(categoryIds.filter(Boolean)));
 
-        // Find suppliers that match THESE categories
-        // We look into SupplierCategoryMapping for M2M links
-        // AND maybe fallback/also check the single categoryId on Supplier model
-        const matchingSuppliers = await prisma.supplier.findMany({
+        // Find suppliers (tenants with isSupplier: true) that match THESE categories
+        const matchingSuppliers = await prisma.tenant.findMany({
             where: {
-                active: true,
+                isActive: true,
+                isSupplier: true,
                 registrationStatus: "approved",
-                OR: [
-                    {
-                        categoryId: { in: uniqueCategoryIds }
-                    },
-                    {
-                        categories: {
-                            some: {
-                                categoryId: { in: uniqueCategoryIds }
-                            }
-                        }
-                    }
-                ],
+                categoryId: { in: uniqueCategoryIds },
                 // Multi-tenant check
                 ...(user.isSuperAdmin ? {} : {
-                    supplierLinks: {
+                    buyerLinks: {
                         some: { tenantId: user.tenantId }
                     }
                 })
@@ -50,13 +38,6 @@ export async function POST(req: NextRequest) {
             include: {
                 category: {
                     select: { name: true }
-                },
-                categories: {
-                    include: {
-                        category: {
-                            select: { name: true }
-                        }
-                    }
                 }
             },
             orderBy: { name: "asc" }
@@ -68,10 +49,7 @@ export async function POST(req: NextRequest) {
             name: s.name,
             email: s.email,
             contactName: s.contactName,
-            // Primary category
-            categoryName: s.category?.name || (s.categories.length > 0 ? s.categories[0].category.name : null),
-            // All linked categories for detailed UI
-            allCategories: s.categories.map(c => c.category.name)
+            categoryName: s.category?.name || null
         }));
 
         return NextResponse.json({ items });

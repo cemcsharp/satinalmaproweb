@@ -165,7 +165,7 @@ export async function GET(req: Request) {
           .findMany({ where: dateFilter("createdAt"), select: { createdAt: true, realizedTotal: true } })
           .catch(() => []),
         prisma.contract.findMany({ where: dateFilter("createdAt"), select: { createdAt: true } }).catch(() => []),
-        prisma.supplier.findMany({ where: dateFilter("createdAt"), select: { createdAt: true } }).catch(() => []),
+        prisma.tenant.findMany({ where: { ...dateFilter("createdAt"), isSupplier: true }, select: { createdAt: true } }).catch(() => []),
       ]);
 
       const bucket = new Map<string, { count: number; spend: number }>();

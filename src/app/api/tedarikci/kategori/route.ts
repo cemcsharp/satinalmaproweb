@@ -85,7 +85,7 @@ export async function DELETE(req: NextRequest) {
         const subCount = await prisma.supplierCategory.count({ where: { parentId: id } });
         if (subCount > 0) return jsonError(400, "Alt kategorisi olan bir kategori silinemez. Önce alt kategorileri silin/taşıyın.");
 
-        const supplierCount = await prisma.supplier.count({ where: { categoryId: id } });
+        const supplierCount = await prisma.tenant.count({ where: { categoryId: id, isSupplier: true } });
         if (supplierCount > 0) return jsonError(400, "Bu kategoriye bağlı tedarikçiler var. Önce tedarikçilerin kategorisini değiştirin.");
 
         await prisma.supplierCategory.delete({

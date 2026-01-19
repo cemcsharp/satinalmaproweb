@@ -13,10 +13,10 @@ export async function GET(req: NextRequest) {
         if (!user) return jsonError(403, "forbidden");
 
         // 1. Tüm aktif tedarikçileri ve son performans özetlerini çek
-        const suppliers = await prisma.supplier.findMany({
-            where: { active: true },
+        const suppliers = await prisma.tenant.findMany({
+            where: { isActive: true, isSupplier: true },
             include: {
-                evaluationSummaries: {
+                evaluationSums: {
                     orderBy: { createdAt: "desc" },
                     take: 1
                 }
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
         // 2. Segmentasyon Mantığı
         const segmentation = suppliers.map(s => {
-            const lastEval = s.evaluationSummaries[0];
+            const lastEval = s.evaluationSums[0];
             const score = lastEval ? lastEval.totalScore : Number(s.score || 0);
 
             let segment: "GOLD" | "SILVER" | "BRONZE" = "BRONZE";

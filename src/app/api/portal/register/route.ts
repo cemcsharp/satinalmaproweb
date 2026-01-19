@@ -6,14 +6,12 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const {
-            // Supplier info
             companyName,
             taxId,
             taxOffice,
             address,
             phone,
             website,
-            // Additional supplier info
             categoryId,
             bankName,
             bankBranch,
@@ -22,13 +20,12 @@ export async function POST(req: NextRequest) {
             bankCurrency,
             commercialRegistrationNo,
             mersisNo,
-            // User info
             contactName,
             email,
             password,
+            userType // Yeni parametre
         } = body;
 
-        // Validation
         if (!companyName || !email || !password || !contactName) {
             return NextResponse.json(
                 { error: "Zorunlu alanlar eksik: Firma adı, email, şifre ve yetkili adı gereklidir." },
@@ -36,7 +33,10 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Check if email already exists
+        // Determine type
+        const isBuyerRegistration = userType === "buyer" || userType === "company";
+        const isSupplierRegistration = userType === "supplier" || !userType; // Default to supplier if not provided (old compatibility)
+
         const existingUser = await prisma.user.findUnique({
             where: { email },
         });
@@ -47,31 +47,20 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Check if company name or taxId already exists
-        const existingSupplier = await prisma.supplier.findFirst({
-            where: {
-                OR: [
-                    { name: companyName },
-                    ...(taxId ? [{ taxId }] : []),
-                ],
-            },
+        // Find appropriate default role
+        const roleKey = isBuyerRegistration ? "buyer_admin" : "supplier_admin";
+        const defaultRole = await prisma.role.findFirst({
+            where: { key: roleKey, active: true }
         });
-        if (existingSupplier) {
-            return NextResponse.json(
-                { error: "Bu firma adı veya vergi numarası zaten kayıtlı." },
-                { status: 400 }
-            );
-        }
 
-        // Hash password
         const passwordHash = await bcrypt.hash(password, 12);
 
-        // Create supplier and user in a transaction
         const result = await prisma.$transaction(async (tx) => {
-            // Create supplier with pending status
-            const supplier = await tx.supplier.create({
+            // Create tenant with status based on type
+            const tenant = await tx.tenant.create({
                 data: {
                     name: companyName,
+                    slug: companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now().toString(36),
                     taxId: taxId || null,
                     taxOffice: taxOffice || null,
                     address: address || null,
@@ -87,32 +76,35 @@ export async function POST(req: NextRequest) {
                     bankCurrency: bankCurrency || "TRY",
                     commercialRegistrationNo: commercialRegistrationNo || null,
                     mersisNo: mersisNo || null,
-                    active: false, // Will be activated after approval
-                    registrationStatus: "pending",
+                    isActive: isBuyerRegistration, // Buyers active, suppliers need approval
+                    isSupplier: isSupplierRegistration,
+                    isBuyer: isBuyerRegistration,
+                    registrationStatus: isBuyerRegistration ? "approved" : "pending",
                     registrationSource: "self",
                 },
             });
 
-            // Create user linked to supplier
+            // Create user linked to tenant and role
             const user = await tx.user.create({
                 data: {
-                    username: email,
+                    username: contactName,
                     email: email,
-                    // Note: User model doesn't have a 'name' field in schema
                     passwordHash: passwordHash,
-                    role: "supplier",
-                    isActive: false, // Will be activated after approval
-                    supplierId: supplier.id,
+                    isActive: isBuyerRegistration,
+                    tenantId: tenant.id,
+                    roleId: defaultRole?.id || null
                 },
             });
 
-            return { supplier, user };
+            return { tenant, user };
         });
 
         return NextResponse.json({
             success: true,
-            message: "Kayıt başarılı! Hesabınız admin onayı bekliyor.",
-            supplierId: result.supplier.id,
+            message: isBuyerRegistration
+                ? "Kayıt başarılı! Giriş yapabilirsiniz."
+                : "Kayıt başarılı! Hesabınız admin onayı bekliyor.",
+            supplierId: result.tenant.id,
         });
     } catch (error: any) {
         console.error("Registration error:", error);

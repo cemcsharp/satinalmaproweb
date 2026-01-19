@@ -7,16 +7,18 @@ import { getSystemSettings } from "@/lib/settings";
 // POST: Reject a supplier registration
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const authResult = await requirePermissionApi(req, "admin");
-        if (authResult instanceof NextResponse) return authResult;
+        if (!authResult) {
+            return NextResponse.json({ error: "forbidden" }, { status: 403 });
+        }
 
-        const supplierId = params.id;
+        const { id: supplierId } = await params;
 
-        const supplier = await prisma.supplier.findUnique({
-            where: { id: supplierId }
+        const supplier = await prisma.tenant.findUnique({
+            where: { id: supplierId, isSupplier: true }
         });
 
         if (!supplier) {
@@ -24,11 +26,11 @@ export async function POST(
         }
 
         // Update supplier status
-        await prisma.supplier.update({
+        await prisma.tenant.update({
             where: { id: supplierId },
             data: {
                 registrationStatus: "rejected",
-                active: false
+                isActive: false
             }
         });
 

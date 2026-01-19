@@ -38,53 +38,74 @@ export async function POST(req: NextRequest) {
         // Hash password
         const passwordHash = await bcrypt.hash(password, 12);
 
-        // Determine role based on user type
-        const role = userType === "supplier" ? "supplier" : "user";
+        // Determine if this is a buyer or supplier registration
+        const isBuyerRegistration = userType === "buyer" || userType === "company";
+        const isSupplierRegistration = userType === "supplier";
 
-        // Create user
+        // Find appropriate default role - exact match first
+        let defaultRole = null;
+        try {
+            const roleKey = isBuyerRegistration ? "buyer_admin" : "supplier_admin";
+            defaultRole = await prisma.role.findFirst({
+                where: { key: roleKey, active: true }
+            });
+
+            // Fallback to generic roles if specific not found
+            if (!defaultRole) {
+                defaultRole = await prisma.role.findFirst({
+                    where: { key: isBuyerRegistration ? "admin" : "supplier", active: true }
+                });
+            }
+        } catch (e) {
+            console.error("Role lookup failed:", e);
+        }
+
+        // Create Tenant first (for both buyer and supplier)
+        const tenant = await prisma.tenant.create({
+            data: {
+                name: companyName.trim(),
+                slug: companyName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now().toString(36),
+                email: email.toLowerCase().trim(),
+                phone: phone.trim(),
+                contactName: fullName.trim(),
+                registrationStatus: isSupplierRegistration ? "pending" : "approved", // Suppliers need approval, buyers auto-approved
+                isSupplier: isSupplierRegistration,
+                isBuyer: isBuyerRegistration,
+                isActive: isBuyerRegistration // Buyers are active immediately, suppliers need approval
+            }
+        });
+
+        // Create user and link to tenant
         const user = await prisma.user.create({
             data: {
                 username: fullName.trim(),
                 email: email.toLowerCase().trim(),
                 phone: phone.trim(),
                 passwordHash,
-                role,
-                // Mark as pending approval for suppliers
-                ...(userType === "supplier" ? { isApproved: false } : {})
+                tenantId: tenant.id,
+                roleId: defaultRole?.id || null,
+                isActive: isBuyerRegistration, // Buyers are active immediately
+                isSuperAdmin: false
             }
         });
-
-        // If supplier, also create a supplier record
-        if (userType === "supplier") {
-            try {
-                await prisma.supplier.create({
-                    data: {
-                        name: companyName.trim(),
-                        email: email.toLowerCase().trim(),
-                        phone: phone.trim(),
-                        contactPerson: fullName.trim(),
-                        status: "pending", // Requires admin approval
-                        userId: user.id
-                    }
-                });
-            } catch (e) {
-                // If supplier creation fails, still continue - user is created
-                console.error("Supplier record creation failed:", e);
-            }
-        }
 
         // Send welcome email
         try {
             const origin = req.nextUrl.origin;
+            const isApprovalNeeded = isSupplierRegistration;
+
             const welcomeHtml = renderEmailTemplate("generic", {
                 title: "Hoş Geldiniz!",
-                body: `
+                body: isApprovalNeeded ? `
                     <p>Merhaba ${fullName},</p>
-                    <p>Platformumuza kayıt olduğunuz için teşekkür ederiz!</p>
-                    ${userType === "supplier"
-                        ? "<p>Tedarikçi hesabınız onay sürecindedir. Onaylandığında size bilgi vereceğiz.</p>"
-                        : "<p>Hemen giriş yaparak platformumuzu kullanmaya başlayabilirsiniz.</p>"
-                    }
+                    <p>Platformumuza tedarikçi olarak kayıt olduğunuz için teşekkür ederiz!</p>
+                    <p>Hesabınız admin onay sürecindedir. Onaylandığında giriş yapabileceksiniz ve size bilgi vereceğiz.</p>
+                    <p><strong>Şirket:</strong> ${companyName}</p>
+                    <p><strong>E-posta:</strong> ${email}</p>
+                ` : `
+                    <p>Merhaba ${fullName},</p>
+                    <p>Platformumuza alıcı firma olarak kayıt olduğunuz için teşekkür ederiz!</p>
+                    <p>Hesabınız aktif hale getirilmiştir. Hemen giriş yapabilirsiniz.</p>
                     <p><strong>Şirket:</strong> ${companyName}</p>
                     <p><strong>E-posta:</strong> ${email}</p>
                 `,
@@ -94,20 +115,22 @@ export async function POST(req: NextRequest) {
 
             await dispatchEmail({
                 to: email.toLowerCase(),
-                subject: "Hoş Geldiniz!",
+                subject: isApprovalNeeded ? "Kaydınız Alındı - Onay Bekliyor" : "Hoş Geldiniz - Hesabınız Aktif!",
                 html: welcomeHtml,
                 category: "welcome"
             });
         } catch (e) {
             console.error("Welcome email failed:", e);
-            // Don't fail registration if email fails
         }
+
+        const message = isSupplierRegistration
+            ? "Kayıt başarılı. Hesabınız admin onayı bekliyor. Onaylandığında e-posta ile bilgilendirileceksiniz."
+            : "Kayıt başarılı. Hesabınız aktif! Giriş yapabilirsiniz.";
 
         return NextResponse.json({
             ok: true,
-            message: userType === "supplier"
-                ? "Kayıt başarılı. Tedarikçi hesabınız onay bekliyor."
-                : "Kayıt başarılı. Giriş yapabilirsiniz."
+            message,
+            userType: isBuyerRegistration ? "buyer" : "supplier"
         }, { status: 201 });
 
     } catch (error: any) {

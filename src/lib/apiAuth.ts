@@ -36,10 +36,11 @@ export async function getSessionUser(): Promise<{ id: string; role: Role; tenant
 
   if (!user) return null;
 
-  // Prioritize roleRef.key, fallback to user.role string
-  const role = (user.roleRef?.key || user.role || "user") as Role;
+  // Role is always determined via roleId relation
+  const role = (user.roleRef?.key || "user") as Role;
+  const isSuperAdmin = !!user.isSuperAdmin;
 
-  return { id: user.id, role, tenantId: (user as any).tenantId, isSuperAdmin: !!(user as any).isSuperAdmin };
+  return { id: user.id, role, tenantId: user.tenantId, isSuperAdmin };
 }
 
 export async function ensureRole(required: Role | Role[]): Promise<{ id: string; role: Role } | null> {
@@ -68,8 +69,8 @@ export async function ensureRoleApi(req: NextRequest, required: Role | Role[]): 
   });
   if (!user) return null;
 
-  // Prioritize roleRef.key
-  const role: Role = (user.roleRef?.key || user.role || "user") as Role;
+  // Role is always determined via roleId relation
+  const role: Role = (user.roleRef?.key || "user") as Role;
 
   const roles = Array.isArray(required) ? required : [required];
 
@@ -113,7 +114,6 @@ export type UserWithPermissions = {
   unitLabel: string | null;
   isAdmin: boolean;
   tenantId: string | null;
-  supplierId: string | null;
   isSuperAdmin: boolean;
   departmentId: string | null;
 };
@@ -136,18 +136,16 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
   });
   if (!user) return null;
 
-  let roleKey: Role = (user.role as Role) || "user";
+  let roleKey: Role = "user";
   let permissions: string[] = [];
 
-  if (user.roleRef && user.roleRef.permissions) {
+  if (user.roleRef) {
+    roleKey = (user.roleRef.key as Role) || "user";
     const rolePerms = user.roleRef.permissions;
     if (Array.isArray(rolePerms)) {
       permissions = rolePerms as string[];
     } else if (typeof rolePerms === 'object') {
       permissions = Object.keys(rolePerms).filter(k => (rolePerms as any)[k]);
-    }
-    if (user.roleRef.key) {
-      roleKey = user.roleRef.key as Role;
     }
   }
 
@@ -164,9 +162,8 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
     unitId: user.unitId,
     unitLabel: user.unit?.label || null,
     isAdmin: roleKey === "admin",
-    tenantId: (user as any).tenantId,
-    supplierId: (user as any).supplierId,
-    isSuperAdmin: !!(user as any).isSuperAdmin,
+    tenantId: user.tenantId,
+    isSuperAdmin: !!user.isSuperAdmin,
     departmentId: user.departmentId
   };
 }

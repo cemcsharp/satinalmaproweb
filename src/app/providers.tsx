@@ -7,6 +7,7 @@ import { SessionProvider } from "next-auth/react";
 import { SWRConfig } from "swr";
 import { useEffect } from "react";
 import LandingProvider from "@/components/landing/LandingProvider";
+import { PreferencesProvider } from "@/providers/PreferencesProvider";
 
 // Safe SessionProvider wrapper
 function SafeSessionProvider({ children }: { children: React.ReactNode }) {
@@ -48,7 +49,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           <ToastProvider>
             <LandingProvider>
               <ModuleAccessProvider>
-                {children}
+                <PreferencesProvider>
+                  {children}
+                </PreferencesProvider>
               </ModuleAccessProvider>
             </LandingProvider>
           </ToastProvider>

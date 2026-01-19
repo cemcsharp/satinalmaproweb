@@ -46,8 +46,8 @@ export async function GET(req: NextRequest) {
         let isRegistered = false;
 
         if (rfqSupplier.supplierId) {
-            supplierData = await prisma.supplier.findUnique({
-                where: { id: rfqSupplier.supplierId }
+            supplierData = await prisma.tenant.findUnique({
+                where: { id: rfqSupplier.supplierId, isSupplier: true }
             });
             // Only require onboarding if supplier is NOT approved and missing critical info
             // Approved suppliers should go directly to offer form
@@ -58,8 +58,8 @@ export async function GET(req: NextRequest) {
             }
         } else {
             // Check if supplier exists by email even if not linked yet
-            supplierData = await prisma.supplier.findUnique({
-                where: { email: rfqSupplier.email }
+            supplierData = await prisma.tenant.findUnique({
+                where: { email: rfqSupplier.email, isSupplier: true }
             });
             // If supplier exists and is approved, no onboarding needed
             if (supplierData && supplierData.registrationStatus === 'approved') {
@@ -170,18 +170,19 @@ export async function POST(req: NextRequest) {
 
             // 1. Check if Supplier exists by Email
             let supplierId: string;
-            const existingSupplier = await prisma.supplier.findUnique({
-                where: { email: rfqSupplier.email }
+            const existingSupplier = await prisma.tenant.findUnique({
+                where: { email: rfqSupplier.email, isSupplier: true }
             });
 
             // 1.1 Check Conflicts (Name or TaxID) with OTHER suppliers
-            const conflicts = await prisma.supplier.findMany({
+            const conflicts = await prisma.tenant.findMany({
                 where: {
+                    isSupplier: true,
                     OR: [
                         { name: name },
-                        { taxId: taxId ? taxId : undefined } // Only check if taxId is provided
+                        { taxId: taxId ? taxId : undefined }
                     ],
-                    NOT: existingSupplier ? { id: existingSupplier.id } : {} // Exclude self if updating
+                    NOT: existingSupplier ? { id: existingSupplier.id } : {}
                 }
             });
 
@@ -209,22 +210,25 @@ export async function POST(req: NextRequest) {
                 bankCurrency,
                 commercialRegistrationNo,
                 mersisNo,
-                active: true
+                isActive: true,
+                isSupplier: true
             };
 
             if (existingSupplier) {
                 // Update existing
-                const updated = await prisma.supplier.update({
+                const updated = await prisma.tenant.update({
                     where: { id: existingSupplier.id },
                     data: supplierData
                 });
                 supplierId = updated.id;
             } else {
                 // Create new
-                const newSupplier = await prisma.supplier.create({
+                const newSupplier = await prisma.tenant.create({
                     data: {
                         ...supplierData,
-                        email: rfqSupplier.email
+                        email: rfqSupplier.email,
+                        slug: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+                        isBuyer: false
                     }
                 });
                 supplierId = newSupplier.id;
@@ -248,15 +252,13 @@ export async function POST(req: NextRequest) {
                     where: { email: rfqSupplier.email || "" },
                     update: {
                         passwordHash: hashedPassword,
-                        supplierId: supplierId,
-                        role: "supplier"
+                        tenantId: supplierId
                     },
                     create: {
                         username: rfqSupplier.email || `sup_${supplierId.slice(-6)}`,
                         email: rfqSupplier.email,
                         passwordHash: hashedPassword,
-                        supplierId: supplierId,
-                        role: "supplier",
+                        tenantId: supplierId,
                         isActive: true
                     }
                 });

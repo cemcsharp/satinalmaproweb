@@ -5,7 +5,6 @@ import { prisma } from "@/lib/db";
 // Fetch weights from database ScoringType table
 async function getWeightsFromDB(scoringTypeCode: string): Promise<{ weightA: number; weightB: number; weightC: number } | null> {
   try {
-    // Try to find by code (case-insensitive)
     const scoringType = await prisma.scoringType.findFirst({
       where: {
         OR: [
@@ -31,7 +30,6 @@ async function getWeightsFromDB(scoringTypeCode: string): Promise<{ weightA: num
   }
 }
 
-// Default fallback weights for known scoring types
 const DEFAULT_WEIGHTS: Record<string, [number, number, number]> = {
   malzeme: [0.4, 0.4, 0.2],
   hizmet: [0.3, 0.5, 0.2],
@@ -40,7 +38,6 @@ const DEFAULT_WEIGHTS: Record<string, [number, number, number]> = {
   insaat: [0.4, 0.5, 0.1],
 };
 
-// Submit supplier evaluation per order
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -50,7 +47,6 @@ export async function POST(req: NextRequest) {
     const answers = Array.isArray(body?.answers) ? body.answers : [];
     if (!orderId || !supplierId) return jsonError(400, "invalid_payload", { message: "missing_order_or_supplier" });
 
-    // Normalize and validate answers
     const normalized = answers.map((a: any) => ({
       questionId: String(a?.questionId || "").trim(),
       section: String(a?.section || "").trim(),
@@ -59,7 +55,6 @@ export async function POST(req: NextRequest) {
     const validAnswers = normalized.filter((a: any) => a.questionId && String(a.value ?? "").trim() !== "");
     if (validAnswers.length === 0) return jsonError(400, "invalid_payload", { message: "answers_missing_or_invalid" });
 
-    // Ensure all questionIds exist to avoid FK violations
     const questionIds: string[] = Array.from(new Set<string>(validAnswers.map((a: any) => String(a.questionId))));
     const existing = await prisma.evaluationQuestion.findMany({ where: { id: { in: questionIds } }, select: { id: true } });
     const existingSet = new Set(existing.map((q) => q.id));
@@ -71,45 +66,38 @@ export async function POST(req: NextRequest) {
     // Ensure order and supplier exist
     const [order, supplier] = await Promise.all([
       prisma.order.findUnique({ where: { id: orderId }, include: { status: true } }),
-      prisma.supplier.findUnique({ where: { id: supplierId } }),
+      prisma.tenant.findUnique({ where: { id: supplierId, isSupplier: true } }),
     ]);
     if (!order || !supplier) return jsonError(404, "not_found");
 
-    // Map answers to numeric scale 1..5
     const toNumeric = (val: any) => {
       const s = String(val ?? "").trim();
       const n = Number(s);
-      if (Number.isFinite(n) && n >= 0) return n; // rating values "1".."5"
-      // dropdown option ids mapping (demo: o1..o4)
-      if (s === "o1") return 5; // Mükemmel
-      if (s === "o2") return 4; // İyi
-      if (s === "o3") return 3; // Orta
-      if (s === "o4") return 2; // Zayıf
+      if (Number.isFinite(n) && n >= 0) return n;
+      if (s === "o1") return 5;
+      if (s === "o2") return 4;
+      if (s === "o3") return 3;
+      if (s === "o4") return 2;
       return 0;
     };
     const values = validAnswers.map((a: any) => toNumeric(a?.value));
 
-    // Get weights from database first, then fallback to defaults
     const dbWeights = await getWeightsFromDB(scoringType);
 
     let weights: [number, number, number];
     let weightsSource: "database" | "default" | "equal";
 
     if (dbWeights) {
-      // Use database-defined weights
       weights = [dbWeights.weightA, dbWeights.weightB, dbWeights.weightC];
       weightsSource = "database";
     } else if (DEFAULT_WEIGHTS[scoringType]) {
-      // Use predefined defaults
       weights = DEFAULT_WEIGHTS[scoringType];
       weightsSource = "default";
     } else {
-      // Equal weights for unknown types
       weights = [1 / 3, 1 / 3, 1 / 3];
       weightsSource = "equal";
     }
 
-    // Group answers by section (A, B, C)
     const bySection: Record<string, number[]> = {};
     for (let i = 0; i < validAnswers.length; i++) {
       const sec = String(validAnswers[i]?.section || "").toUpperCase();
@@ -123,11 +111,9 @@ export async function POST(req: NextRequest) {
     const avgB = avg(bySection["B"] || []);
     const avgC = avg(bySection["C"] || []);
 
-    // Calculate weighted overall rating
     const overallRating = Number((avgA * weights[0] + avgB * weights[1] + avgC * weights[2]).toFixed(2));
     const score = Number(((overallRating / 5) * 100).toFixed(2));
 
-    // Determine decision based on rating
     const decision = (() => {
       const dOnayli = scoringType === "insaat" ? "Onaylı Yüklenici" : "Onaylı Tedarikçi";
       const dCalis = scoringType === "insaat" ? "Çalışılabilir Yüklenici" : "Çalışılabilir";
@@ -140,7 +126,6 @@ export async function POST(req: NextRequest) {
       return "Belirsiz";
     })();
 
-    // Persist evaluation and answers
     const created = await prisma.$transaction(async (tx) => {
       const ev = await tx.supplierEvaluation.create({
         data: {

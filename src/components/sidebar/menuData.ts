@@ -19,6 +19,7 @@ export type MenuItem = {
  */
 export const menuItems: MenuItem[] = [
     { label: "Control Tower", href: "/dashboard", icon: "home", category: "Genel" },
+    { label: "Organizasyon", href: "/organization/settings", icon: "settings", category: "Genel", requiredRole: ["buyer_admin", "supplier_admin", "admin"] },
 
 
     // OPERASYONEL (Satınalma Döngüsü)

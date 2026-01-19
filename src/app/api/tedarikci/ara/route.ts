@@ -9,8 +9,12 @@ export async function GET(req: NextRequest) {
     if (!q || q.length < 2) {
       return NextResponse.json({ items: [] });
     }
-    const items = await prisma.supplier.findMany({
-      where: { name: { contains: q, mode: "insensitive" }, active: true },
+    const items = await prisma.tenant.findMany({
+      where: {
+        name: { contains: q, mode: "insensitive" },
+        isActive: true,
+        isSupplier: true
+      },
       select: { id: true, name: true },
       take: 10,
       orderBy: { name: "asc" },

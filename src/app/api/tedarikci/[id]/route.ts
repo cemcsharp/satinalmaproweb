@@ -10,8 +10,8 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
   const safeId = String(id || "").trim();
   if (!safeId) return jsonError(404, "not_found");
   try {
-    const supplier = await prisma.supplier.findUnique({
-      where: { id: safeId },
+    const supplier = await prisma.tenant.findUnique({
+      where: { id: safeId, isSupplier: true },
       include: {
         users: {
           select: {
@@ -19,7 +19,6 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
             username: true,
             email: true,
             isActive: true,
-            role: true
           }
         }
       }
@@ -61,13 +60,10 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       }
     });
 
-
-
-
     const payload = {
       id: supplier.id,
       name: supplier.name,
-      active: supplier.active,
+      active: supplier.isActive,
       taxId: (supplier as any).taxId ?? null,
       contactName: (supplier as any).contactName ?? null,
       email: supplier.email,
@@ -87,7 +83,6 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       createdAt: supplier.createdAt?.toISOString?.() ?? null,
       aggregates: {
         recentOrders,
-
         latestSummary: latestSummary
           ? {
             period: latestSummary.period,
@@ -134,9 +129,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     if (!user) return jsonError(401, "unauthorized");
 
     // Security: Only SuperAdmin or Platform Admin can global edit? 
-    // Or regular firm admin can edit? Usually firm admin should only edit their TenantSupplier link.
-    // Core supplier info editing should be restricted to superadmins or platform-approved editors.
-    if (!user.isSuperAdmin && user.role !== "admin") {
+    if (!user.isSuperAdmin && user.roleRef?.key !== "admin") {
       return jsonError(403, "forbidden", { message: "Tedarikçi bilgilerini düzenleme yetkiniz yok." });
     }
 
@@ -170,25 +163,22 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     setStr("bankCurrency");
     setStr("commercialRegistrationNo");
     setStr("mersisNo");
-    if (body.active !== undefined) data.active = Boolean(body.active);
+    if (body.active !== undefined) data.isActive = Boolean(body.active);
 
     if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.push("invalid_email");
     if (data.phone && String(data.phone).replace(/\D/g, "").length < 7) errors.push("invalid_phone");
     if (data.taxId && String(data.taxId).replace(/\D/g, "").length < 8) errors.push("invalid_taxId");
     if (errors.length) return jsonError(400, "validation_failed", { details: errors });
 
-    const updated = await prisma.supplier.update({ where: { id: safeId }, data });
+    const updated = await prisma.tenant.update({ where: { id: safeId, isSupplier: true }, data });
     return NextResponse.json(updated);
   } catch (e: any) {
-    // Not found on update
     if (e?.code === "P2025") {
       return jsonError(404, "not_found");
     }
-    // Unique constraint violation
     if (e?.code === "P2002") {
       const target = Array.isArray(e?.meta?.target) ? e.meta.target[0] : e?.meta?.target || "unknown";
       const field = typeof target === "string" ? target : "unknown";
-      // Map to a cleaner field name if composite index
       return jsonError(409, "duplicate", { details: { field } });
     }
     return jsonError(500, "server_error", { message: e?.message });
@@ -200,13 +190,14 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
   const safeId = String(id || "").trim();
   if (!safeId) return jsonError(404, "not_found");
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return jsonError(401, "unauthorized");
+    const { getUserWithPermissions } = await import("@/lib/apiAuth");
+    const user = await getUserWithPermissions(_req);
+    if (!user || !user.isSuperAdmin) return jsonError(401, "unauthorized");
+
     try {
-      await prisma.supplier.delete({ where: { id: safeId } });
+      await prisma.tenant.delete({ where: { id: safeId, isSupplier: true } });
       return NextResponse.json({ ok: true });
     } catch (e: any) {
-      // Foreign key constraint, linked orders/contracts etc.
       const code = e?.code === "P2003" ? "linked_records" : e?.code === "P2025" ? "not_found" : "server_error";
       const status = code === "linked_records" ? 409 : code === "not_found" ? 404 : 500;
       return jsonError(status, code, { message: e?.message });

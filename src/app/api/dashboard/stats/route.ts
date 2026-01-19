@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
                 orderBy: { createdAt: "desc" },
                 select: { id: true, barcode: true, status: { select: { label: true } }, createdAt: true }
             }),
-            prisma.supplier.count({ where: { active: true } }),
+            prisma.tenant.count({ where: { isActive: true, isSupplier: true } }),
             prisma.contract.count(),
         ]);
 

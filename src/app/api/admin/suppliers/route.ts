@@ -6,15 +6,18 @@ import { requirePermissionApi } from "@/lib/apiAuth";
 export async function GET(req: NextRequest) {
     try {
         const authResult = await requirePermissionApi(req, "admin");
-        if (authResult instanceof NextResponse) return authResult;
+        if (!authResult) {
+            return NextResponse.json({ error: "forbidden" }, { status: 403 });
+        }
 
         const status = req.nextUrl.searchParams.get("status") || "all";
 
-        const where = status === "all"
-            ? {}
-            : { registrationStatus: status };
+        const where: any = { isSupplier: true };
+        if (status !== "all") {
+            where.registrationStatus = status;
+        }
 
-        const suppliers = await prisma.supplier.findMany({
+        const suppliers = await prisma.tenant.findMany({
             where,
             include: {
                 category: {
@@ -26,7 +29,13 @@ export async function GET(req: NextRequest) {
             }
         });
 
-        return NextResponse.json({ ok: true, suppliers });
+        // Map isActive to active for frontend compatibility
+        const mappedSuppliers = suppliers.map(s => ({
+            ...s,
+            active: s.isActive
+        }));
+
+        return NextResponse.json({ ok: true, suppliers: mappedSuppliers });
     } catch (error) {
         console.error("Admin suppliers list error:", error);
         return NextResponse.json({ error: "internal_error" }, { status: 500 });

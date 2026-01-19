@@ -8,19 +8,19 @@ export async function GET(req: NextRequest) {
         const auth = await requireAuthApi(req);
         if (!auth) return jsonError(401, "unauthorized");
 
-        // Fetch user and their supplier relation
+        // Fetch user and their tenant relation
         const user = await prisma.user.findUnique({
             where: { id: auth.userId },
-            select: { supplierId: true }
+            select: { tenantId: true }
         });
 
-        if (!user?.supplierId) {
+        if (!user?.tenantId) {
             return jsonError(403, "supplier_access_denied", { message: "Bu hesap bir tedarikçi ile iliştirilmemiş." });
         }
 
-        // Fetch supplier profile
-        const supplier = await prisma.supplier.findUnique({
-            where: { id: user.supplierId },
+        // Fetch supplier (tenant) profile
+        const supplier = await prisma.tenant.findUnique({
+            where: { id: user.tenantId, isSupplier: true },
             select: {
                 id: true,
                 name: true,
@@ -61,13 +61,13 @@ export async function PUT(req: NextRequest) {
         const auth = await requireAuthApi(req);
         if (!auth) return jsonError(401, "unauthorized");
 
-        // Fetch user and their supplier relation
+        // Fetch user and their tenant relation
         const user = await prisma.user.findUnique({
             where: { id: auth.userId },
-            select: { supplierId: true }
+            select: { tenantId: true }
         });
 
-        if (!user?.supplierId) {
+        if (!user?.tenantId) {
             return jsonError(403, "supplier_access_denied", { message: "Bu hesap bir tedarikçi ile iliştirilmemiş." });
         }
 
@@ -92,9 +92,9 @@ export async function PUT(req: NextRequest) {
             return jsonError(400, "no_fields", { message: "Güncellenecek alan bulunamadı." });
         }
 
-        // Update supplier
-        const updated = await prisma.supplier.update({
-            where: { id: user.supplierId },
+        // Update tenant (supplier)
+        const updated = await prisma.tenant.update({
+            where: { id: user.tenantId, isSupplier: true },
             data: updateData,
             select: {
                 id: true,

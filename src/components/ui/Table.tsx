@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { usePreferences } from "@/providers/PreferencesProvider";
 
 // Table Container
 type TableContainerProps = {
@@ -64,6 +65,9 @@ type THProps = {
 };
 
 export function TH({ children, className = "", align = "left", sortable, direction, onSort }: THProps) {
+  const { preferences } = usePreferences();
+  const isCompact = preferences.compactView;
+
   const alignClass = {
     left: "text-left",
     center: "text-center",
@@ -73,8 +77,8 @@ export function TH({ children, className = "", align = "left", sortable, directi
   return (
     <th
       className={`
-        px-4 py-3
-        text-xs font-semibold uppercase tracking-wider
+        ${isCompact ? "px-2 py-1.5" : "px-4 py-3"}
+        text-[10px] sm:text-xs font-semibold uppercase tracking-wider
         text-slate-500
         border-b border-slate-200
         ${alignClass}
@@ -146,6 +150,9 @@ type TDProps = {
 };
 
 export function TD({ children, className = "", align = "left", colSpan }: TDProps) {
+  const { preferences } = usePreferences();
+  const isCompact = preferences.compactView;
+
   const alignClass = {
     left: "text-left",
     center: "text-center",
@@ -155,8 +162,8 @@ export function TD({ children, className = "", align = "left", colSpan }: TDProp
   return (
     <td
       className={`
-        px-4 py-3
-        text-sm
+        ${isCompact ? "px-2 py-1.5" : "px-4 py-3"}
+        ${isCompact ? "text-[12px] sm:text-xs" : "text-sm"}
         text-slate-700
         ${alignClass}
         ${className}

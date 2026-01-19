@@ -17,11 +17,11 @@ export async function GET(req: NextRequest) {
     if (!field || !value) return jsonError(400, "invalid_query");
     if (!["name", "email", "taxId"].includes(field)) return jsonError(400, "invalid_field");
 
-    const where: any = { [field]: value };
+    const where: any = { [field]: value, isSupplier: true };
     if (excludeId) {
       where.id = { not: excludeId };
     }
-    const existing = await prisma.supplier.findFirst({ where, select: { id: true } });
+    const existing = await prisma.tenant.findFirst({ where, select: { id: true } });
     return NextResponse.json({ exists: Boolean(existing) });
   } catch (e: any) {
     return jsonError(500, "server_error", { message: e?.message });

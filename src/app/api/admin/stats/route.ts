@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
         const authResult = await requirePermissionApi(req, "admin");
         if (authResult instanceof NextResponse) return authResult;
 
-        // Get counts in parallel
+        // Get counts in parallel (using Tenant model for suppliers)
         const [
             totalUsers,
             activeUsers,
@@ -22,18 +22,18 @@ export async function GET(req: NextRequest) {
         ] = await Promise.all([
             prisma.user.count(),
             prisma.user.count({ where: { isActive: true } }),
-            prisma.supplier.count(),
-            prisma.supplier.count({ where: { registrationStatus: "pending" } }),
-            prisma.supplier.count({ where: { registrationStatus: "approved" } }),
+            prisma.tenant.count({ where: { isSupplier: true } }),
+            prisma.tenant.count({ where: { isSupplier: true, registrationStatus: "pending" } }),
+            prisma.tenant.count({ where: { isSupplier: true, registrationStatus: "approved" } }),
             prisma.rfq.count(),
             prisma.rfq.count({ where: { status: "OPEN" } }),
             prisma.rfqOffer.count(),
             prisma.order.count()
         ]);
 
-        // Get recent activities
-        const recentSuppliers = await prisma.supplier.findMany({
-            where: { registrationStatus: "pending" },
+        // Get recent pending supplier registrations (from Tenant model)
+        const recentSuppliers = await prisma.tenant.findMany({
+            where: { isSupplier: true, registrationStatus: "pending" },
             take: 5,
             orderBy: { createdAt: "desc" },
             select: {

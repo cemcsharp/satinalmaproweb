@@ -16,9 +16,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
-        supplier: true,
-        // Company bilgilerini fatura otomatik doldurma için genişlet
-        company: { select: { id: true, name: true, taxId: true, address: true } },
+        seller: true, // Renamed from supplier
+        buyer: { select: { id: true, name: true, taxId: true, address: true } }, // Renamed from company
         status: true,
         method: true,
         regulation: true,
@@ -69,12 +68,12 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       method: order.method?.label ?? null,
       regulation: order.regulation?.label ?? null,
       currency: order.currency?.label ?? null,
-      supplierName: order.supplier?.name ?? null,
-      supplierTaxId: (order as any).supplier?.taxId ?? null,
-      supplierAddress: (order as any).supplier?.address ?? null,
-      companyName: order.company?.name ?? null,
-      companyTaxId: (order as any).company?.taxId ?? null,
-      companyAddress: (order as any).company?.address ?? null,
+      supplierName: order.seller?.name ?? null,
+      supplierTaxId: (order as any).seller?.taxId ?? null,
+      supplierAddress: (order as any).seller?.address ?? null,
+      companyName: order.buyer?.name ?? null,
+      companyTaxId: (order as any).buyer?.taxId ?? null,
+      companyAddress: (order as any).buyer?.address ?? null,
       requestBarcode: order.request?.barcode ?? null,
       requestBudget: order.request?.budget ? Number(order.request.budget) : 0,
       // items
@@ -146,16 +145,16 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     await connectOption("regulationId", body.regulationId, "regulation");
     await connectOption("currencyId", body.currencyId, "currency");
 
-    // Supplier & Company
+    // Seller (Supplier) & Buyer (Company)
     if (typeof body.supplierId === "string" && body.supplierId) {
-      const sup = await prisma.supplier.findUnique({ where: { id: body.supplierId } });
+      const sup = await prisma.tenant.findUnique({ where: { id: body.supplierId, isSupplier: true } });
       if (!sup) errors.push("invalid_supplierId");
-      else data.supplier = { connect: { id: body.supplierId } };
+      else data.seller = { connect: { id: body.supplierId } };
     }
     if (typeof body.companyId === "string" && body.companyId) {
-      const comp = await prisma.company.findUnique({ where: { id: body.companyId } });
+      const comp = await prisma.tenant.findUnique({ where: { id: body.companyId, isBuyer: true } });
       if (!comp) errors.push("invalid_companyId");
-      else data.company = { connect: { id: body.companyId } };
+      else data.buyer = { connect: { id: body.companyId } };
     }
     // Responsible user
     if (typeof body.responsibleUserId === "string") {
@@ -199,7 +198,15 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     });
 
     try {
-      const after = await prisma.order.findUnique({ where: { id: orderId }, include: { status: true, responsible: true, supplier: true, request: { include: { owner: true, responsible: true, unit: true } } } });
+      const after = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          status: true,
+          responsible: true,
+          seller: true, // Renamed from supplier
+          request: { include: { owner: true, responsible: true, unit: true } }
+        }
+      });
       const prev = (before?.status?.label || "").toLowerCase();
       const next = (after?.status?.label || "").toLowerCase();
       const approvedWords = ["tamamlandı", "onaylı", "onaylanmış", "kapalı"];
@@ -276,12 +283,13 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       const supplierEmail = (after as any)?.supplier?.email;
 
       if (!wasApprovedBefore && isNowApproved && supplierEmail) {
-        const supplierName = (after as any)?.supplier?.name || "Tedarikçi";
-        const companyName = (after as any)?.company?.name || "";
+        const supplierName = (after as any)?.seller?.name || "Tedarikçi";
+        const companyName = (after as any)?.buyer?.name || "";
         const orderTotal = typeof (after as any)?.realizedTotal?.toNumber === "function"
           ? (after as any).realizedTotal.toNumber()
           : Number((after as any)?.realizedTotal ?? 0);
         const currencyLabel = (after as any)?.currency?.label || "TRY";
+        // ... rest of logic for supplier email ...
         const orderItems = await prisma.orderItem.findMany({ where: { orderId } });
 
         const supplierSubject = `Sipariş Onayı – ${after?.barcode} – ${companyName}`;

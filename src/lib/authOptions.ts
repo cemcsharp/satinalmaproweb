@@ -83,6 +83,27 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Check if user is active
+        if (!user.isActive) {
+          console.warn(`[Auth] User inactive/pending approval: ${email}`);
+          return null;
+        }
+
+        // Check associated tenant (organization) status
+        if (user.tenantId) {
+          const tenant = await prisma.tenant.findUnique({
+            where: { id: user.tenantId }
+          });
+          if (!tenant || !tenant.isActive) {
+            console.warn(`[Auth] Organization account inactive: ${email}`);
+            return null;
+          }
+          if (tenant.planExpiresAt && new Date(tenant.planExpiresAt) < new Date()) {
+            console.warn(`[Auth] Organization subscription expired: ${email}`);
+            return null;
+          }
+        }
+
         // Successful login: reset limiter and log
         loginLimiter.recordAttempt(email, true);
         try {
@@ -107,10 +128,9 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email ?? null,
-          role: user.role || "user",
-          isSuperAdmin: !!(user as any).isSuperAdmin,
-          tenantId: (user as any).tenantId || undefined,
-          supplierId: (user as any).supplierId || undefined
+          role: "user", // Initial fallback, JWT callback will sync the real role from DB
+          isSuperAdmin: !!user.isSuperAdmin,
+          tenantId: user.tenantId || undefined,
         };
       }
     })
@@ -139,11 +159,9 @@ export const authOptions: NextAuthOptions = {
 
           if (me) {
             tok.userId = uid;
-            // Prioritize roleRef.key, fallback to flat role field
-            tok.role = me.roleRef?.key || me.role || "user";
-            tok.tenantId = (me as any).tenantId || undefined;
-            tok.supplierId = (me as any).supplierId || undefined;
-            tok.isSuperAdmin = !!(me as any).isSuperAdmin;
+            tok.role = me.roleRef?.key || "user";
+            tok.tenantId = me.tenantId || undefined;
+            tok.isSuperAdmin = !!me.isSuperAdmin;
           }
         } catch (err) {
           console.error('[Auth JWT] Sync error:', err);
@@ -172,7 +190,6 @@ export const authOptions: NextAuthOptions = {
         if (tok.userId) u.id = tok.userId;
         if (tok.role) u.role = tok.role;
         if (tok.tenantId) u.tenantId = tok.tenantId;
-        if (tok.supplierId) u.supplierId = tok.supplierId;
         u.isSuperAdmin = !!tok.isSuperAdmin;
       }
       return session;

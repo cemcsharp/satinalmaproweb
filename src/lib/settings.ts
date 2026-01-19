@@ -112,33 +112,13 @@ export const defaultSettings: SystemSettings = {
 };
 
 /**
- * Veritabanından sistem ayarlarını çeker ve varsayılanlarla birleştirir.
+ * Sistem ayarlarını döndürür.
+ * NOT: SystemSetting modeli şema refaktörü sırasında kaldırıldı.
+ * Şimdilik varsayılan ayarları döndürüyoruz. Gelecekte tenant bazlı ayarlar için
+ * Tenant modeline settings alanı eklenebilir.
  */
 export async function getSystemSettings(): Promise<SystemSettings> {
-    try {
-        const settings = await prisma.systemSetting.findMany();
-
-        const settingsMap: any = { ...defaultSettings };
-
-        settings.forEach(s => {
-            if (s.value) {
-                // JSON alanlar için parse işlemi
-                const jsonKeys = ["faqItems", "solutionCards", "buyerFeatures", "supplierFeatures"];
-                if (jsonKeys.includes(s.key)) {
-                    try {
-                        settingsMap[s.key] = JSON.parse(s.value);
-                    } catch {
-                        settingsMap[s.key] = (defaultSettings as any)[s.key];
-                    }
-                } else {
-                    settingsMap[s.key] = s.value;
-                }
-            }
-        });
-
-        return settingsMap as SystemSettings;
-    } catch (error) {
-        console.error("Failed to fetch system settings:", error);
-        return defaultSettings;
-    }
+    // SystemSetting model was removed during schema refactoring
+    // Return default settings for now
+    return defaultSettings;
 }

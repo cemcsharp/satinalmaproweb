@@ -184,11 +184,12 @@ export async function GET(request: NextRequest) {
                 })
                 : Promise.resolve([]),
 
-            // Search Suppliers (Tedarikçiler)
+            // Search Suppliers (Tedarikçiler - using Tenant model)
             (!moduleFilter || moduleFilter === "tedarikci") && canSearchTedarikci
-                ? prisma.supplier.findMany({
+                ? prisma.tenant.findMany({
                     where: {
-                        active: true, // Only active suppliers
+                        isActive: true,
+                        isSupplier: true,
                         OR: [
                             { name: { contains: query, mode: "insensitive" } },
                             { taxId: { contains: query, mode: "insensitive" } },

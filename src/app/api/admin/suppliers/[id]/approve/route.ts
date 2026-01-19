@@ -4,20 +4,22 @@ import { requirePermissionApi, getSessionUser } from "@/lib/apiAuth";
 import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 import { getSystemSettings } from "@/lib/settings";
 
-// POST: Approve a supplier
+// POST: Approve a supplier (tenant with isSupplier: true)
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const authResult = await requirePermissionApi(req, "admin");
-        if (authResult instanceof NextResponse) return authResult;
+        if (!authResult) {
+            return NextResponse.json({ error: "forbidden" }, { status: 403 });
+        }
 
-        const session = await getSessionUser();
-        const supplierId = params.id;
+        const session = await getSessionUser(req);
+        const { id: supplierId } = await params;
 
-        const supplier = await prisma.supplier.findUnique({
-            where: { id: supplierId },
+        const supplier = await prisma.tenant.findUnique({
+            where: { id: supplierId, isSupplier: true },
             include: {
                 users: true
             }
@@ -27,20 +29,20 @@ export async function POST(
             return NextResponse.json({ error: "supplier_not_found" }, { status: 404 });
         }
 
-        // Update supplier status
-        await prisma.supplier.update({
+        // Update supplier (tenant) status
+        await prisma.tenant.update({
             where: { id: supplierId },
             data: {
                 registrationStatus: "approved",
-                active: true,
+                isActive: true,
                 approvedAt: new Date(),
-                approvedById: session?.id
+                approvedById: session?.userId
             }
         });
 
-        // Activate user accounts
+        // Activate user accounts linked to this tenant
         await prisma.user.updateMany({
-            where: { supplierId },
+            where: { tenantId: supplierId },
             data: { isActive: true }
         });
 

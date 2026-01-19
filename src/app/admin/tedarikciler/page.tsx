@@ -6,6 +6,8 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { Table, THead, TBody, TR, TH, TD, TableContainer } from "@/components/ui/Table";
 
+import Modal from "@/components/ui/Modal";
+
 interface Supplier {
     id: string;
     name: string;
@@ -15,6 +17,7 @@ interface Supplier {
     registrationStatus: string;
     registrationSource: string | null;
     createdAt: string;
+    isActive: boolean;
     category: { name: string } | null;
 }
 
@@ -23,6 +26,8 @@ export default function AdminSuppliersPage() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
 
     const fetchSuppliers = async () => {
         try {
@@ -51,6 +56,44 @@ export default function AdminSuppliersPage() {
             }
         } catch (error) {
             console.error(`Failed to ${action} supplier:`, error);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleToggleActive = async (supplierId: string) => {
+        setActionLoading(supplierId);
+        try {
+            const res = await fetch(`/api/admin/suppliers/${supplierId}/toggle-active`, {
+                method: "POST"
+            });
+            if (res.ok) {
+                fetchSuppliers();
+            }
+        } catch (error) {
+            console.error("Failed to toggle supplier status:", error);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleDeleteSupplier = async () => {
+        if (!supplierToDelete) return;
+        setActionLoading(supplierToDelete.id);
+        try {
+            const res = await fetch(`/api/admin/suppliers/${supplierToDelete.id}`, {
+                method: "DELETE"
+            });
+            if (res.ok) {
+                setDeleteConfirmOpen(false);
+                setSupplierToDelete(null);
+                fetchSuppliers();
+            } else {
+                const data = await res.json();
+                alert(data.message || "Silme işlemi başarısız.");
+            }
+        } catch (error) {
+            console.error("Failed to delete supplier:", error);
         } finally {
             setActionLoading(null);
         }
@@ -136,31 +179,52 @@ export default function AdminSuppliersPage() {
                                         </TD>
                                         <TD>{getStatusBadge(supplier.registrationStatus)}</TD>
                                         <TD className="text-right">
-                                            {supplier.registrationStatus === "pending" && (
-                                                <div className="flex gap-2 justify-end">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="primary"
-                                                        onClick={() => handleAction(supplier.id, "approve")}
-                                                        loading={actionLoading === supplier.id}
-                                                        className="bg-sky-600 hover:bg-sky-700"
-                                                    >
-                                                        Onayla
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => handleAction(supplier.id, "reject")}
-                                                        loading={actionLoading === supplier.id}
-                                                        className="text-red-600 border-red-200 hover:bg-red-50"
-                                                    >
-                                                        Reddet
-                                                    </Button>
-                                                </div>
-                                            )}
-                                            {supplier.registrationStatus !== "pending" && (
-                                                <span className="text-slate-400 text-sm">-</span>
-                                            )}
+                                            <div className="flex gap-2 justify-end">
+                                                {supplier.registrationStatus === "pending" ? (
+                                                    <>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="primary"
+                                                            onClick={() => handleAction(supplier.id, "approve")}
+                                                            loading={actionLoading === supplier.id}
+                                                            className="bg-sky-600 hover:bg-sky-700"
+                                                        >
+                                                            Onayla
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleAction(supplier.id, "reject")}
+                                                            loading={actionLoading === supplier.id}
+                                                            className="text-red-600 border-red-200 hover:bg-red-50"
+                                                        >
+                                                            Reddet
+                                                        </Button>
+                                                    </>
+                                                ) : supplier.registrationStatus === "approved" ? (
+                                                    <>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleToggleActive(supplier.id)}
+                                                            loading={actionLoading === supplier.id}
+                                                            className={supplier.isActive ? "text-red-600 border-red-200 hover:bg-red-50" : "text-emerald-600 border-emerald-200 hover:bg-emerald-50"}
+                                                        >
+                                                            {supplier.isActive ? "Pasif Yap" : "Aktif Yap"}
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => { setSupplierToDelete(supplier); setDeleteConfirmOpen(true); }}
+                                                            className="text-red-600 border-red-200 hover:bg-red-50"
+                                                        >
+                                                            Sil
+                                                        </Button>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-slate-400 text-sm">-</span>
+                                                )}
+                                            </div>
                                         </TD>
                                     </TR>
                                 ))
@@ -169,6 +233,34 @@ export default function AdminSuppliersPage() {
                     </Table>
                 </TableContainer>
             </Card>
+            {/* Delete Confirmation Modal */}
+            <Modal
+                isOpen={deleteConfirmOpen}
+                onClose={() => setDeleteConfirmOpen(false)}
+                title="Tedarikçiyi Sil"
+            >
+                <div className="space-y-4">
+                    <p className="text-slate-600">
+                        <span className="font-bold text-slate-900">{supplierToDelete?.name}</span> adlı tedarikçiyi ve bağlı olan tüm kullanıcı hesaplarını silmek istediğinize emin misiniz?
+                    </p>
+                    <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-amber-800 text-sm">
+                        ⚠️ Bu işlem geri alınamaz. Eğer tedarikçinin aktif sipariş veya ihale kayıtları varsa silme işlemi engellenecektir.
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4">
+                        <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+                            İptal
+                        </Button>
+                        <Button
+                            variant="primary"
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={handleDeleteSupplier}
+                            loading={actionLoading === supplierToDelete?.id}
+                        >
+                            Sil Onayla
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }

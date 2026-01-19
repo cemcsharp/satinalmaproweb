@@ -102,22 +102,30 @@ export async function POST(req: NextRequest) {
 
     let companyId = body.companyId?.trim();
     if (!companyId) {
-      const companies = await prisma.company.findMany({
-        where: { tenantId: user.isSuperAdmin ? undefined : user.tenantId },
-        select: { id: true },
-        take: 2
-      });
-      if (companies.length === 1) {
-        companyId = companies[0].id;
+      if (user.tenantId) {
+        companyId = user.tenantId;
       } else {
-        return jsonError(400, "missing_company");
+        const companies = await prisma.tenant.findMany({
+          where: { isBuyer: true },
+          select: { id: true },
+          take: 2
+        });
+        if (companies.length === 1) {
+          companyId = companies[0].id;
+        } else {
+          return jsonError(400, "missing_company");
+        }
       }
     } else {
-      // Validate provided companyId belongs to tenant
-      if (!user.isSuperAdmin) {
-        const comp = await prisma.company.findFirst({ where: { id: companyId, tenantId: user.tenantId } });
-        if (!comp) return jsonError(403, "invalid_company_tenant");
-      }
+      // Validate provided companyId belongs to tenant or is a valid buyer
+      const comp = await prisma.tenant.findFirst({
+        where: {
+          id: companyId,
+          isBuyer: true,
+          id: user.isSuperAdmin ? undefined : user.tenantId
+        }
+      });
+      if (!comp) return jsonError(403, "invalid_company_tenant");
     }
 
     let requestId: string | undefined = undefined;
@@ -165,10 +173,18 @@ export async function POST(req: NextRequest) {
     });
     // Email: Yeni Sipariş Oluşturuldu
     try {
-      const origin = req.nextUrl.origin;
-      const link = `${origin}/siparis/detay/${encodeURIComponent(created.id)}`;
-      // Responsible, order.request owner, company email
-      const after = await prisma.order.findUnique({ where: { id: created.id }, include: { status: true, method: true, responsible: true, company: true, request: { include: { owner: true, unit: true } }, items: true } });
+      // Responsible, order.request owner, buyer email
+      const after = await prisma.order.findUnique({
+        where: { id: created.id },
+        include: {
+          status: true,
+          method: true,
+          responsible: true,
+          buyer: true, // Renamed from company
+          request: { include: { owner: true, unit: true } },
+          items: true
+        }
+      });
       const total = (after?.items || []).reduce((sum: number, it: any) => sum + Number(it.quantity) * Number(it.unitPrice), 0);
       const unitLabel = String((after as any)?.request?.unit?.label || "");
 
@@ -200,7 +216,7 @@ export async function POST(req: NextRequest) {
       const targets: string[] = [];
       if ((after as any)?.responsible?.email) targets.push(String((after as any).responsible.email));
       if ((after as any)?.request?.owner?.email) targets.push(String((after as any).request.owner.email));
-      if ((after as any)?.company?.email) targets.push(String((after as any).company.email));
+      if ((after as any)?.buyer?.email) targets.push(String((after as any).buyer.email));
       if ((after as any)?.request?.unitEmail) targets.push(String((after as any).request.unitEmail));
       for (const to of Array.from(new Set(targets)).filter(Boolean)) {
         await dispatchEmail({ to, subject, html, category: "order_create" });

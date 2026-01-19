@@ -157,7 +157,9 @@ export default function RegisterPage() {
                     </div>
                     <h2 className="text-2xl font-bold text-slate-800 mb-2">Kayıt Başarılı!</h2>
                     <p className="text-slate-600 mb-6">
-                        Hesabınız oluşturuldu. Yönetici onayından sonra giriş yapabileceksiniz.
+                        {formData.userType === "buyer"
+                            ? "Hesabınız oluşturuldu ve aktifleştirildi. Hemen giriş yapabilirsiniz."
+                            : "Hesabınız oluşturuldu. Yönetici onayından sonra giriş yapabileceksiniz."}
                     </p>
                     <Link
                         href="/login"

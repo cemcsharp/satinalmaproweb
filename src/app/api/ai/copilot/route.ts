@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
 
         // 2. Tedarikçi Sorguları (Örn: "En iyi tedarikçiler?", "Kime güvenmeliyim?")
         else if (query.includes("tedarikçi") || query.includes("firma") || query.includes("güven")) {
-            const topSuppliers = await prisma.supplier.findMany({
-                where: { active: true, score: { gte: 80 } },
+            const topSuppliers = await prisma.tenant.findMany({
+                where: { isActive: true, isSupplier: true, score: { gte: 80 } },
                 orderBy: { score: "desc" },
                 take: 3
             });

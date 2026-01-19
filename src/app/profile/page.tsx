@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
+import { usePreferences } from "@/providers/PreferencesProvider";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -15,7 +16,8 @@ export default function ProfilePage() {
 
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
   const [emailNotifications, setEmailNotifications] = React.useState(true);
-  const [compactView, setCompactView] = React.useState(false);
+  const { preferences, setPreference } = usePreferences();
+  const compactView = preferences.compactView;
 
   // Stats
   const [stats, setStats] = React.useState({ requests: 0, orders: 0, rfqs: 0 });
@@ -67,9 +69,7 @@ export default function ProfilePage() {
           const data = await prefsRes.json();
           setEmailNotifications(data.emailEnabled);
           setNotificationsEnabled(data.inAppEnabled);
-          // Compact view might still use localStorage if not in DB, 
-          // but let's try to get it if we ever add to DB.
-          setCompactView(localStorage.getItem("profile.compactView") === "true");
+          // compactView already managed by PreferencesProvider
         }
       } catch (e) {
         console.error("Veriler yüklenemedi:", e);
@@ -81,22 +81,14 @@ export default function ProfilePage() {
     fetchData();
   }, [status]);
 
-  const savePreference = async (key: string, value: boolean) => {
+  const savePreferenceLocal = async (key: string, value: boolean) => {
     try {
-      // Local check
       if (key === "compactView") {
-        localStorage.setItem("profile.compactView", value ? "true" : "false");
+        await setPreference("compactView", value);
+      } else {
+        const apiKey = key === "notificationsEnabled" ? "inAppEnabled" : key === "emailNotifications" ? "emailEnabled" : key;
+        await setPreference(apiKey as any, value);
       }
-
-      // API call for DB sync
-      await fetch("/api/profile/preferences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          [key === "notificationsEnabled" ? "inAppEnabled" : key === "emailNotifications" ? "emailEnabled" : key]: value
-        })
-      });
-
       show({ title: "Kaydedildi", description: "Ayar güncellendi", variant: "success" });
     } catch {
       show({ title: "Hata", description: "Ayar kaydedilemedi", variant: "error" });
@@ -322,7 +314,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" checked={notificationsEnabled} onChange={(e) => { setNotificationsEnabled(e.target.checked); savePreference("notificationsEnabled", e.target.checked); }} />
+                  <input type="checkbox" className="sr-only peer" checked={notificationsEnabled} onChange={(e) => { setNotificationsEnabled(e.target.checked); savePreferenceLocal("notificationsEnabled", e.target.checked); }} />
                   <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
@@ -338,7 +330,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" checked={emailNotifications} onChange={(e) => { setEmailNotifications(e.target.checked); savePreference("emailNotifications", e.target.checked); }} />
+                  <input type="checkbox" className="sr-only peer" checked={emailNotifications} onChange={(e) => { setEmailNotifications(e.target.checked); savePreferenceLocal("emailNotifications", e.target.checked); }} />
                   <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
                 </label>
               </div>
@@ -358,7 +350,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" checked={compactView} onChange={(e) => { setCompactView(e.target.checked); savePreference("compactView", e.target.checked); }} />
+                  <input type="checkbox" className="sr-only peer" checked={compactView} onChange={(e) => { savePreferenceLocal("compactView", e.target.checked); }} />
                   <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
                 </label>
               </div>

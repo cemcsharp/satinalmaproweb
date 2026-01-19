@@ -1,13 +1,13 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/authOptions";
 import jwt from "jsonwebtoken";
 
 // POST: Generate impersonation token for a user
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await getServerSession(authOptions);
@@ -17,7 +17,7 @@ export async function POST(
             return NextResponse.json({ error: "unauthorized" }, { status: 401 });
         }
 
-        const userId = params.id;
+        const { id: userId } = await params;
 
         const targetUser = await prisma.user.findUnique({
             where: { id: userId },

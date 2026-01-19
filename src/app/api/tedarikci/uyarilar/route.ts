@@ -22,8 +22,8 @@ function prevPeriod(period: string): string {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const period = url.searchParams.get("period") ?? currentPeriod();
-  const threshold = Number(url.searchParams.get("threshold") ?? 60); // alert if totalScore < threshold
-  const drop = Number(url.searchParams.get("drop") ?? 15); // alert if drop >= drop
+  const threshold = Number(url.searchParams.get("threshold") ?? 60);
+  const drop = Number(url.searchParams.get("drop") ?? 15);
 
   try {
     const session = await getServerSession(authOptions);
@@ -31,7 +31,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const suppliers = await prisma.supplier.findMany({ where: { active: true }, select: { id: true, name: true } });
+    const suppliers = await prisma.tenant.findMany({
+      where: { isActive: true, isSupplier: true },
+      select: { id: true, name: true }
+    });
     const alerts: any[] = [];
     const prev = prevPeriod(period);
 
@@ -45,7 +48,7 @@ export async function GET(req: Request) {
         alerts.push({ supplierId: s.id, period, type: "MissingData", message: msg, severity: "warning" });
         try {
           await prisma.supplierAlert.create({ data: { supplierId: s.id, period, type: "MissingData", message: msg, severity: "warning" } });
-        } catch {}
+        } catch { }
         continue;
       }
 
@@ -54,7 +57,7 @@ export async function GET(req: Request) {
         alerts.push({ supplierId: s.id, period, type: "Threshold", message: msg, severity: "critical" });
         try {
           await prisma.supplierAlert.create({ data: { supplierId: s.id, period, type: "Threshold", message: msg, severity: "critical" } });
-        } catch {}
+        } catch { }
       }
 
       if (curr && prevSum) {
@@ -64,7 +67,7 @@ export async function GET(req: Request) {
           alerts.push({ supplierId: s.id, period, type: "Drop", message: msg, severity: "warning" });
           try {
             await prisma.supplierAlert.create({ data: { supplierId: s.id, period, type: "Drop", message: msg, severity: "warning" } });
-          } catch {}
+          } catch { }
         }
       }
     }

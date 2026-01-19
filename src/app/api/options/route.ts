@@ -61,12 +61,20 @@ export async function GET(req: NextRequest) {
       if (results[k]) results[k].push({ id: item.id, label: item.label, active: item.active });
     });
 
-    // Fetch Standard Relations (always included in old version, so keeping it safe)
-    const suppliers = await prisma.supplier.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, active: true } });
-    results.tedarikci = suppliers.map((x: any) => ({ id: x.id, label: x.name, active: x.active }));
+    // Fetch Standard Relations
+    const suppliers = await prisma.tenant.findMany({
+      where: { isSupplier: true, isActive: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, isActive: true }
+    });
+    results.tedarikci = suppliers.map((x: any) => ({ id: x.id, label: x.name, active: x.isActive }));
 
-    const companies = await prisma.company.findMany({ where: { active: true }, orderBy: { name: 'asc' }, select: { id: true, name: true, active: true } });
-    results.firma = companies.map((x: any) => ({ id: x.id, label: x.name, active: x.active }));
+    const companies = await prisma.tenant.findMany({
+      where: { isBuyer: true, isActive: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, isActive: true }
+    });
+    results.firma = companies.map((x: any) => ({ id: x.id, label: x.name, active: x.isActive }));
 
     // Some option lists treated "firma" or "tedarikci" as OptionItems too? 
     // If so, they are mapped above. If they are relational tables, they are mapped here.
@@ -106,8 +114,8 @@ async function listItemsByKey(key: string) {
 }
 
 async function listCompanies() {
-  const companies = await prisma.company.findMany({ orderBy: { name: "asc" } });
-  return { key: "firma", items: companies.map((c: any, i: number) => ({ id: c.id, label: c.name, active: !!c.active, sort: i + 1 })) };
+  const companies = await prisma.tenant.findMany({ where: { isBuyer: true }, orderBy: { name: "asc" } });
+  return { key: "firma", items: companies.map((c: any, i: number) => ({ id: c.id, label: c.name, active: !!c.isActive, sort: i + 1 })) };
 }
 
 // Create new option item under given category key
@@ -158,7 +166,19 @@ export async function POST(req: NextRequest) {
       const phone = body?.phone == null ? null : String(body.phone || "");
       const email = body?.email == null ? null : String(body.email || "");
       try {
-        await prisma.company.create({ data: { name, taxId, address, taxOffice, phone, email, active: true } });
+        await prisma.tenant.create({
+          data: {
+            name,
+            taxId,
+            address,
+            taxOffice,
+            phone,
+            email,
+            isActive: true,
+            isBuyer: true,
+            slug: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+          }
+        });
       } catch (e: any) {
         const code = e?.code || "";
         if (code === "P2002") {
@@ -232,13 +252,13 @@ export async function PATCH(req: NextRequest) {
     if (company) {
       if (action === "toggle") {
         const active = Boolean(body?.active);
-        await prisma.company.update({ where: { id }, data: { active } });
+        await prisma.tenant.update({ where: { id }, data: { isActive: active } });
         const payload = await listCompanies();
         return NextResponse.json(payload);
       } else if (action === "rename") {
         const label = String(body?.label || "").trim();
         if (!label) return jsonError(400, "invalid_payload");
-        await prisma.company.update({ where: { id }, data: { name: label } });
+        await prisma.tenant.update({ where: { id }, data: { name: label } });
         const payload = await listCompanies();
         return NextResponse.json(payload);
       } else if (action === "update") {
@@ -256,7 +276,7 @@ export async function PATCH(req: NextRequest) {
         if (typeof phone !== "undefined") data.phone = phone || null;
         if (typeof email !== "undefined") data.email = email || null;
         if (!Object.keys(data).length) return jsonError(400, "no_fields_to_update");
-        await prisma.company.update({ where: { id }, data });
+        await prisma.tenant.update({ where: { id }, data });
         const payload = await listCompanies();
         return NextResponse.json(payload);
       } else {
@@ -357,12 +377,12 @@ export async function PUT(req: NextRequest) {
     if (!id) return jsonError(400, "invalid_payload", { message: "id_required" });
     if (!label) return jsonError(400, "invalid_payload", { message: "label_required" });
 
-    // Check if it's a company
-    const company = await prisma.company.findUnique({ where: { id } });
+    // Check if it's a company (tenant)
+    const company = await prisma.tenant.findUnique({ where: { id, isBuyer: true } });
     if (company) {
       const data: any = { name: label };
       if (typeof email !== "undefined") data.email = email || null;
-      await prisma.company.update({ where: { id }, data });
+      await prisma.tenant.update({ where: { id }, data });
       const payload = await listCompanies();
       return NextResponse.json(payload);
     }
@@ -426,12 +446,12 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ key: "teslimatAdresi", items: items.map((x: any) => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault })) });
     }
 
-    // Check if it's a company
-    const company = await prisma.company.findUnique({ where: { id } });
+    // Check if it's a company (tenant)
+    const company = await prisma.tenant.findUnique({ where: { id, isBuyer: true } });
     if (company) {
       const inUseCount = await prisma.order.count({ where: { companyId: id } });
       if (inUseCount > 0) return jsonError(409, "in_use", { message: "Firma bağlı kayıtlar nedeniyle silinemiyor" });
-      await prisma.company.delete({ where: { id } });
+      await prisma.tenant.delete({ where: { id } });
       const payload = await listCompanies();
       return NextResponse.json(payload);
     }

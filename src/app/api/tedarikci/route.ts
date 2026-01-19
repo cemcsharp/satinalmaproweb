@@ -103,6 +103,7 @@ export async function GET(req: NextRequest) {
   try {
     const where: any = {
       AND: [
+        { isSupplier: true },
         q
           ? {
             OR: [
@@ -113,7 +114,7 @@ export async function GET(req: NextRequest) {
             ],
           }
           : {},
-        active !== null && active !== "" ? { active: active === "true" } : {},
+        active !== null && active !== "" ? { isActive: active === "true" } : {},
         dateFrom || dateTo
           ? {
             createdAt: {
@@ -142,7 +143,7 @@ export async function GET(req: NextRequest) {
         : ({ name: sortDir } as any);
 
     const [items, total] = await Promise.all([
-      prisma.supplier.findMany({
+      prisma.tenant.findMany({
         where,
         orderBy,
         skip: (page - 1) * pageSize,
@@ -154,7 +155,7 @@ export async function GET(req: NextRequest) {
           } : false
         } as any
       }),
-      prisma.supplier.count({ where }),
+      prisma.tenant.count({ where }),
     ]);
 
     return NextResponse.json({ items, total, page, pageSize });
@@ -249,10 +250,13 @@ export async function POST(req: NextRequest) {
     if (phone && phone.replace(/\D/g, "").length < 7) errors.push("invalid_phone");
     if (taxId && taxId.replace(/\D/g, "").length < 8) errors.push("invalid_taxId");
     if (errors.length) return jsonError(400, "validation_failed", { details: errors });
-    const created = await prisma.supplier.create({
+    const created = await prisma.tenant.create({
       data: {
         name,
-        active: Boolean(body?.active ?? true),
+        slug: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        isActive: Boolean(body?.active ?? true),
+        isSupplier: true,
+        isBuyer: false,
         taxId,
         contactName,
         email,
@@ -271,10 +275,11 @@ export async function POST(req: NextRequest) {
         mersisNo,
         // If created by a tenant user, automatically link to their tenant
         ...(user.tenantId ? {
-          supplierLinks: {
+          buyerLinks: { // Note: BuyerToSupplier relation name is 'supplierLinks' on the BUYER side, but let's check schema.
+            // On the SUPPLIER side (this model), the relation to TenantSupplier is 'buyerLinks' (@relation("SupplierToBuyer"))
             create: {
               tenantId: user.tenantId,
-              status: "approved", // User-created suppliers are approved by default for their tenant
+              status: "approved",
             }
           }
         } : {})

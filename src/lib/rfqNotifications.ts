@@ -33,28 +33,18 @@ export async function notifySuppliersByCategory(rfqId: string) {
             return;
         }
 
-        // Find suppliers in these categories (via primary category OR category mappings)
-        const suppliers = await prisma.supplier.findMany({
+        // Find suppliers (tenants with isSupplier: true) in these categories
+        const suppliers = await prisma.tenant.findMany({
             where: {
-                active: true,
+                isActive: true,
+                isSupplier: true,
                 registrationStatus: "approved",
                 email: {
                     not: null
                 },
-                OR: [
-                    // Primary category match
-                    {
-                        categoryId: {
-                            in: categoryIds
-                        }
-                    },
-                    // Category mapping match
-                    {
-                        categoryId: {
-                            in: categoryIds
-                        }
-                    }
-                ]
+                categoryId: {
+                    in: categoryIds
+                }
             }
         });
 

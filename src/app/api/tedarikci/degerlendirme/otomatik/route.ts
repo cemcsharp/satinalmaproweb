@@ -40,14 +40,16 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch all suppliers
-    const suppliers = await prisma.supplier.findMany({ where: { active: true }, select: { id: true, name: true } });
+    // Fetch all suppliers (tenants with isSupplier: true)
+    const suppliers = await prisma.tenant.findMany({
+      where: { isActive: true, isSupplier: true },
+      select: { id: true, name: true }
+    });
     const summaries: any[] = [];
 
     for (const s of suppliers) {
       const metrics = await prisma.supplierPerformanceMetric.findMany({ where: { supplierId: s.id, period } });
       if (metrics.length === 0) {
-        // still create a MissingData style summary with zeros
         const summary = {
           supplierId: s.id,
           period,
@@ -65,11 +67,10 @@ export async function GET(req: Request) {
             update: summary,
             create: summary,
           });
-        } catch {}
+        } catch { }
         continue;
       }
 
-      // Aggregate across sources by average
       const avg = (arr: (number | null)[]) => {
         const vals = arr.filter((v) => typeof v === "number") as number[];
         if (vals.length === 0) return null;
@@ -82,7 +83,6 @@ export async function GET(req: Request) {
       const priceIndex = avg(metrics.map((m) => m.priceIndex ?? null));
       const serviceScoreRaw = avg(metrics.map((m) => m.serviceScore ?? null));
 
-      // Normalize to 0..100
       const qualityScore = Math.round(
         (normalize(onTimeRate, { min: 0, max: 1 }) + normalize(defectRate, { min: 0, max: 1, invert: true })) / 2
       );
@@ -108,13 +108,12 @@ export async function GET(req: Request) {
           update: summary,
           create: summary,
         });
-      } catch {}
+      } catch { }
     }
 
-    // Create a batch report payload
     try {
       await prisma.supplierReport.create({ data: { period, scope: "Global", payload: summaries } });
-    } catch {}
+    } catch { }
 
     return NextResponse.json({ ok: true, period, count: summaries.length, summaries });
   } catch (error: any) {

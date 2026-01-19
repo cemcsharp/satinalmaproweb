@@ -31,10 +31,10 @@ export async function POST(req: NextRequest) {
         if (!offer) return jsonError(404, "offer_not_found");
         if (offer.rfqSupplier.rfqId !== rfqId) return jsonError(400, "mismatch");
 
-        // Determine buying company (Assume first active company for MVP or from request unit relation if we had it mapped)
+        // Determine buying company (Assume first active buyer tenant for MVP)
         let finalCompanyId = companyId;
         if (!finalCompanyId) {
-            const comp = await prisma.company.findFirst({ where: { active: true } });
+            const comp = await prisma.tenant.findFirst({ where: { isBuyer: true, isActive: true } });
             finalCompanyId = comp?.id;
         }
         if (!finalCompanyId) return jsonError(400, "no_company_defined");
@@ -46,12 +46,15 @@ export async function POST(req: NextRequest) {
 
         let supplierId = offer.rfqSupplier.supplierId;
         if (!supplierId) {
-            // Auto-create supplier from RFQ contact info
-            const newSup = await prisma.supplier.create({
+            // Auto-create supplier (tenant) from RFQ contact info
+            const newSup = await prisma.tenant.create({
                 data: {
                     name: offer.rfqSupplier.contactName || offer.rfqSupplier.email,
                     email: offer.rfqSupplier.email,
-                    active: true,
+                    slug: (offer.rfqSupplier.contactName || offer.rfqSupplier.email).toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+                    isSupplier: true,
+                    isBuyer: false,
+                    isActive: true,
                     notes: "RFQ sistemi üzerinden otomatik oluşturuldu."
                 }
             });
@@ -135,6 +138,7 @@ export async function POST(req: NextRequest) {
                     currencyId,
                     realizedTotal: offer.totalAmount,
                     responsibleUserId: user.id,
+                    tenantId: user.tenantId, // Add tenantId for multi-tenancy
                     items: {
                         create: orderItemsData
                     }
