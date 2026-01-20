@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
-import { dispatchEmail, renderEmailTemplate } from "@/lib/mailer";
 
 // GET: Fetch RFQ details by Token
 export async function GET(req: NextRequest) {
@@ -19,13 +18,23 @@ export async function GET(req: NextRequest) {
                         }
                     }
                 },
-                offer: {
+                offers: {
+                    orderBy: { round: 'desc' },
+                    take: 1,
                     include: { items: true }
                 }
             }
-        });
+        }) as any;
 
         if (!rfqSupplier) return jsonError(404, "invitation_not_found");
+
+        // Auth Unification: If logged in, tenantId must match
+        const { getUserWithPermissions } = await import("@/lib/apiAuth");
+        const auth = await getUserWithPermissions(req);
+        if (auth && auth.tenantId && rfqSupplier.supplierId && auth.tenantId !== rfqSupplier.supplierId) {
+            console.warn(`[Portal Security] GET Tenant mismatch: User ${auth.id} (Tenant: ${auth.tenantId}) tried to access Token belonging to Supplier ${rfqSupplier.supplierId}`);
+            return jsonError(403, "supplier_mismatch", { message: "Bu teklif daveti başka bir firmaya aittir. Lütfen kendi hesabınızla giriş yapınız." });
+        }
 
         // Check expiry
         if (new Date() > rfqSupplier.tokenExpiry) {
@@ -40,28 +49,24 @@ export async function GET(req: NextRequest) {
             });
         }
 
-        // Determine if onboarding is needed (no linked supplier OR missing critical info like IBAN)
+        // Determine if onboarding is needed
         let needsOnboarding = false;
         let supplierData = null;
         let isRegistered = false;
 
         if (rfqSupplier.supplierId) {
             supplierData = await prisma.tenant.findUnique({
-                where: { id: rfqSupplier.supplierId, isSupplier: true }
+                where: { id: rfqSupplier.supplierId }
             });
-            // Only require onboarding if supplier is NOT approved and missing critical info
-            // Approved suppliers should go directly to offer form
             if (supplierData && supplierData.registrationStatus === 'approved') {
                 needsOnboarding = false;
             } else if (!supplierData || !supplierData.bankIban || !supplierData.taxOffice) {
                 needsOnboarding = true;
             }
         } else {
-            // Check if supplier exists by email even if not linked yet
-            supplierData = await prisma.tenant.findUnique({
+            supplierData = await prisma.tenant.findFirst({
                 where: { email: rfqSupplier.email, isSupplier: true }
             });
-            // If supplier exists and is approved, no onboarding needed
             if (supplierData && supplierData.registrationStatus === 'approved') {
                 needsOnboarding = false;
             } else {
@@ -69,13 +74,11 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        // Check if a User account actually exists for this email
         const userAccount = await prisma.user.findUnique({
             where: { email: rfqSupplier.email || "" }
         });
         isRegistered = !!userAccount;
 
-        // Return limited data (public safe)
         return NextResponse.json({
             ok: true,
             rfq: {
@@ -84,7 +87,7 @@ export async function GET(req: NextRequest) {
                 rfxCode: rfqSupplier.rfq.rfxCode,
                 deadline: rfqSupplier.rfq.deadline,
                 status: rfqSupplier.rfq.status,
-                items: rfqSupplier.rfq.items.map(i => ({
+                items: rfqSupplier.rfq.items.map((i: any) => ({
                     id: i.id,
                     name: i.name,
                     quantity: Number(i.quantity),
@@ -119,10 +122,10 @@ export async function GET(req: NextRequest) {
             },
             needsOnboarding,
             isRegistered,
-            existingOffer: rfqSupplier.offer // If they already submitted, return it
+            existingOffer: rfqSupplier.offers?.[0] || null
         });
 
-    } catch (e: any) {
+    } catch (e) {
         console.error(e);
         return jsonError(500, "server_error");
     }
@@ -141,20 +144,29 @@ export async function POST(req: NextRequest) {
                 rfq: {
                     include: {
                         items: true,
-                        rfqMessages: {
+                        messages: {
                             include: {
-                                author: { select: { name: true, email: true } },
+                                author: { select: { username: true, email: true } },
                                 rfqSupplier: { select: { companyName: true } }
                             },
                             orderBy: { createdAt: "asc" }
                         }
                     }
                 },
-                offer: { include: { items: true } }
+                offers: { orderBy: { round: 'desc' }, take: 1, include: { items: true } }
             }
-        });
+        }) as any;
 
         if (!rfqSupplier) return jsonError(404, "invitation_not_found");
+
+        // Auth Unification: If logged in, tenantId must match
+        const { getUserWithPermissions } = await import("@/lib/apiAuth");
+        const auth = await getUserWithPermissions(req);
+        if (auth && auth.tenantId && rfqSupplier.supplierId && auth.tenantId !== rfqSupplier.supplierId) {
+            console.warn(`[Portal Security] POST Tenant mismatch: User ${auth.id} (Tenant: ${auth.tenantId}) tried to access Token belonging to Supplier ${rfqSupplier.supplierId}`);
+            return jsonError(403, "supplier_mismatch", { message: "Bu işlem başka bir firmaya aittir. Lütfen kendi hesabınızla giriş yapınız." });
+        }
+
         if (new Date() > rfqSupplier.tokenExpiry) return jsonError(410, "token_expired");
         if (rfqSupplier.rfq.status !== "ACTIVE") return jsonError(400, "rfq_closed");
 
@@ -162,15 +174,16 @@ export async function POST(req: NextRequest) {
         const action = req.nextUrl.searchParams.get("action");
 
         if (action === "onboard") {
+            const onboardBody = await req.json();
             const {
                 name, taxId, taxOffice, contactName, phone, address, website, notes,
                 bankName, bankBranch, bankIban, bankAccountNo, bankCurrency,
                 commercialRegistrationNo, mersisNo, password
-            } = await req.json();
+            } = onboardBody;
 
             // 1. Check if Supplier exists by Email
             let supplierId: string;
-            const existingSupplier = await prisma.tenant.findUnique({
+            const existingSupplier = await prisma.tenant.findFirst({
                 where: { email: rfqSupplier.email, isSupplier: true }
             });
 
@@ -187,10 +200,8 @@ export async function POST(req: NextRequest) {
             });
 
             if (conflicts.length > 0) {
-                // Determine which field conflicted
                 const names = conflicts.map(c => c.name);
                 if (names.includes(name)) return NextResponse.json({ error: "Bu 'Firma Adı' ile kayıtlı başka bir tedarikçi zaten var." }, { status: 400 });
-                // If not name, it must be taxId
                 return NextResponse.json({ error: "Bu 'Vergi No' ile kayıtlı başka bir tedarikçi zaten var." }, { status: 400 });
             }
 
@@ -209,20 +220,18 @@ export async function POST(req: NextRequest) {
                 bankAccountNo,
                 bankCurrency,
                 commercialRegistrationNo,
-                mersisNo,
+                mersisNo: mersisNo || null,
                 isActive: true,
                 isSupplier: true
             };
 
             if (existingSupplier) {
-                // Update existing
                 const updated = await prisma.tenant.update({
                     where: { id: existingSupplier.id },
                     data: supplierData
                 });
                 supplierId = updated.id;
             } else {
-                // Create new
                 const newSupplier = await prisma.tenant.create({
                     data: {
                         ...supplierData,
@@ -234,7 +243,6 @@ export async function POST(req: NextRequest) {
                 supplierId = newSupplier.id;
             }
 
-            // 2. Link to RfqSupplier
             await prisma.rfqSupplier.update({
                 where: { id: rfqSupplier.id },
                 data: {
@@ -243,7 +251,6 @@ export async function POST(req: NextRequest) {
                 }
             });
 
-            // 3. Create/Update User Account (Corporate Account System)
             if (password && password.length >= 6) {
                 const { hashPassword } = await import("@/lib/auth");
                 const hashedPassword = await hashPassword(password);
@@ -285,44 +292,20 @@ export async function POST(req: NextRequest) {
 
         // --- OFFER SUBMISSION FLOW (Default) ---
         const body = await req.json();
-        /*
-          Body: {
-             notes: string,
-             validUntil: date,
-             items: [ { rfqItemId: string, unitPrice: number, currency: string, ... } ]
-          }
-        */
-
-        // allow overwriting offer? Yes.
-        // If offer exists, update or delete/recreate. Delete/recreate is easier for items.
-
         const {
-            items, notes, validUntil, currency, attachments, companyName,
+            items, notes: offerNotes, validUntil, currency, attachments, companyName,
             incoterm, paymentTerm, extraCostPackaging, extraCostLogistics,
             shippingIncluded, deliveryDays, partialDelivery, validityDays, generalWarranty
         } = body;
 
         if (!Array.isArray(items) || items.length === 0) return jsonError(400, "no_items");
 
-        // Calculate total
         let totalAmount = 0;
-        const offerItemsData: Array<{
-            rfqItemId: string;
-            quantity: number;
-            unitPrice: number;
-            vatRate: number;
-            totalPrice: number;
-            notes?: string;
-            brand?: string;
-            technicalSpecs?: string;
-            isAlternative?: boolean;
-            warranty?: string;
-        }> = [];
+        const offerItemsData: any[] = [];
 
         for (const item of items) {
             const qty = Number(item.quantity || 0);
             const price = Number(item.unitPrice || 0);
-            const vat = Number(item.vatRate || 20);
             const lineTotal = qty * price;
             totalAmount += lineTotal;
 
@@ -330,7 +313,7 @@ export async function POST(req: NextRequest) {
                 rfqItemId: item.rfqItemId,
                 quantity: qty,
                 unitPrice: price,
-                vatRate: vat,
+                vatRate: Number(item.vatRate || 20),
                 totalPrice: lineTotal,
                 notes: item.notes,
                 brand: item.brand,
@@ -342,58 +325,44 @@ export async function POST(req: NextRequest) {
 
         const result = await prisma.$transaction(async (tx) => {
             let previousLog = "";
+            const existingOffer = rfqSupplier.offers?.[0];
 
-            // Delete existing offer if any
-            if (rfqSupplier.offer) {
-                const old = rfqSupplier.offer;
+            if (existingOffer) {
                 const dateStr = new Date().toLocaleString("tr-TR");
-
-                // Extract existing logs if any
-                const existingLogs = old.notes ? old.notes.split("--- GEÇMİŞ REVİZYONLAR ---")[1] : "";
-
+                const existingLogs = existingOffer.notes ? existingOffer.notes.split("--- GEÇMİŞ REVİZYONLAR ---")[1] : "";
                 let detailsLog = "";
-                // Compare items
-                if (old.items && old.items.length > 0) {
+
+                if (existingOffer.items && existingOffer.items.length > 0) {
                     detailsLog = "\nDeğişiklikler:";
-                    for (const oldItem of old.items) {
+                    for (const oldItem of existingOffer.items) {
                         const newItem = items.find((i: any) => i.rfqItemId === oldItem.rfqItemId);
                         if (newItem) {
                             const oldPrice = Number(oldItem.unitPrice);
                             const newPrice = Number(newItem.unitPrice || 0);
-
                             if (oldPrice !== newPrice) {
-                                // Find Item Name
                                 const rfqItem = rfqSupplier.rfq.items.find((ri: any) => ri.id === oldItem.rfqItemId);
-                                const itemName = rfqItem ? rfqItem.name : "Ürün";
-                                detailsLog += `\n- ${itemName}: ${oldPrice.toLocaleString("tr-TR")} -> ${newPrice.toLocaleString("tr-TR")} ${currency}`;
+                                detailsLog += `\n- ${rfqItem?.name || "Ürün"}: ${oldPrice.toLocaleString("tr-TR")} -> ${newPrice.toLocaleString("tr-TR")} ${currency}`;
                             }
                         }
                     }
-                    if (detailsLog === "\nDeğişiklikler:") detailsLog = ""; // No changes detected
+                    if (detailsLog === "\nDeğişiklikler:") detailsLog = "";
                 }
 
-                const currentLog = `\n\n[Revizyon: ${dateStr}]\nEski Toplam: ${Number(old.totalAmount).toLocaleString("tr-TR")} ${old.currency}${detailsLog}`;
-
+                currentLog = `\n\n[Revizyon: ${dateStr}]\nEski Toplam: ${Number(existingOffer.totalAmount).toLocaleString("tr-TR")} ${existingOffer.currency}${detailsLog}`;
                 previousLog = "--- GEÇMİŞ REVİZYONLAR ---" + currentLog + (existingLogs || "");
 
-                await tx.offer.delete({ where: { id: rfqSupplier.offer.id } });
+                await tx.offer.delete({ where: { id: existingOffer.id } });
             }
 
-            // Combine notes
-            const finalNotes = (notes || "") + (previousLog ? "\n\n" + previousLog : "");
-
-            // Create Offer
             const offer = await tx.offer.create({
                 data: {
                     rfqSupplierId: rfqSupplier.id,
-                    totalAmount: totalAmount,
+                    totalAmount,
                     currency: currency || "TRY",
                     validUntil: validUntil ? new Date(validUntil) : null,
-                    notes: finalNotes,
-                    attachments: attachments || null, // Save file URLs
-                    items: {
-                        create: offerItemsData
-                    },
+                    notes: (offerNotes || "") + (previousLog ? "\n\n" + previousLog : ""),
+                    attachments: attachments || null,
+                    items: { create: offerItemsData },
                     incoterm: incoterm || null,
                     paymentTerm: paymentTerm || null,
                     extraCostPackaging: extraCostPackaging ? Number(extraCostPackaging) : 0,
@@ -403,11 +372,11 @@ export async function POST(req: NextRequest) {
                     partialDelivery: partialDelivery ?? false,
                     validityDays: validityDays ? Number(validityDays) : 30,
                     generalWarranty: generalWarranty || null,
-                    submittedAt: new Date()
+                    submittedAt: new Date(),
+                    round: rfqSupplier.rfq.negotiationRound
                 }
             });
 
-            // Update Stage and Company Name
             await tx.rfqSupplier.update({
                 where: { id: rfqSupplier.id },
                 data: {
@@ -418,8 +387,6 @@ export async function POST(req: NextRequest) {
 
             return offer;
         });
-
-        // Notify Admins? (Optional)
 
         return NextResponse.json({ ok: true, id: result.id });
 

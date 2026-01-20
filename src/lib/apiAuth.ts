@@ -116,6 +116,7 @@ export type UserWithPermissions = {
   tenantId: string | null;
   isSuperAdmin: boolean;
   departmentId: string | null;
+  departmentLabel: string | null;
 };
 
 export async function getUserWithPermissions(req: NextRequest): Promise<UserWithPermissions | null> {
@@ -131,6 +132,7 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
     where: { id: String(userId) },
     include: {
       unit: true,
+      department: true,
       roleRef: true
     }
   });
@@ -144,8 +146,8 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
     const rolePerms = user.roleRef.permissions;
     if (Array.isArray(rolePerms)) {
       permissions = rolePerms as string[];
-    } else if (typeof rolePerms === 'object') {
-      permissions = Object.keys(rolePerms).filter(k => (rolePerms as any)[k]);
+    } else if (rolePerms && typeof rolePerms === 'object') {
+      permissions = Object.keys(rolePerms as object).filter(k => (rolePerms as any)[k]);
     }
   }
 
@@ -164,7 +166,8 @@ export async function getUserWithPermissions(req: NextRequest): Promise<UserWith
     isAdmin: roleKey === "admin",
     tenantId: user.tenantId,
     isSuperAdmin: !!user.isSuperAdmin,
-    departmentId: user.departmentId
+    departmentId: user.departmentId,
+    departmentLabel: (user as any).department?.name || null
   };
 }
 

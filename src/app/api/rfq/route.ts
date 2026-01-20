@@ -235,14 +235,32 @@ export async function GET(req: NextRequest) {
                 orderBy: { createdAt: "desc" },
                 include: {
                     _count: { select: { suppliers: true, items: true } },
-                    suppliers: { select: { id: true, stage: true, supplier: { select: { name: true } }, email: true, offer: { select: { totalAmount: true, currency: true } } } },
+                    suppliers: {
+                        include: {
+                            offers: {
+                                orderBy: { round: 'desc' },
+                                take: 1,
+                                select: { totalAmount: true, currency: true }
+                            },
+                            supplier: { select: { name: true } }
+                        }
+                    },
                     requests: { select: { id: true, barcode: true, subject: true, ownerUserId: true } }
                 }
             }),
             prisma.rfq.count({ where: whereClause })
         ]);
 
-        return NextResponse.json({ items, total, page, totalPages: Math.ceil(total / take) });
+        // Mapping to maintain backward compatibility for list view
+        const mappedItems = items.map((rfq: any) => ({
+            ...rfq,
+            suppliers: rfq.suppliers.map((s: any) => ({
+                ...s,
+                offer: s.offers?.[0] || null
+            }))
+        }));
+
+        return NextResponse.json({ items: mappedItems, total, page, totalPages: Math.ceil(total / take) });
 
     } catch (e) {
         console.error("RFQ GET Error:", e);

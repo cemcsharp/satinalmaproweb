@@ -5,14 +5,21 @@ import { existsSync } from "fs";
 
 export async function POST(req: NextRequest) {
     try {
+        const { getUserWithPermissions } = await import("@/lib/apiAuth");
+        const user = await getUserWithPermissions(req);
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
         const formData = await req.formData();
         const files = formData.getAll("files") as File[];
+        const targetFolder = req.nextUrl.searchParams.get("folder") || "general";
 
         if (!files || files.length === 0) {
             return NextResponse.json({ error: "No files uploaded" }, { status: 400 });
         }
 
-        const uploadDir = join(process.cwd(), "public", "uploads", "contracts");
+        // Structure: public/uploads/{tenantId}/{targetFolder}/
+        const tenantDir = user.tenantId || "common";
+        const uploadDir = join(process.cwd(), "public", "uploads", tenantDir, targetFolder);
 
         // Upload dizinini oluştur (yoksa)
         if (!existsSync(uploadDir)) {
@@ -31,6 +38,7 @@ export async function POST(req: NextRequest) {
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "image/png",
                 "image/jpeg",
+                "image/webp"
             ];
 
             if (!allowedTypes.includes(file.type)) {
@@ -52,7 +60,8 @@ export async function POST(req: NextRequest) {
             // Benzersiz dosya adı oluştur
             const timestamp = Date.now();
             const randomStr = Math.random().toString(36).substring(2, 8);
-            const ext = file.name.split(".").pop();
+            const rawExt = file.name.split(".").pop() || "";
+            const ext = rawExt.toLowerCase();
             const fileName = `${timestamp}-${randomStr}.${ext}`;
             const filePath = join(uploadDir, fileName);
 
@@ -63,7 +72,7 @@ export async function POST(req: NextRequest) {
 
             uploadedFiles.push({
                 fileName: file.name,
-                url: `/uploads/contracts/${fileName}`,
+                url: `/uploads/${tenantDir}/${targetFolder}/${fileName}`,
                 mimeType: file.type,
                 size: file.size,
             });

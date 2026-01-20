@@ -37,10 +37,13 @@ export async function POST(req: NextRequest) {
         const isBuyerRegistration = userType === "buyer" || userType === "company";
         const isSupplierRegistration = userType === "supplier" || !userType; // Default to supplier if not provided (old compatibility)
 
+        // Check for existing user
+        console.log("[Register] Checking for existing user email:", email);
         const existingUser = await prisma.user.findUnique({
             where: { email },
         });
         if (existingUser) {
+            console.log("[Register] User already exists:", email);
             return NextResponse.json(
                 { error: "Bu e-posta adresi zaten kayıtlı." },
                 { status: 400 }
@@ -49,14 +52,32 @@ export async function POST(req: NextRequest) {
 
         // Find appropriate default role
         const roleKey = isBuyerRegistration ? "buyer_admin" : "supplier_admin";
+        console.log("[Register] Looking for role:", roleKey);
         const defaultRole = await prisma.role.findFirst({
             where: { key: roleKey, active: true }
         });
+        console.log("[Register] Role found:", defaultRole?.id);
+
+        if (taxId) {
+            console.log("[Register] Checking for existing Tax ID:", taxId);
+            const existingTenant = await prisma.tenant.findUnique({
+                where: { taxId }
+            });
+            if (existingTenant) {
+                console.log("[Register] Tenant with Tax ID already exists:", taxId);
+                return NextResponse.json(
+                    { error: "Bu Vergi Kimlik Numarası (VKN) ile kayıtlı bir firma zaten var." },
+                    { status: 400 }
+                );
+            }
+        }
 
         const passwordHash = await bcrypt.hash(password, 12);
 
+        console.log("[Register] Starting transaction...");
         const result = await prisma.$transaction(async (tx) => {
             // Create tenant with status based on type
+            console.log("[Register] Creating tenant:", companyName);
             const tenant = await tx.tenant.create({
                 data: {
                     name: companyName,
@@ -76,40 +97,42 @@ export async function POST(req: NextRequest) {
                     bankCurrency: bankCurrency || "TRY",
                     commercialRegistrationNo: commercialRegistrationNo || null,
                     mersisNo: mersisNo || null,
-                    isActive: isBuyerRegistration, // Buyers active, suppliers need approval
+                    isActive: false, // All registrations need approval
                     isSupplier: isSupplierRegistration,
                     isBuyer: isBuyerRegistration,
-                    registrationStatus: isBuyerRegistration ? "approved" : "pending",
+                    registrationStatus: "pending", // All currently pending
                     registrationSource: "self",
                 },
             });
 
             // Create user linked to tenant and role
+            console.log("[Register] Creating user:", email);
             const user = await tx.user.create({
                 data: {
-                    username: contactName,
+                    username: email, // Use email as username to ensure uniqueness
                     email: email,
                     passwordHash: passwordHash,
-                    isActive: isBuyerRegistration,
+                    isActive: false, // User also inactive until approved
                     tenantId: tenant.id,
                     roleId: defaultRole?.id || null
                 },
             });
-
             return { tenant, user };
         });
 
+        console.log("[Register] Transaction success.");
+
         return NextResponse.json({
             success: true,
-            message: isBuyerRegistration
-                ? "Kayıt başarılı! Giriş yapabilirsiniz."
-                : "Kayıt başarılı! Hesabınız admin onayı bekliyor.",
+            message: "Kayıt başarılı! Hesabınız admin onayı bekliyor.",
             supplierId: result.tenant.id,
         });
     } catch (error: any) {
-        console.error("Registration error:", error);
+        console.error("FULL REGISTRATION ERROR OBJECT:", JSON.stringify(error, null, 2));
+        console.error("ERROR MESSAGE:", error.message);
+        console.error("ERROR STACK:", error.stack);
         return NextResponse.json(
-            { error: "Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin." },
+            { error: "Kayıt sırasında bir hata oluştu: " + (error.message || "Bilinmeyen hata") },
             { status: 500 }
         );
     }

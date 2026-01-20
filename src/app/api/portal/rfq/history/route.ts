@@ -11,10 +11,10 @@ export async function GET(req: NextRequest) {
         // Fetch user and their supplier relation
         const user = await prisma.user.findUnique({
             where: { id: auth.userId },
-            select: { supplierId: true }
+            select: { tenantId: true }
         });
 
-        if (!user?.supplierId) {
+        if (!user?.tenantId) {
             return jsonError(403, "supplier_access_denied", { message: "Bu hesap bir tedarikçi ile iliştirilmemiş." });
         }
 
@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
         const [participations, total] = await Promise.all([
             prisma.rfqSupplier.findMany({
                 where: {
-                    supplierId: user.supplierId,
-                    offer: { isNot: null }
+                    supplierId: user.tenantId,
+                    offers: { some: {} }
                 },
                 include: {
                     rfq: {
@@ -42,7 +42,9 @@ export async function GET(req: NextRequest) {
                             createdAt: true
                         }
                     },
-                    offer: {
+                    offers: {
+                        orderBy: { round: 'desc' },
+                        take: 1,
                         select: {
                             id: true,
                             totalAmount: true,
@@ -64,42 +66,45 @@ export async function GET(req: NextRequest) {
                         }
                     }
                 },
-                orderBy: { offer: { submittedAt: "desc" } },
+                orderBy: { createdAt: 'desc' },
                 skip,
                 take: limit
             }),
             prisma.rfqSupplier.count({
                 where: {
-                    supplierId: user.supplierId,
-                    offer: { isNot: null }
+                    supplierId: user.tenantId,
+                    offers: { some: {} }
                 }
             })
         ]);
 
         // Transform response
-        const history = participations.map(p => ({
-            participationId: p.id,
-            rfqId: p.rfq.id,
-            rfxCode: p.rfq.rfxCode,
-            title: p.rfq.title,
-            rfqStatus: p.rfq.status,
-            deadline: p.rfq.deadline,
-            offer: p.offer ? {
-                id: p.offer.id,
-                totalAmount: p.offer.totalAmount,
-                currency: p.offer.currency,
-                submittedAt: p.offer.submittedAt,
-                isWinner: p.offer.isWinner,
-                validUntil: p.offer.validUntil,
-                itemCount: p.offer.items.length,
-                items: p.offer.items.map(item => ({
-                    name: item.rfqItem.name,
-                    quantity: item.quantity,
-                    unitPrice: item.unitPrice,
-                    totalPrice: item.totalPrice
+        const history = participations.map((p: any) => {
+            return {
+                participationId: p.id,
+                rfqId: p.rfq.id,
+                rfxCode: p.rfq.rfxCode,
+                title: p.rfq.title,
+                rfqStatus: p.rfq.status,
+                deadline: p.rfq.deadline,
+                offers: p.offers.map((off: any) => ({
+                    id: off.id,
+                    totalAmount: off.totalAmount,
+                    currency: off.currency,
+                    submittedAt: off.submittedAt,
+                    isWinner: off.isWinner,
+                    validUntil: off.validUntil,
+                    round: off.round,
+                    itemCount: off.items.length,
+                    items: off.items.map((item: any) => ({
+                        name: item.rfqItem.name,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        totalPrice: item.totalPrice
+                    }))
                 }))
-            } : null
-        }));
+            };
+        });
 
         return NextResponse.json({
             history,

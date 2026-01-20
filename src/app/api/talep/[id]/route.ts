@@ -13,25 +13,31 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     const { id } = await context.params;
     const safeId = String(id || "").trim();
     if (!safeId) return jsonError(404, "not_found");
-    let item: any = null;
-    try {
-      item = await prisma.request.findUnique({
-        where: { id: safeId },
-        include: {
-          relatedPerson: true,
-          unit: true,
-          status: true,
-          currency: true,
-          owner: true,
-          responsible: true,
-          items: { include: { unit: true } },
-          attachments: true,
-          comments: { include: { author: true } },
+
+    const item = await prisma.request.findUnique({
+      where: { id: safeId },
+      include: {
+        relatedPerson: true,
+        status: true,
+        currency: true,
+        owner: true,
+        responsible: true,
+        unit: {
+          include: {
+            approvalWorkflow: {
+              include: {
+                steps: true
+              }
+            }
+          }
         },
-      });
-    } catch (_e) {
-      return jsonError(404, "not_found");
-    }
+        items: { include: { unit: true } },
+        attachments: true,
+        comments: { include: { author: true } },
+        approvalRecords: { include: { approver: { select: { username: true, email: true } } }, orderBy: { stepOrder: "asc" } },
+      },
+    });
+
     if (!item) return jsonError(404, "not_found");
 
     // Multi-tenant Isolation: User must belong to the same tenant as the request
@@ -46,70 +52,74 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     const isOwner = item.ownerUserId === user.id;
     const isResponsible = item.responsibleUserId === user.id;
     const isSameUnit = item.unitId === user.unitId;
+    const isSameDept = item.departmentId === user.departmentId;
 
-    if (!isAdmin && !isOwner && !isResponsible && !isSameUnit) {
+    if (!isAdmin && !isOwner && !isResponsible && !isSameUnit && !isSameDept) {
       return jsonError(403, "forbidden_access", { message: "Bu talebi görüntüleme yetkiniz yok." });
     }
+
     const payload = {
       id: item.id,
       barcode: item.barcode,
-      date: item.createdAt?.toISOString?.() || null,
+      date: item.createdAt?.toISOString() || null,
       subject: item.subject,
-      budget:
-        typeof (item as any).budget?.toNumber === "function"
-          ? (item as any).budget.toNumber()
-          : Number(item.budget as any),
+      budget: Number(item.budget || 0),
       // relation ids (mevcut tüketimler için korunuyor)
-      relatedPersonId: (item as any).relatedPersonId ?? item.relatedPerson?.id ?? null,
-      unitId: (item as any).unitId ?? item.unit?.id ?? null,
-      statusId: (item as any).statusId ?? item.status?.id ?? null,
-      currencyId: (item as any).currencyId ?? item.currency?.id ?? null,
-      ownerUserId: (item as any).ownerUserId ?? item.owner?.id ?? null,
-      responsibleUserId: (item as any).responsibleUserId ?? item.responsible?.id ?? null,
+      relatedPersonId: item.relatedPersonId || null,
+      unitId: item.unitId || null,
+      departmentId: item.departmentId || null,
+      statusId: item.statusId || null,
+      currencyId: item.currencyId || null,
+      ownerUserId: item.ownerUserId || null,
+      responsibleUserId: item.responsibleUserId || null,
       // relation labels (UI için kolaylık)
       relatedPerson: item.relatedPerson?.label || null,
       unit: item.unit?.label || null,
+      department: item.department?.name || null,
       status: item.status?.label || null,
       currency: item.currency?.label || null,
-      unitEmail: (item as any).unitEmail ?? null,
+      unitEmail: item.unitEmail || null,
       owner: item.owner?.username || item.owner?.email || null,
       responsible: item.responsible?.username || item.responsible?.email || null,
       // items
-      items: Array.isArray(item.items)
-        ? item.items.map((it: any) => ({
-          id: it.id,
-          name: it.name,
-          quantity:
-            typeof it.quantity?.toNumber === "function"
-              ? it.quantity.toNumber()
-              : Number(it.quantity as any),
-          unit: it.unit?.label || null,
-          unitId: (it as any).unitId ?? it.unit?.id ?? null,
-          unitPrice:
-            typeof (it as any).unitPrice?.toNumber === "function"
-              ? (it as any).unitPrice.toNumber()
-              : Number((it as any).unitPrice ?? 0),
-        }))
-        : [],
+      items: item.items.map((it) => ({
+        id: it.id,
+        name: it.name,
+        quantity: Number(it.quantity || 0),
+        unit: it.unit?.label || null,
+        unitId: it.unitId,
+        unitPrice: Number(it.unitPrice || 0),
+      })),
       // comments
-      comments: Array.isArray(item.comments)
-        ? item.comments.map((c: any) => ({
-          id: c.id,
-          text: c.text,
-          author: c.author?.username || c.author?.email || null,
-          createdAt: c.createdAt?.toISOString?.() || null,
-        }))
-        : [],
-    };
-    // Attachments
-    (payload as any).attachments = Array.isArray(item.attachments)
-      ? item.attachments.map((a: any) => ({
+      comments: item.comments.map((c) => ({
+        id: c.id,
+        text: c.text,
+        author: c.author?.username || c.author?.email || null,
+        createdAt: c.createdAt?.toISOString() || null,
+      })),
+      // attachments
+      attachments: item.attachments.map((a) => ({
         id: a.id,
         fileName: a.fileName,
         url: a.url,
         type: a.type,
-      }))
-      : [];
+      })),
+      // approval records
+      approvalRecords: item.approvalRecords.map((r) => {
+        const step = item.unit?.approvalWorkflow?.steps.find(s => s.stepOrder === r.stepOrder);
+        return {
+          id: r.id,
+          stepOrder: r.stepOrder,
+          stepName: r.stepName,
+          status: r.status,
+          approver: r.approver?.username || r.approver?.email || null,
+          approverRole: step?.approverRole || null,
+          comment: r.comment,
+          processedAt: r.processedAt?.toISOString() || null,
+        };
+      })
+    };
+
     return NextResponse.json(payload);
   } catch (e: any) {
     return jsonError(500, "talep_get_failed", { message: e?.message });
@@ -130,7 +140,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     if (!existingReq) return jsonError(404, "not_found");
 
     // Multi-tenant Isolation
-    if (!user.isSuperAdmin && (existingReq as any).tenantId !== user.tenantId) {
+    if (!user.isSuperAdmin && existingReq.tenantId !== user.tenantId) {
       return jsonError(403, "tenant_mismatch", { message: "Bu veriyi düzenleme yetkiniz yok." });
     }
 
@@ -148,7 +158,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 
     const body = await req.json().catch(() => ({}));
     const errors: string[] = [];
-    const data: any = {};
+    const data: Prisma.RequestUpdateInput = {};
+
     if (typeof body.subject !== "undefined") {
       const subject = String(body.subject || "").trim();
       if (!subject) errors.push("subject_required");
@@ -166,81 +177,73 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     if (typeof body.unitEmail !== "undefined") {
       data.unitEmail = String(body.unitEmail || "").trim() || null;
     }
-    // Validate relation ids if provided
+
+    // Validate relations
     if (typeof body.unitId === "string" && body.unitId) {
-      const unit = await prisma.optionItem.findUnique({ where: { id: body.unitId } });
-      if (!unit) errors.push("invalid_unitId");
-      else data.unit = { connect: { id: body.unitId } };
+      data.unit = { connect: { id: body.unitId } };
     }
     if (typeof body.statusId === "string" && body.statusId) {
-      const status = await prisma.optionItem.findUnique({ where: { id: body.statusId } });
-      if (!status) errors.push("invalid_statusId");
-      else data.status = { connect: { id: body.statusId } };
+      data.status = { connect: { id: body.statusId } };
     }
     if (typeof body.currencyId === "string" && body.currencyId) {
-      const currency = await prisma.optionItem.findUnique({ where: { id: body.currencyId } });
-      if (!currency) errors.push("invalid_currencyId");
-      else data.currency = { connect: { id: body.currencyId } };
+      data.currency = { connect: { id: body.currencyId } };
     }
     if (typeof body.relatedPersonId === "string" && body.relatedPersonId) {
-      const rp = await prisma.optionItem.findUnique({ where: { id: body.relatedPersonId } });
-      if (!rp) errors.push("invalid_relatedPersonId");
-      else data.relatedPerson = { connect: { id: body.relatedPersonId } };
+      data.relatedPerson = { connect: { id: body.relatedPersonId } };
     }
-    // Owner / Responsible (User)
+
+    // Owner / Responsible
     if (typeof body.ownerUserId === "string" && body.ownerUserId) {
-      const owner = await prisma.user.findUnique({ where: { id: body.ownerUserId } });
-      if (!owner) errors.push("invalid_ownerUserId");
-      else data.owner = { connect: { id: body.ownerUserId } };
+      data.owner = { connect: { id: body.ownerUserId } };
     } else if (body.ownerUserId === null) {
       data.owner = { disconnect: true };
     }
 
     if (typeof body.responsibleUserId === "string" && body.responsibleUserId) {
-      const resp = await prisma.user.findUnique({ where: { id: body.responsibleUserId } });
-      if (!resp) errors.push("invalid_responsibleUserId");
-      else data.responsible = { connect: { id: body.responsibleUserId } };
+      data.responsible = { connect: { id: body.responsibleUserId } };
     } else if (body.responsibleUserId === null) {
       data.responsible = { disconnect: true };
     }
 
-    // Items replace-update support
+    // Items management
     if (Array.isArray(body.items)) {
-      const payloadItems = [] as Array<{ id?: string; name: string; quantity: number; unitId: string; unitPrice: number }>;
-      for (const it of body.items as any[]) {
-        const name = String(it?.name || "").trim();
-        const quantity = Number(it?.quantity);
-        const unitId = String(it?.unitId || "").trim();
-        const unitPrice = Number(it?.unitPrice ?? 0);
-        const itemId = it?.id ? String(it.id) : undefined;
-        if (!name) errors.push("item_name_required");
-        if (!Number.isFinite(quantity) || quantity <= 0) errors.push("item_quantity_invalid");
-        if (!unitId) errors.push("item_unitId_required");
-        if (!Number.isFinite(unitPrice) || unitPrice < 0) errors.push("item_unitPrice_invalid");
-        if (unitId) {
-          const unitExists = await prisma.optionItem.findUnique({ where: { id: unitId } });
-          if (!unitExists) errors.push("invalid_item_unitId");
-        }
-        payloadItems.push({ id: itemId, name, quantity, unitId, unitPrice });
+      const payloadItems = body.items.map((it: any) => ({
+        id: it.id ? String(it.id) : undefined,
+        name: String(it.name || "").trim(),
+        quantity: Number(it.quantity),
+        unitId: String(it.unitId || "").trim(),
+        unitPrice: Number(it.unitPrice || 0)
+      }));
+
+      for (const it of payloadItems) {
+        if (!it.name) errors.push("item_name_required");
+        if (!Number.isFinite(it.quantity) || it.quantity <= 0) errors.push("item_quantity_invalid");
+        if (!it.unitId) errors.push("item_unitId_required");
       }
+
       if (!errors.length) {
-        const idsInPayload = payloadItems.filter((p) => !!p.id).map((p) => p.id!) as string[];
-        const createItems = payloadItems.filter((p) => !p.id).map((p) => ({ name: p.name, quantity: p.quantity, unitPrice: p.unitPrice, unit: { connect: { id: p.unitId } } }));
-        const updateItems = payloadItems.filter((p) => !!p.id).map((p) => ({ where: { id: p.id! }, data: { name: p.name, quantity: p.quantity, unitPrice: p.unitPrice, unit: { connect: { id: p.unitId } } } }));
-        if (idsInPayload.length) {
-          data.items = {
-            deleteMany: [{ NOT: { id: { in: idsInPayload } } }],
-            create: createItems,
-            update: updateItems,
-          };
-        } else {
-          const existing = await prisma.request.findUnique({ where: { id: safeId }, include: { items: { select: { id: true } } } });
-          const existingIds = Array.isArray(existing?.items) ? (existing!.items as any[]).map((x) => x.id) : [];
-          data.items = {
-            deleteMany: existingIds.length ? [{ id: { in: existingIds } }] : [],
-            create: createItems,
-          };
-        }
+        const idsInPayload = payloadItems.filter((p: any) => p.id).map((p: any) => p.id);
+
+        data.items = {
+          deleteMany: {
+            id: { notIn: idsInPayload }
+          },
+          upsert: payloadItems.map((p: any) => ({
+            where: { id: p.id || "new-item" },
+            update: {
+              name: p.name,
+              quantity: p.quantity,
+              unitPrice: p.unitPrice,
+              unit: { connect: { id: p.unitId } }
+            },
+            create: {
+              name: p.name,
+              quantity: p.quantity,
+              unitPrice: p.unitPrice,
+              unit: { connect: { id: p.unitId } }
+            }
+          }))
+        };
       }
     }
 
@@ -253,64 +256,37 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       const updated = await prisma.request.update({ where: { id: safeId }, data });
       const after = await prisma.request.findUnique({ where: { id: safeId }, include: { status: true, owner: true, responsible: true } });
 
-      // Mail gönderimini arka planda yap (await etme)
-      (async () => {
-        try {
-          const prev = before?.status?.label || "";
-          const next = after?.status?.label || "";
-          const origin = req.nextUrl.origin;
-          const link = `${origin}/talep/detay/${encodeURIComponent(after!.id)}`;
-          const subject = "Talep Durumu Güncellendi";
-          const html = renderEmailTemplate("generic", { title: subject, body: `Talep No: ${before?.barcode || safeId}<br/>Önceki Durum: ${prev}<br/>Yeni Durum: ${next}<br/>Tarih: ${new Date().toLocaleString("tr-TR")}${body?.note ? `<br/>Açıklama: ${String(body.note)}` : ""}`, actionUrl: link, actionText: "Talebi Aç" });
-          const emails: string[] = [];
-          if ((after as any)?.owner?.email) emails.push(String((after as any).owner.email));
-          if ((after as any)?.responsible?.email) emails.push(String((after as any).responsible.email));
-          if ((before as any)?.unitEmail) emails.push(String((before as any).unitEmail));
-          const mailPromises = Array.from(new Set(emails)).filter(Boolean).map(to =>
-            dispatchEmail({ to, subject, html, category: "request_status" }).catch(err => {
-              console.error(`Mail gönderilemedi (${to}):`, err);
-            })
-          );
-          await Promise.allSettled(mailPromises);
-        } catch (err) {
-          console.error("Mail gönderim hatası:", err);
-        }
-      })();
+      if (before && after) {
+        // Background email task
+        (async () => {
+          try {
+            const prev = before.status?.label || "";
+            const next = after.status?.label || "";
+            const origin = req.nextUrl.origin;
+            const link = `${origin}/talep/detay/${encodeURIComponent(after.id)}`;
+            const subject = "Talep Durumu Güncellendi";
+            const html = renderEmailTemplate("generic", {
+              title: subject,
+              body: `Talep No: ${before.barcode || safeId}<br/>Önceki Durum: ${prev}<br/>Yeni Durum: ${next}`,
+              actionUrl: link,
+              actionText: "Talebi Aç"
+            });
+            const emails = new Set<string>();
+            if (after.owner?.email) emails.add(after.owner.email);
+            if (after.responsible?.email) emails.add(after.responsible.email);
+            if (before.unitEmail) emails.add(before.unitEmail);
+
+            await Promise.allSettled([...emails].map(to => dispatchEmail({ to, subject, html, category: "request_status" })));
+          } catch (err) {
+            console.error("Mail error:", err);
+          }
+        })();
+      }
 
       return NextResponse.json({ ok: true, id: updated.id });
     } catch (err: any) {
-      const msg = String(err?.message || "");
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
         return jsonError(404, "not_found");
-      }
-      if (/Unknown argument `unitPrice`/i.test(msg)) {
-        try {
-          const fallbackData: any = { ...data };
-          if (Array.isArray(body.items)) {
-            const payloadItems = [] as Array<{ id?: string; name: string; quantity: number; unitId: string }>;
-            for (const it of body.items as any[]) {
-              const name = String(it?.name || "").trim();
-              const quantity = Number(it?.quantity);
-              const unitId = String(it?.unitId || "").trim();
-              const itemId = it?.id ? String(it.id) : undefined;
-              payloadItems.push({ id: itemId, name, quantity, unitId });
-            }
-            const idsInPayload = payloadItems.filter((p) => !!p.id).map((p) => p.id!) as string[];
-            const createItems = payloadItems.filter((p) => !p.id).map((p) => ({ name: p.name, quantity: p.quantity, unit: { connect: { id: p.unitId } } }));
-            const updateItems = payloadItems.filter((p) => !!p.id).map((p) => ({ where: { id: p.id! }, data: { name: p.name, quantity: p.quantity, unit: { connect: { id: p.unitId } } } }));
-            if (idsInPayload.length) {
-              fallbackData.items = { deleteMany: [{ NOT: { id: { in: idsInPayload } } }], create: createItems, update: updateItems };
-            } else {
-              const existing = await prisma.request.findUnique({ where: { id: safeId }, include: { items: { select: { id: true } } } });
-              const existingIds = Array.isArray(existing?.items) ? (existing!.items as any[]).map((x) => x.id) : [];
-              fallbackData.items = { deleteMany: existingIds.length ? [{ id: { in: existingIds } }] : [], create: createItems };
-            }
-          }
-          const updated2 = await prisma.request.update({ where: { id: safeId }, data: fallbackData });
-          return NextResponse.json({ ok: true, id: updated2.id });
-        } catch (e2: any) {
-          throw e2;
-        }
       }
       throw err;
     }
@@ -331,12 +307,10 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     const existingReq = await prisma.request.findUnique({ where: { id: safeId } });
     if (!existingReq) return jsonError(404, "not_found");
 
-    // Multi-tenant Isolation
-    if (!user.isSuperAdmin && (existingReq as any).tenantId !== user.tenantId) {
+    if (!user.isSuperAdmin && existingReq.tenantId !== user.tenantId) {
       return jsonError(403, "tenant_mismatch", { message: "Bu veriyi silme yetkiniz yok." });
     }
 
-    // Security Check
     const unitLabelClean = (user.unitLabel || "").toLocaleLowerCase("tr-TR").replace(/\s/g, "");
     const isSatinalma = unitLabelClean.includes("satınalma") || unitLabelClean.includes("satinlama");
     const isAdmin = user.isSuperAdmin || user.isAdmin || isSatinalma;
@@ -346,26 +320,13 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
       return jsonError(403, "forbidden_delete", { message: "Sadece kendi taleplerinizi silebilirsiniz." });
     }
 
-    // Safety: Prevent deleting processed requests (unless admin)
-    // Assuming statusId for 'Draft' or 'Pending' is needed, but we check label via join ideally.
-    // Since we don't have status label here easily without join, let's trust Admin/Owner judgement OR
-    // we could fetch status. For now, basic auth is huge improvement.
-
-    try {
-      await prisma.request.delete({ where: { id: safeId } });
-      return NextResponse.json({ ok: true });
-    } catch (err: any) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
-        return jsonError(404, "not_found");
-      }
-      throw err;
-    }
+    await prisma.request.delete({ where: { id: safeId } });
+    return NextResponse.json({ ok: true });
   } catch (e: any) {
     return jsonError(500, "talep_delete_failed", { message: e?.message });
   }
 }
 
-// PUT endpoint (alias for PATCH)
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   return PATCH(req, context);
 }

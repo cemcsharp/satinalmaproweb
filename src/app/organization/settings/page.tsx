@@ -66,32 +66,56 @@ export default function OrganizationSettingsPage() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            // Fetch Tenant Settings
-            const settingsRes = await fetch("/api/tenant/settings");
-            if (settingsRes.ok) setTenant(await settingsRes.json());
+            const [settingsRes, usersRes, rolesRes] = await Promise.all([
+                fetch("/api/tenant/settings"),
+                fetch("/api/tenant/users"),
+                fetch("/api/admin/roles")
+            ]);
 
-            // Fetch Users & Invitations
-            const usersRes = await fetch("/api/tenant/users");
+            let currentTenant: Tenant | null = null;
+
+            if (settingsRes.ok) {
+                currentTenant = await settingsRes.json();
+                setTenant(currentTenant);
+            }
+
             if (usersRes.ok) {
                 const data = await usersRes.json();
                 setUsers(data.users || []);
                 setInvitations(data.invitations || []);
             }
 
-            // Fetch Roles (for invitation)
-            // Use a fallback list if no dedicated API
-            const rolesRes = await fetch("/api/admin/roles"); // Assuming this exists or returns user-friendly roles
             if (rolesRes.ok) {
                 const data = await rolesRes.json();
-                // Filter relevant roles for the user type (buyer/supplier)
-                setRoles(data || []);
+                const allRoles = data.items || [];
+
+                // Filter roles based on Tenant Type
+                if (currentTenant) {
+                    const filteredRoles = allRoles.filter((r: any) => {
+                        // Always exclude super admin
+                        if (r.key === 'admin') return false;
+
+                        // Whitelist core business roles (even if isSystem=true)
+                        if (currentTenant?.isBuyer && r.key.startsWith('buyer_')) return true;
+                        if (currentTenant?.isSupplier && r.key.startsWith('supplier_')) return true;
+
+                        // Also whitelist specific roles
+                        if (currentTenant?.isBuyer && r.key === 'satinalma_muduru') return true;
+
+                        // Exclude other system roles (unless whitelisted above)
+                        if (r.isSystem) return false;
+
+                        return true;
+                    });
+                    setRoles(filteredRoles);
+                } else {
+                    setRoles(allRoles);
+                }
             } else {
-                // Fallback roles based on tenant type
+                // Fallback roles
                 setRoles([
                     { id: "buyer_admin", name: "Alıcı Yöneticisi" },
-                    { id: "buyer_user", name: "Alıcı Çalışanı" },
-                    { id: "supplier_admin", name: "Tedarikçi Yöneticisi" },
-                    { id: "supplier_user", name: "Tedarikçi Çalışanı" }
+                    { id: "supplier_admin", name: "Tedarikçi Yöneticisi" }
                 ]);
             }
         } catch (error) {
@@ -126,6 +150,27 @@ export default function OrganizationSettingsPage() {
             show({ title: "Hata", description: "Bir hata oluştu", variant: "error" });
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDeleteInvite = async (id: string) => {
+        if (!confirm("Bu davetiyeyi iptal etmek istediğinize emin misiniz?")) return;
+
+        try {
+            const res = await fetch(`/api/tenant/invite?id=${id}`, {
+                method: "DELETE"
+            });
+
+            if (res.ok) {
+                show({ title: "Başarılı", description: "Davetiye iptal edildi", variant: "success" });
+                fetchData(); // Refresh list
+            } else {
+                const err = await res.json();
+                show({ title: "Hata", description: err.error || "İptal edilemedi", variant: "error" });
+            }
+        } catch (error) {
+            console.error(error);
+            show({ title: "Hata", description: "Bir hata oluştu", variant: "error" });
         }
     };
 
@@ -259,9 +304,9 @@ export default function OrganizationSettingsPage() {
                                         <TR key={u.id}>
                                             <TD><div className="font-medium">{u.username}</div></TD>
                                             <TD>{u.email}</TD>
-                                            <TD><Badge variant="outline">{u.roleRef?.name || "Kullanıcı"}</Badge></TD>
+                                            <TD><Badge variant="default">{u.roleRef?.name || "Kullanıcı"}</Badge></TD>
                                             <TD>
-                                                <Badge variant={u.isActive ? "success" : "secondary"}>
+                                                <Badge variant={u.isActive ? "success" : "default"}>
                                                     {u.isActive ? "Aktif" : "Pasif"}
                                                 </Badge>
                                             </TD>
@@ -285,6 +330,7 @@ export default function OrganizationSettingsPage() {
                                             <TH>Atanan Rol</TH>
                                             <TH>Son Tarih</TH>
                                             <TH>Durum</TH>
+                                            <TH></TH>
                                         </TR>
                                     </THead>
                                     <TBody>
@@ -296,6 +342,16 @@ export default function OrganizationSettingsPage() {
                                                     {new Date(i.expiresAt).toLocaleDateString("tr-TR")}
                                                 </TD>
                                                 <TD><Badge variant="warning">Beklemede</Badge></TD>
+                                                <TD className="text-right">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                        onClick={() => handleDeleteInvite(i.id)}
+                                                    >
+                                                        İptal Et
+                                                    </Button>
+                                                </TD>
                                             </TR>
                                         ))}
                                     </TBody>

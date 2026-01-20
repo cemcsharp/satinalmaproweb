@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
         const session = await getServerSession(authOptions);
 
         // Get all settings (admin or public)
-        const allSettings = await prisma.systemSetting.findMany();
+        const allSettings = await prisma.systemSettings.findMany();
 
         const settingsMap: Record<string, string> = {};
         allSettings.forEach((s: any) => {
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
         // Upsert each setting
         for (const [key, value] of Object.entries(settings)) {
-            await prisma.systemSetting.upsert({
+            await prisma.systemSettings.upsert({
                 where: { key },
                 update: {
                     value: String(value),

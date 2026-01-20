@@ -24,12 +24,21 @@ export async function POST(
             return NextResponse.json({ error: "organization_not_found" }, { status: 404 });
         }
 
-        const updatedTenant = await prisma.tenant.update({
-            where: { id: tenantId },
-            data: { isActive: !tenant.isActive }
-        });
+        const newActiveState = !tenant.isActive;
 
-        console.log(`[API] Organization ${tenantId} is now ${updatedTenant.isActive ? "active" : "inactive"}`);
+        // Transaction to update both Tenant and its Users
+        const [updatedTenant] = await prisma.$transaction([
+            prisma.tenant.update({
+                where: { id: tenantId },
+                data: { isActive: newActiveState }
+            }),
+            prisma.user.updateMany({
+                where: { tenantId: tenantId },
+                data: { isActive: newActiveState }
+            })
+        ]);
+
+        console.log(`[API] Organization ${tenantId} and its users are now ${newActiveState ? "active" : "inactive"}`);
 
         return NextResponse.json({
             ok: true,

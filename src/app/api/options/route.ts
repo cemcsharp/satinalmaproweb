@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { jsonError } from "@/lib/apiError";
-import { requireAuthApi } from "@/lib/apiAuth";
+import { requireAuthApi, getUserWithPermissions } from "@/lib/apiAuth";
 import { apiCache } from "@/lib/cache";
 
 const OPTIONS_CACHE_KEY = "options_all";
@@ -29,11 +29,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Auth Check
-    const auth = await requireAuthApi(req);
+    const auth = await getUserWithPermissions(req);
     if (!auth) return jsonError(401, "unauthorized");
 
-    // All Options Cache (Simple implementation: cache all options for authorized users)
-    const cachedAll = apiCache.get(OPTIONS_CACHE_KEY);
+    // All Options Cache - Tenant Specific
+    const TENANT_CACHE_KEY = `options_${auth.tenantId || 'global'}`;
+    const cachedAll = apiCache.get(TENANT_CACHE_KEY);
     if (cachedAll) return NextResponse.json(cachedAll);
 
     const keys = [
@@ -84,11 +85,25 @@ export async function GET(req: NextRequest) {
     const users = await prisma.user.findMany({ orderBy: { username: 'asc' }, select: { id: true, username: true, email: true } });
     results.kullanici = users.map((x: any) => ({ id: x.id, label: x.username || x.email, active: true }));
 
-    // Teslimat Adresleri
-    const deliveryAddresses = await prisma.deliveryAddress.findMany({ orderBy: [{ isDefault: 'desc' }, { name: 'asc' }], select: { id: true, name: true, active: true, address: true, isDefault: true } });
-    results.teslimatAdresi = deliveryAddresses.map((x: any) => ({ id: x.id, label: x.name, active: x.active, address: x.address, isDefault: x.isDefault }));
+    // Fetch Departments (Corporate Units) - Tenant Specific
+    const departments = await prisma.department.findMany({
+      where: {
+        OR: [
+          { tenantId: auth.tenantId },
+          { tenantId: null }
+        ]
+      },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, manager: { select: { email: true } } }
+    });
+    results.departman = departments.map(d => ({
+      id: d.id,
+      label: d.name,
+      active: true,
+      email: d.manager?.email || null
+    }));
 
-    apiCache.set(OPTIONS_CACHE_KEY, results);
+    apiCache.set(TENANT_CACHE_KEY, results);
     return NextResponse.json(results);
 
   } catch (e: any) {
@@ -146,8 +161,8 @@ export async function POST(req: NextRequest) {
         }
       }
       // Invalidate cache since we added items
-      apiCache.delete(OPTIONS_CACHE_KEY);
-      apiCache.delete(OPTIONS_PUBLIC_KEY);
+      apiCache.invalidate(OPTIONS_CACHE_KEY);
+      apiCache.invalidate(OPTIONS_PUBLIC_KEY);
 
       return NextResponse.json({ message: "Synced", added: addedCount });
     }
@@ -164,7 +179,9 @@ export async function POST(req: NextRequest) {
       const address = body?.address == null ? null : String(body.address || "");
       const taxOffice = body?.taxOffice == null ? null : String(body.taxOffice || "");
       const phone = body?.phone == null ? null : String(body.phone || "");
-      const email = body?.email == null ? null : String(body.email || "");
+      const email = String(body?.email || "").trim();
+      if (!email) return jsonError(400, "invalid_payload", { message: "email_required" });
+
       try {
         await prisma.tenant.create({
           data: {
@@ -176,7 +193,7 @@ export async function POST(req: NextRequest) {
             email,
             isActive: true,
             isBuyer: true,
-            slug: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+            slug: (name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || `org-${Date.now()}`)
           }
         });
       } catch (e: any) {
@@ -248,7 +265,7 @@ export async function PATCH(req: NextRequest) {
     const action = String(body?.action || "");
     const id = String(body?.id || "").trim();
     if (!id) return jsonError(400, "invalid_payload");
-    const company = await prisma.company.findUnique({ where: { id } });
+    const company = await prisma.tenant.findUnique({ where: { id, isBuyer: true } });
     if (company) {
       if (action === "toggle") {
         const active = Boolean(body?.active);

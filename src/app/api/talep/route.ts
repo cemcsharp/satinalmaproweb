@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { jsonError } from "@/lib/apiError";
 import { requirePermissionApi } from "@/lib/apiAuth";
 import { notify } from "@/lib/notification-service";
@@ -13,6 +14,7 @@ type CreateRequestBody = {
   budget: number;
   relatedPersonId: string;
   unitId: string;
+  departmentId?: string;
   statusId: string;
   currencyId: string;
   unitEmail?: string;
@@ -138,10 +140,26 @@ export async function POST(req: NextRequest) {
       const budgetAmount = Number(body.budget);
 
       created = await prisma.$transaction(async (tx) => {
-        // 1. Create the request
+        // 1. Find relevant Approval Workflow
+        // Selection: 1. Unit-specific workflow, 2. Global active 'Request' workflow
+        const unitWorkflow = await tx.optionItem.findUnique({
+          where: { id: body.unitId },
+          select: { approvalWorkflowId: true }
+        });
+
+        let workflowId = unitWorkflow?.approvalWorkflowId;
+        if (!workflowId) {
+          const globalWorkflow = await tx.approvalWorkflow.findFirst({
+            where: { entityType: "Request", active: true },
+            orderBy: { createdAt: "desc" }
+          });
+          workflowId = globalWorkflow?.id;
+        }
+
+        // 2. Create the request
         const req = await tx.request.create({
           data: {
-            barcode: body.barcode?.trim() || null, // Opsiyonel - null olabilir
+            barcode: body.barcode?.trim() || null,
             subject: body.subject.trim(),
             budget: body.budget,
             relatedPersonId: body.relatedPersonId,
@@ -152,7 +170,7 @@ export async function POST(req: NextRequest) {
             justification: body.justification?.trim() || null,
             ownerUserId: String(user.id),
             tenantId: user.tenantId,
-            departmentId: user.departmentId, // Link to user's department
+            departmentId: body.departmentId || user.departmentId,
             items: body.items && body.items.length > 0 ? {
               create: body.items.map((i) => ({
                 name: i.name.trim(),
@@ -168,7 +186,34 @@ export async function POST(req: NextRequest) {
           select: { id: true, barcode: true, requestNumber: true }
         });
 
-        // 2. Reserve Budget if department and budget exist
+        // 3. Initialize Approval Records if workflow found
+        if (workflowId) {
+          const steps = await tx.approvalStep.findMany({
+            where: { workflowId },
+            orderBy: { stepOrder: "asc" }
+          });
+
+          if (steps.length > 0) {
+            await tx.approvalRecord.createMany({
+              data: steps.map((step) => ({
+                entityType: "Request",
+                entityId: req.id,
+                stepOrder: step.stepOrder,
+                stepName: step.name,
+                status: "pending", // Initial status for all records
+              }))
+            });
+
+            // Update request status to reflect the first approval step
+            // Use d4 (Onay Bekliyor) as seeded in seed.mjs
+            await tx.request.update({
+              where: { id: req.id },
+              data: { statusId: "d4" }
+            });
+          }
+        }
+
+        // 4. Reserve Budget if department and budget exist
         if (user.departmentId && budgetAmount > 0) {
           const budgetRecord = await tx.budget.findFirst({
             where: {
@@ -205,6 +250,7 @@ export async function POST(req: NextRequest) {
             unitEmail: unitEmail || null,
             ownerUserId: String(user.id),
             tenantId: user.tenantId,
+            departmentId: body.departmentId || user.departmentId,
             items: body.items && body.items.length > 0 ? {
               create: body.items.map((i) => ({
                 name: i.name.trim(),
@@ -228,14 +274,7 @@ export async function POST(req: NextRequest) {
       const existingUser = await prisma.user.findUnique({ where: { email: unitEmail } });
       if (!existingUser) {
         try {
-          const tempPassword = generateTempPassword();
-          const userModule = await import("@/lib/apiAuth"); // Dynamic import to avoid cycles if any
-          // We need bcrypt here. Ensure it is imported at top or dynamically.
-          // Since we cannot easily add top-level imports with replace, we will use dynamic import or assume bcrypt is available if we added it.
-          // Let's rely on adding the import at the top in a separate change if needed, OR use dynamic require if possible.
-          // Better: I will use a separate replace to add imports first.
-
-          // Actually, I can combine logic. But let's do imports first for safety.
+          // Logic for auto-creating user is handled below in the background section
         } catch (err) { }
       }
     }
@@ -260,12 +299,16 @@ export async function POST(req: NextRequest) {
             const safeUnitLabel = unitLabel.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ0-9\s]/g, "").trim() || unitEmail.split("@")[0];
             const username = safeUnitLabel;
 
+            const userRole = await prisma.role.findFirst({ where: { key: "user" } });
+
             await prisma.user.create({
               data: {
                 username,
                 email: unitEmail,
                 passwordHash,
-                role: "birim_evaluator",
+                roleId: userRole?.id || null,
+                tenantId: user.tenantId, // Link to the same tenant
+                isActive: true
               },
             });
 
@@ -302,7 +345,7 @@ export async function POST(req: NextRequest) {
         { label: "Sahibi", value: String((after as any)?.owner?.username || "") },
         { label: "Detay", value: String(body.subject) },
       ];
-      const items = Array.isArray((after as any)?.items) ? ((after as any).items as Array<any>).map((it) => ({ name: String(it.name), quantity: Number(it.quantity), unitPrice: Number(it.unitPrice || 0) })) : [];
+      const items = Array.isArray((after as any)?.items) ? ((after as any).items as Array<{ name: string; quantity: any; unitPrice: any }>).map((it) => ({ name: String(it.name), quantity: Number(it.quantity || 0), unitPrice: Number(it.unitPrice || 0) })) : [];
       const html = renderEmailTemplate("detail", { title: unitLabel ? `Yeni Talep Oluşturuldu – Birim: ${unitLabel}` : "Yeni Talep Oluşturuldu", intro: "Talebin özeti ve kalemleri aşağıdadır.", fields, items, actionUrl: link, actionText: "Talebi Aç" });
       const subject = unitLabel ? `Yeni Talep Oluşturuldu – Birim: ${unitLabel}` : "Yeni Talep Oluşturuldu";
       const owner = await prisma.user.findUnique({ where: { id: String(user.id) } });
@@ -384,6 +427,7 @@ export async function POST(req: NextRequest) {
  *                 page: { type: 'integer' }
  *                 pageSize: { type: 'integer' }
  *                 totalPages: { type: 'integer' }
+ *                 totalPages: { type: 'integer' }
  */
 export async function GET(req: NextRequest) {
   try {
@@ -402,7 +446,7 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, Number(url.searchParams.get("page") || 1));
     const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize") || 20)));
 
-    const where: any = {};
+    const where: Prisma.RequestWhereInput = {};
     if (q) {
       where.OR = [
         { barcode: { contains: q, mode: "insensitive" } },
@@ -415,9 +459,10 @@ export async function GET(req: NextRequest) {
     const dateFromValid = dateFrom && !isNaN(dateFrom.getTime());
     const dateToValid = dateTo && !isNaN(dateTo.getTime());
     if (dateFromValid || dateToValid) {
-      where.createdAt = {};
-      if (dateFromValid) where.createdAt.gte = dateFrom as Date;
-      if (dateToValid) where.createdAt.lte = dateTo as Date;
+      const dateRange: any = {};
+      if (dateFromValid) dateRange.gte = dateFrom;
+      if (dateToValid) dateRange.lte = dateTo;
+      where.createdAt = dateRange;
     }
 
     // Unit-based data isolation - Users only see their unit's data
@@ -429,18 +474,20 @@ export async function GET(req: NextRequest) {
     if (seeAll) {
       // Admin/Satinalma sees all - apply manual filter if requested
       if (unit) {
-        where.unit = { is: { label: unit } };
+        where.unit = { label: unit };
       }
     } else if (user.unitId) {
-      // Non-privileged users only see their unit's requests
       where.unitId = user.unitId;
+    } else if (user.departmentId) {
+      // Users can see requests from their department
+      where.departmentId = user.departmentId;
     } else {
-      // User has no unit assigned - show nothing
+      // User has no unit or department assigned - show nothing
       where.unitId = "___NO_ACCESS___";
     }
 
     if (status) {
-      where.status = { is: { label: status } };
+      where.status = { label: status };
     }
 
     // MULTI-TENANT: Apply enterprise/firm isolation
@@ -452,6 +499,7 @@ export async function GET(req: NextRequest) {
 
     const include = {
       unit: true,
+      department: true,
       status: true,
       currency: true,
     };
@@ -465,16 +513,14 @@ export async function GET(req: NextRequest) {
       take: pageSize,
     });
 
-    const mapped = rows.map((r: any) => ({
+    const mapped = rows.map((r) => ({
       id: r.id,
       barcode: r.barcode,
       date: r.createdAt.toISOString(),
       subject: r.subject,
-      budget:
-        typeof (r as any).budget?.toNumber === "function"
-          ? (r as any).budget.toNumber()
-          : Number(r.budget as any),
+      budget: Number(r.budget || 0),
       unit: r.unit?.label || "",
+      department: r.department?.name || "",
       status: r.status?.label || "",
       currency: r.currency?.label || "",
     }));
@@ -502,7 +548,7 @@ export async function PATCH(req: NextRequest) {
     const body = (await req.json()) as UpdateStatusBody;
     const identifier = String(body.id || body.barcode || "").trim();
     if (!identifier || !body.statusId) return jsonError(400, "missing_fields");
-    const where: any = body.id ? { id: identifier } : { barcode: identifier };
+    const where: Prisma.RequestWhereInput = body.id ? { id: identifier } : { barcode: identifier };
 
     // MULTI-TENANT: Ensure the user can only edit within their own tenant
     if (!user.isSuperAdmin) {
@@ -512,7 +558,8 @@ export async function PATCH(req: NextRequest) {
     const before = await prisma.request.findFirst({ where, include: { status: true, owner: true, responsible: true, unit: true } });
     if (!before) return jsonError(404, "not_found");
     const updated = await prisma.request.update({ where: { id: before.id }, data: { statusId: String(body.statusId) } });
-    const after = await prisma.request.findUnique({ where, include: { status: true, owner: true, responsible: true, unit: true } });
+    const after = await prisma.request.findUnique({ where: { id: before.id }, include: { status: true, owner: true, responsible: true, unit: true } });
+
     // Notifications
     const prev = before?.status?.label || "";
     const next = after?.status?.label || "";

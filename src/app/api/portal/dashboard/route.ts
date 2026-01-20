@@ -11,24 +11,24 @@ export async function GET(req: NextRequest) {
         // Fetch user and their supplier relation
         const user = await prisma.user.findUnique({
             where: { id: auth.userId },
-            select: { supplierId: true }
+            select: { tenantId: true }
         });
 
-        if (!user?.supplierId) {
+        if (!user?.tenantId) {
             return jsonError(403, "supplier_access_denied", { message: "Bu hesap bir tedarikçi ile iliştirilmemiş." });
         }
 
         // Fetch summary totals
         const [rfqCount, offerCount, orderCount, contractCount] = await Promise.all([
-            prisma.rfqSupplier.count({ where: { supplierId: user.supplierId } }),
-            prisma.offer.count({ where: { rfqSupplier: { supplierId: user.supplierId } } }),
-            prisma.order.count({ where: { supplierId: user.supplierId } }),
-            prisma.contract.count({ where: { order: { supplierId: user.supplierId } } })
+            prisma.rfqSupplier.count({ where: { supplierId: user.tenantId } }),
+            prisma.offer.count({ where: { rfqSupplier: { supplierId: user.tenantId } } }),
+            prisma.order.count({ where: { supplierId: user.tenantId } }),
+            prisma.contract.count({ where: { order: { supplierId: user.tenantId } } })
         ]);
 
         // Fetch RFQs assigned to this supplier via RfqSupplier junction
         const participations = await prisma.rfqSupplier.findMany({
-            where: { supplierId: user.supplierId },
+            where: { supplierId: user.tenantId },
             include: {
                 rfq: {
                     select: {
@@ -40,7 +40,9 @@ export async function GET(req: NextRequest) {
                         createdAt: true
                     }
                 },
-                offer: {
+                offers: {
+                    orderBy: { round: 'desc' },
+                    take: 1,
                     select: {
                         id: true,
                         submittedAt: true,
@@ -53,22 +55,25 @@ export async function GET(req: NextRequest) {
             orderBy: { rfq: { createdAt: "desc" } }
         });
 
-        const items = participations.map(p => ({
-            participationId: p.id,
-            rfqId: p.rfq.id,
-            rfxCode: p.rfq.rfxCode,
-            title: p.rfq.title,
-            status: p.rfq.status,
-            deadline: p.rfq.deadline,
-            stage: p.stage, // SENT, VIEWED, OFFERED, DECLINED
-            hasSubmittedOffer: !!p.offer,
-            offerDetails: p.offer ? {
-                id: p.offer.id,
-                submittedAt: p.offer.submittedAt,
-                totalAmount: p.offer.totalAmount,
-                currency: p.offer.currency
-            } : null
-        }));
+        const items = participations.map(p => {
+            const latestOffer = p.offers[0] || null;
+            return {
+                participationId: p.id,
+                rfqId: p.rfq.id,
+                rfxCode: p.rfq.rfxCode,
+                title: p.rfq.title,
+                status: p.rfq.status,
+                deadline: p.rfq.deadline,
+                stage: p.stage, // SENT, VIEWED, OFFERED, DECLINED
+                hasSubmittedOffer: !!latestOffer,
+                offerDetails: latestOffer ? {
+                    id: latestOffer.id,
+                    submittedAt: latestOffer.submittedAt,
+                    totalAmount: latestOffer.totalAmount,
+                    currency: latestOffer.currency
+                } : null
+            };
+        });
 
         const totals = {
             rfqs: rfqCount,

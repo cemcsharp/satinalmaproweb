@@ -10,6 +10,16 @@ import Button from "@/components/ui/Button";
 
 type RequestItem = { id: string; name: string; quantity: number; unit: string | null; unitPrice?: number };
 type RequestComment = { id: string; text: string; author: string | null; createdAt: string | null };
+type ApprovalRecord = {
+  id: string;
+  stepOrder: number;
+  stepName: string;
+  status: string;
+  approver: string | null;
+  approverRole: string | null;
+  comment: string | null;
+  processedAt: string | null;
+};
 type RequestDetail = {
   id: string;
   barcode: string;
@@ -17,6 +27,7 @@ type RequestDetail = {
   justification?: string | null;
   budget: number;
   unit?: string | null;
+  department?: string | null;
   status?: string | null;
   currency?: string | null;
   date?: string | null;
@@ -26,6 +37,7 @@ type RequestDetail = {
   responsible?: string | null;
   items: RequestItem[];
   comments?: RequestComment[];
+  approvalRecords?: ApprovalRecord[];
 };
 
 export default function TalepDetayPage() {
@@ -38,6 +50,8 @@ export default function TalepDetayPage() {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSatinalma, setIsSatinalma] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     // Fetch Permissions
@@ -49,6 +63,7 @@ export default function TalepDetayPage() {
       setIsSatinalma(satinalma);
 
       if (p.permissions) setPermissions(p.permissions);
+      setUserRole(p.role);
     }).catch(() => { });
 
     if (!id) return;
@@ -80,6 +95,34 @@ export default function TalepDetayPage() {
     if (v.includes("bekle") || v.includes("işlem")) return "info";
     return "default";
   };
+
+  const handleApprove = async (action: "approve" | "reject", comment?: string) => {
+    if (!data) return;
+    setProcessing(true);
+    try {
+      const res = await fetch(`/api/approval/Request/${data.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, comment })
+      });
+      if (!res.ok) {
+        const j = await res.json();
+        throw new Error(j.message || j.error || "İşlem başarısız");
+      }
+      // Refresh data
+      const fresh = await fetch(`/api/talep/${data.id}`).then(r => r.json());
+      setData(fresh);
+      alert(action === "approve" ? "Talep onaylandı." : "Talep reddedildi.");
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const currentPendingStep = data.approvalRecords?.find(r => r.status === "pending");
+  const canUserApproveCurrentStep = currentPendingStep && (isAdmin || userRole === currentPendingStep.approverRole);
+
 
   if (loading) return <div className="p-10 text-center"><Skeleton height={300} /></div>;
   if (error) return <div className="p-10 text-center text-red-600">{error}</div>;
@@ -162,8 +205,8 @@ export default function TalepDetayPage() {
                 <div className="text-sm text-slate-900">{data.relatedPerson || "-"}</div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Birim</label>
-                <div className="text-sm text-slate-900">{data.unit || "-"}</div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Departman (Birim)</label>
+                <div className="text-sm text-slate-900">{data.department || data.unit || "-"}</div>
               </div>
               {data.unitEmail && (
                 <div>
@@ -241,6 +284,94 @@ export default function TalepDetayPage() {
               </div>
             </div>
           </Card>
+
+          {/* Onay Akışı */}
+          {data.approvalRecords && data.approvalRecords.length > 0 && (
+            <Card title="Onay Geçmişi" className="p-5">
+              <div className="space-y-6">
+                {data.approvalRecords.map((record, idx) => (
+                  <div key={record.id} className="relative flex gap-4">
+                    {idx !== data.approvalRecords!.length - 1 && (
+                      <div className="absolute left-3 top-8 bottom-0 w-0.5 bg-slate-100"></div>
+                    )}
+                    <div className={`z-10 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${record.status === "approved" ? "bg-green-100 text-green-600" :
+                        record.status === "rejected" ? "bg-red-100 text-red-600" :
+                          "bg-blue-50 text-blue-500 border border-blue-100"
+                      }`}>
+                      {record.status === "approved" ? "✓" : record.status === "rejected" ? "✕" : record.stepOrder}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <h4 className="text-sm font-semibold text-slate-900">{record.stepName}</h4>
+                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${record.status === "approved" ? "bg-green-50 text-green-700" :
+                            record.status === "rejected" ? "bg-red-50 text-red-700" :
+                              "bg-blue-50 text-blue-700"
+                          }`}>
+                          {record.status === "approved" ? "Onaylandı" : record.status === "rejected" ? "Reddedildi" : "Bekliyor"}
+                        </span>
+                      </div>
+                      {record.approver && (
+                        <div className="text-xs text-slate-500 mt-0.5">Sorumlu: {record.approver}</div>
+                      )}
+                      {record.approverRole && !record.approver && (
+                        <div className="text-xs text-slate-400 mt-0.5">Yetki: {record.approverRole}</div>
+                      )}
+                      {record.comment && (
+                        <div className="mt-2 text-xs text-slate-600 bg-slate-50 p-2 rounded italic border-l-2 border-slate-200">
+                          "{record.comment}"
+                        </div>
+                      )}
+                      {record.processedAt && (
+                        <div className="text-[10px] text-slate-400 mt-1">{new Date(record.processedAt).toLocaleString("tr-TR")}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Onay Butonları */}
+              {canUserApproveCurrentStep && (
+                <div className="mt-8 pt-6 border-t border-slate-100 space-y-4">
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Onay İşlemi</div>
+                  <textarea
+                    id="approvalComment"
+                    className="w-full text-sm p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-400"
+                    placeholder="Onay/Red notunuzu buraya yazabilirsiniz..."
+                    rows={3}
+                  ></textarea>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="gradient"
+                      fullWidth
+                      loading={processing}
+                      onClick={() => {
+                        const comment = (document.getElementById("approvalComment") as HTMLTextAreaElement)?.value;
+                        handleApprove("approve", comment);
+                      }}
+                    >
+                      Onayla
+                    </Button>
+                    <Button
+                      variant="outline"
+                      fullWidth
+                      loading={processing}
+                      className="text-red-600 hover:bg-red-50 hover:text-red-700 border-red-100"
+                      onClick={() => {
+                        const comment = (document.getElementById("approvalComment") as HTMLTextAreaElement)?.value;
+                        if (!comment) {
+                          alert("Red işlemi için gerekçe yazmanız zorunludur.");
+                          return;
+                        }
+                        handleApprove("reject", comment);
+                      }}
+                    >
+                      Reddet
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
         </div>
       </div >
     </section >

@@ -10,6 +10,7 @@ import Modal from "@/components/ui/Modal"; // Added
 import { useToast } from "@/components/ui/Toast";
 import { formatNumberTR } from "@/lib/format";
 import Skeleton from "@/components/ui/Skeleton";
+import NegotiationPanel from "@/components/rfq/NegotiationPanel";
 
 export default function RfqDetayPage() {
     const { id } = useParams();
@@ -44,16 +45,14 @@ export default function RfqDetayPage() {
                         let minPrice = Infinity;
 
                         d.suppliers.forEach((s: any) => {
-                            if (!s.offer?.items) return;
-                            const offerItem = s.offer.items.find((oi: any) => oi.rfqItemId === item.id);
+                            const latestOffer = s.offers?.[0]; // Use array directly
+                            if (!latestOffer?.items) return;
+                            const offerItem = latestOffer.items.find((oi: any) => oi.rfqItemId === item.id);
                             if (offerItem) {
-                                // Convert price to base currency if needed? Assuming same currency or simple compare for now.
-                                // For MVP assumes same currency or user checks. 
-                                // Ideally normalize currency but that's complex.
                                 const price = Number(offerItem.unitPrice);
                                 if (price < minPrice && price > 0) {
                                     minPrice = price;
-                                    bestOfferId = s.offer.id;
+                                    bestOfferId = latestOffer.id;
                                 }
                             }
                         });
@@ -158,8 +157,14 @@ export default function RfqDetayPage() {
     if (!data || data.error) return <div className="p-10 text-center">RFQ Bulunamadı</div>;
 
     const suppliers = data.suppliers || [];
-    const offers = suppliers.filter((s: any) => s.offer).map((s: any) => ({ ...s.offer, supplierName: s.contactName || s.supplier?.name }));
-    const sortedOffers = [...offers].sort((a, b) => Number(a.totalAmount) - Number(b.totalAmount)); // Cheapest first
+    const offers = suppliers
+        .filter((s: any) => s.offers && s.offers.length > 0)
+        .map((s: any) => ({ ...s.offers[0], supplierName: s.contactName || s.supplier?.name }));
+    const sortedOffers = [...offers].sort((a, b) => {
+        const amountA = a.baseTotalAmount || Number(a.totalAmount);
+        const amountB = b.baseTotalAmount || Number(b.totalAmount);
+        return amountA - amountB;
+    }); // Cheapest first (normalized to Base Currency)
 
     return (
         <div className="space-y-6 max-w-6xl mx-auto pb-10">
@@ -206,6 +211,20 @@ export default function RfqDetayPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-6">
+                    <NegotiationPanel
+                        rfqId={id as string}
+                        negotiationStatus={data.negotiationStatus}
+                        negotiationRound={data.negotiationRound}
+                        negotiationDeadline={data.negotiationDeadline}
+                        onRefresh={refresh}
+                        stats={{
+                            totalParticipants: suppliers.length,
+                            offeredParticipants: suppliers.filter((s: any) => s.offers?.length > 0).length,
+                            averagePrice: offers.length > 0 ? offers.reduce((a: any, b: any) => a + Number(b.baseTotalAmount || b.totalAmount), 0) / offers.length : 0,
+                            bestPrice: sortedOffers.length > 0 ? Number(sortedOffers[0].baseTotalAmount || sortedOffers[0].totalAmount) : 0
+                        }}
+                    />
+
                     <Card title="Katılımcı Durumu">
                         <ul className="space-y-3">
                             {suppliers.map((sup: any) => (
@@ -215,10 +234,10 @@ export default function RfqDetayPage() {
                                         <div className="text-xs text-slate-500">{sup.email}</div>
                                     </div>
                                     <Badge variant={
-                                        sup.stage === "OFFERED" ? "success" :
+                                        sup.offers?.length > 0 ? "success" :
                                             sup.stage === "VIEWED" ? "warning" : "default"
                                     }>
-                                        {sup.stage === "OFFERED" ? "Teklif Verdi" :
+                                        {sup.offers?.length > 0 ? "Teklif Verdi" :
                                             sup.stage === "VIEWED" ? "Görüntüledi" : "Bekliyor"}
                                     </Badge>
                                 </li>
@@ -259,13 +278,24 @@ export default function RfqDetayPage() {
                                                 <tr key={off.id} className={idx === 0 ? "bg-green-50/50" : ""}>
                                                     <td className="p-3">
                                                         <div className="font-bold text-slate-900">{off.supplierName}</div>
-                                                        {idx === 0 && <span className="text-xs text-green-600 font-bold">★ En İyi Teklif</span>}
+                                                        <div className="flex gap-1 items-center mt-1">
+                                                            <Badge variant="info" className="text-[10px] py-0 px-1.5">Tur: {off.round}</Badge>
+                                                            {idx === 0 && <span className="text-xs text-green-600 font-bold">★ Lider</span>}
+                                                        </div>
                                                     </td>
-                                                    <td className="p-3 text-right font-mono text-base font-semibold text-slate-800">
-                                                        {formatNumberTR(off.totalAmount)} {off.currency}
+                                                    <td className="p-3 text-right">
+                                                        <div className="font-mono text-base font-semibold text-slate-800">
+                                                            {formatNumberTR(off.totalAmount)} {off.currency}
+                                                        </div>
+                                                        {off.currency !== "TRY" && off.baseTotalAmount && (
+                                                            <div className="text-xs text-slate-500 mt-1">
+                                                                ≈ {formatNumberTR(off.baseTotalAmount)} TRY
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td className="p-3 text-center text-slate-500">
-                                                        {new Date(off.submittedAt).toLocaleDateString("tr-TR")}
+                                                        <div className="text-xs">{new Date(off.submittedAt).toLocaleDateString("tr-TR")}</div>
+                                                        <div className="text-[10px]">{new Date(off.submittedAt).toLocaleTimeString("tr-TR", { hour: '2-digit', minute: '2-digit' })}</div>
                                                     </td>
                                                     <td className="p-3 text-right space-x-2">
                                                         <Button
@@ -305,11 +335,14 @@ export default function RfqDetayPage() {
                                         <tr>
                                             <th className="p-4 bg-slate-100/80 backdrop-blur-sm border-b text-left min-w-[200px] text-slate-500 font-bold uppercase tracking-wider text-[10px]">Kalem Detayları</th>
                                             <th className="p-4 bg-slate-100/80 backdrop-blur-sm border-b text-center w-[100px] text-slate-500 font-bold uppercase tracking-wider text-[10px]">Talep Miktarı</th>
-                                            {suppliers.filter((s: any) => s.offer).map((s: any) => (
+                                            {suppliers.filter((s: any) => s.offers?.length > 0).map((s: any) => (
                                                 <th key={s.id} className="p-4 bg-slate-50/80 backdrop-blur-sm border-b border-l text-center min-w-[160px]">
                                                     <div className="font-black text-slate-800 text-sm tracking-tight">{s.contactName || s.supplier?.name}</div>
-                                                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[9px] font-black mt-1 uppercase">
-                                                        {s.offer.currency} Teklifi
+                                                    <div className="flex flex-col items-center gap-1 mt-1">
+                                                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[9px] font-black uppercase">
+                                                            {s.offers[0].currency} Teklifi
+                                                        </div>
+                                                        <Badge variant="info" className="text-[9px] py-0 px-1.5">Tur: {s.offers[0].round}</Badge>
                                                     </div>
                                                 </th>
                                             ))}
@@ -319,9 +352,9 @@ export default function RfqDetayPage() {
                                         {data.items.map((item: any) => {
                                             // Calculate min price for heatmap
                                             const prices = suppliers
-                                                .filter((s: any) => s.offer)
+                                                .filter((s: any) => s.offers?.length > 0)
                                                 .map((s: any) => {
-                                                    const oi = s.offer.items.find((oi: any) => oi.rfqItemId === item.id);
+                                                    const oi = s.offers[0].items.find((oi: any) => oi.rfqItemId === item.id);
                                                     return oi ? Number(oi.unitPrice) : null;
                                                 })
                                                 .filter((p: number | null): p is number => p !== null);
@@ -338,9 +371,10 @@ export default function RfqDetayPage() {
                                                         <div className="font-black text-slate-700">{item.quantity}</div>
                                                         <div className="text-[10px] text-slate-400 font-bold uppercase">{item.unit}</div>
                                                     </td>
-                                                    {suppliers.filter((s: any) => s.offer).map((s: any) => {
-                                                        const offerItem = s.offer.items.find((oi: any) => oi.rfqItemId === item.id);
-                                                        const isSelected = matrixSelections[item.id] === s.offer.id;
+                                                    {suppliers.filter((s: any) => s.offers?.length > 0).map((s: any) => {
+                                                        const latestOffer = s.offers[0];
+                                                        const offerItem = latestOffer.items.find((oi: any) => oi.rfqItemId === item.id);
+                                                        const isSelected = matrixSelections[item.id] === latestOffer.id;
                                                         const price = offerItem ? Number(offerItem.unitPrice) : 0;
                                                         const isMin = price > 0 && price === minPrice;
 
@@ -348,7 +382,7 @@ export default function RfqDetayPage() {
                                                             <td
                                                                 key={s.id}
                                                                 className={`p-4 border-b border-l text-center cursor-pointer transition-all relative ${isSelected ? "bg-blue-600 shadow-[inset_0_0_0_2px_rgba(255,255,255,0.2)]" : isMin ? "bg-sky-50/50" : "hover:bg-slate-50"}`}
-                                                                onClick={() => setMatrixSelections(prev => ({ ...prev, [item.id]: s.offer.id }))}
+                                                                onClick={() => setMatrixSelections(prev => ({ ...prev, [item.id]: latestOffer.id }))}
                                                             >
                                                                 {offerItem ? (
                                                                     <div className="space-y-2">

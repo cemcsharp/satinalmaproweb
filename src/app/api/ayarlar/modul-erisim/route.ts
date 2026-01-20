@@ -57,8 +57,8 @@ export async function GET(req: NextRequest) {
         });
 
         // Modül aktiflik durumlarını getir
-        const moduleSettings = await prisma.systemSetting.findMany({
-            where: { group: "modules" }
+        const moduleSettings = await prisma.systemSettings.findMany({
+            where: { category: "modules" }
         });
 
         // Yapıyı düzenle

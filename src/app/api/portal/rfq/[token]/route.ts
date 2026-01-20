@@ -29,6 +29,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
             return jsonError(404, "invitation_not_found");
         }
 
+        // 1.5. Security: Cross-check tenantId if user is logged in
+        const { getUserWithPermissions } = await import("@/lib/apiAuth");
+        const auth = await getUserWithPermissions(req);
+        if (auth && auth.tenantId && invitation.supplierId && auth.tenantId !== invitation.supplierId) {
+            console.warn(`[Portal Security] Tenant mismatch: User ${auth.id} (Tenant: ${auth.tenantId}) tried to access Token belonging to Supplier ${invitation.supplierId}`);
+            return jsonError(403, "supplier_mismatch", { message: "Bu teklif daveti başka bir firmaya aittir. Lütfen kendi hesabınızla giriş yapınız." });
+        }
+
         // 2. Check deadline
         if (invitation.rfq.deadline && new Date(invitation.rfq.deadline) < new Date()) {
             await logAuditWithRequest(req, {
@@ -53,9 +61,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
         // 4. Use transaction to save Offer and Items
         const result = await prisma.$transaction(async (tx) => {
-            // Create or update offer
+            const currentRound = invitation.rfq.negotiationRound;
+
+            // Create or update offer for the current round
             const offer = await tx.offer.upsert({
-                where: { rfqSupplierId: invitation.id },
+                where: {
+                    rfqSupplierId_round: {
+                        rfqSupplierId: invitation.id,
+                        round: currentRound
+                    }
+                },
                 update: {
                     totalAmount,
                     currency,
@@ -65,6 +80,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
                 },
                 create: {
                     rfqSupplierId: invitation.id,
+                    round: currentRound,
                     totalAmount,
                     currency,
                     validUntil: validUntil ? new Date(validUntil) : null,

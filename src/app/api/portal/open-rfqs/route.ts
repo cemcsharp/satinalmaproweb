@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
                         supplierId: supplier.id
                     },
                     include: {
-                        offer: true
+                        offers: { orderBy: { round: 'desc' }, take: 1 }
                     }
                 }
             },
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
                 status: rfq.status,
                 itemCount: rfq.items.length,
                 categoryName: categories.length > 0 ? categories.join(", ") : null,
-                hasExistingOffer: !!participation?.offer,
+                hasExistingOffer: !!(participation?.offers && participation.offers.length > 0),
                 token: participation?.token || null
             };
         });

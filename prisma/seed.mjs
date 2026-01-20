@@ -170,6 +170,8 @@ async function main() {
   await upsertCategory("durum", "Talep/Sipariş Durumu", [
     { id: "d1", label: "Taslak" },
     { id: "d2", label: "Onaylandı" },
+    { id: "d3", label: "Reddedildi" },
+    { id: "d4", label: "Onay Bekliyor" },
   ]);
   await upsertCategory("paraBirimi", "Para Birimi", [
     { id: "c1", label: "TRY" },

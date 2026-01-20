@@ -193,7 +193,7 @@ function TalepListeContent() {
   const exportColumns: ExportColumn[] = [
     { header: "Talep No", accessor: "barcode" }, // Changed from formattedId to barcode based on existing data
     { header: "Talep Eden", accessor: (row) => (row as any).requestorName || "-" }, // Assuming requestorName exists or can be derived
-    { header: "Birim", accessor: (row: Request) => row.unit || "-" }, // Changed from department to unit
+    { header: "Birim", accessor: (row: any) => row.department || row.unit || "-" },
     { header: "Tarih", accessor: (row: Request) => row.date ? new Date(row.date).toLocaleDateString("tr-TR") : "-" },
     { header: "Konu", accessor: "subject" },
     { header: "Tutar", accessor: (row: Request) => typeof row.budget === 'number' ? row.budget.toLocaleString("tr-TR", { style: "currency", currency: row.currency || "TRY" }) : "-" }, // Changed from budgetEstimate to budget
@@ -202,7 +202,7 @@ function TalepListeContent() {
 
   const exportCsv = () => {
     const header = "Barkod,Tarih,Konu,Bütçe,Birim,Durum,Para Birimi";
-    const lines = items.map((r) => [r.barcode, new Date(r.date).toLocaleDateString(), r.subject, r.budget, r.unit, r.status, r.currency].join(","));
+    const lines = items.map((r: any) => [r.barcode, new Date(r.date).toLocaleDateString(), r.subject, r.budget, r.department || r.unit, r.status, r.currency].join(","));
     const csv = [header, ...lines].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -298,10 +298,18 @@ function TalepListeContent() {
           defaultValue={query}
           onSearch={(val) => { setQuery(val); setPage(1); }}
         />
-        <Select size="sm" value={unit} onChange={(e) => setUnit(e.target.value)}>
+        <Select size="sm" value={unit} onChange={(e) => { setUnit(e.target.value); setPage(1); }}>
           <option value="">Birim (tümü)</option>
-          <option>Satın Alma</option>
-          <option>Üretim</option>
+          {options?.departman?.map((d: any) => (
+            <option key={d.id} value={d.label}>{d.label}</option>
+          ))}
+          {/* Legacy units support if needed */}
+          {!options?.departman && (
+            <>
+              <option>Satın Alma</option>
+              <option>Üretim</option>
+            </>
+          )}
         </Select>
         <Select size="sm" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Durum (tümü)</option>
@@ -330,7 +338,7 @@ function TalepListeContent() {
               <TH>Tarih</TH>
               <TH>Konu</TH>
               <TH>Bütçe</TH>
-              <TH>Birim</TH>
+              <TH>Departman (Birim)</TH>
               <TH>Durum</TH>
               <TH>Para Birimi</TH>
               <TH className="w-[1%] whitespace-nowrap text-right">İşlemler</TH>
@@ -388,7 +396,7 @@ function TalepListeContent() {
                     </div>
                   </TD>
                   <TD>
-                    <span className="text-sm text-slate-600">{r.unit}</span>
+                    <span className="text-sm text-slate-600">{(r as any).department || r.unit}</span>
                   </TD>
                   <TD>
                     <Badge variant={statusVariant(r.status)} className="shadow-sm font-medium">

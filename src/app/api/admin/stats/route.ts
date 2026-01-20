@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
             prisma.tenant.count({ where: { isSupplier: true, registrationStatus: "approved" } }),
             prisma.rfq.count(),
             prisma.rfq.count({ where: { status: "OPEN" } }),
-            prisma.rfqOffer.count(),
+            prisma.offer.count(),
             prisma.order.count()
         ]);
 

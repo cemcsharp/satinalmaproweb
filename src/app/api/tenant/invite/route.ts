@@ -101,8 +101,58 @@ export async function POST(req: NextRequest) {
             invitation
         });
 
-    } catch (error) {
-        console.error("Davet oluşturulurken hata:", error);
-        return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    } catch (error: any) {
+        console.error("Davet oluşturulurken KRİTİK HATA:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        return NextResponse.json({
+            error: "Sunucu hatası: " + (error.message || "Bilinmeyen hata"),
+            details: error.toString()
+        }, { status: 500 });
+    }
+}
+
+/**
+ * Bekleyen davetiyeyi iptal eder (siler).
+ */
+export async function DELETE(req: NextRequest) {
+    try {
+        const user = await getSessionUser();
+        if (!user || !user.tenantId) {
+            return NextResponse.json({ error: "Yetkisiz erişim" }, { status: 401 });
+        }
+
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get("id");
+
+        if (!id) {
+            return NextResponse.json({ error: "Davetiye ID gereklidir" }, { status: 400 });
+        }
+
+        // Davetiyeyi bul ve kontrol et
+        const invite = await prisma.invitation.findUnique({
+            where: { id }
+        });
+
+        if (!invite) {
+            return NextResponse.json({ error: "Davetiye bulunamadı" }, { status: 404 });
+        }
+
+        if (invite.tenantId !== user.tenantId) {
+            return NextResponse.json({ error: "Bu davetiyeyi silme yetkiniz yok" }, { status: 403 });
+        }
+
+        if (invite.status !== "pending") {
+            return NextResponse.json({ error: "Sadece bekleyen davetiyeler iptal edilebilir" }, { status: 400 });
+        }
+
+        // Silme işlemi
+        await prisma.invitation.delete({
+            where: { id }
+        });
+
+        return NextResponse.json({ success: true, message: "Davetiye iptal edildi" });
+
+    } catch (error: any) {
+        console.error("Davetiye silme hatası:", error);
+        return NextResponse.json({ error: "Sunucu hatası: " + error.message }, { status: 500 });
     }
 }

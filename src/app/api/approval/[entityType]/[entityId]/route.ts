@@ -141,8 +141,32 @@ export async function POST(
         }
 
         // Check if user has permission to approve this step
-        // TODO: Add role-based permission check based on step.approverRole
-        const userId = (session.user as any).id;
+        const { getUserWithPermissions } = await import("@/lib/apiAuth");
+        const user = await getUserWithPermissions(req);
+
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Validation: Must be same tenant
+        if (entityType === "Request") {
+            const reqData = await prisma.request.findUnique({ where: { id: entityId }, select: { tenantId: true } });
+            if (reqData && reqData.tenantId !== user.tenantId && !user.isSuperAdmin) {
+                return NextResponse.json({ error: "Tenant mismatch" }, { status: 403 });
+            }
+        }
+
+        // Role Check: If step has an approverRole, user must have that role (or be admin)
+        if (step.approverRole && !user.isAdmin) {
+            if (user.role !== step.approverRole) {
+                return NextResponse.json({
+                    error: "Insufficient permissions",
+                    message: `Bu adımı onaylamak için '${step.approverRole}' rolüne sahip olmalısınız.`
+                }, { status: 403 });
+            }
+        }
+
+        const userId = user.id;
 
         // Create or update approval record
         const existingRecord = existingRecords.find(r => r.stepOrder === targetStepOrder);
@@ -187,27 +211,29 @@ export async function POST(
         // Update entity status
         if (entityType === "Request") {
             if (anyRejected) {
-                // Find "Reddedildi" status
-                const rejectedStatus = await prisma.optionItem.findFirst({
-                    where: { category: { key: "durum" }, label: { contains: "Reddedil" } }
+                // Find "Reddedildi" status (Seed ID: d3)
+                let rejectedStatusId = "d3";
+                const dbStatus = await prisma.optionItem.findFirst({
+                    where: { OR: [{ id: "d3" }, { label: { contains: "Red" } }], category: { key: "durum" } }
                 });
-                if (rejectedStatus) {
-                    await prisma.request.update({
-                        where: { id: entityId },
-                        data: { statusId: rejectedStatus.id }
-                    });
-                }
+                if (dbStatus) rejectedStatusId = dbStatus.id;
+
+                await prisma.request.update({
+                    where: { id: entityId },
+                    data: { statusId: rejectedStatusId }
+                });
             } else if (allApproved) {
-                // Find "Onaylandı" status
-                const approvedStatus = await prisma.optionItem.findFirst({
-                    where: { category: { key: "durum" }, label: { contains: "Onayl" } }
+                // Find "Onaylandı" status (Seed ID: d2)
+                let approvedStatusId = "d2";
+                const dbStatus = await prisma.optionItem.findFirst({
+                    where: { OR: [{ id: "d2" }, { label: { contains: "Onayl" } }], category: { key: "durum" } }
                 });
-                if (approvedStatus) {
-                    await prisma.request.update({
-                        where: { id: entityId },
-                        data: { statusId: approvedStatus.id }
-                    });
-                }
+                if (dbStatus) approvedStatusId = dbStatus.id;
+
+                await prisma.request.update({
+                    where: { id: entityId },
+                    data: { statusId: approvedStatusId }
+                });
             }
         }
 

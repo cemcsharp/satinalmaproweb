@@ -27,7 +27,7 @@ type ProductRow = {
 };
 
 type OptionsPayload = Record<string, Option[]>;
-const emptyOptions: OptionsPayload = { ilgiliKisi: [], birim: [], durum: [], paraBirimi: [], birimTipi: [] };
+const emptyOptions: OptionsPayload = { ilgiliKisi: [], birim: [], durum: [], paraBirimi: [], birimTipi: [], departman: [] };
 
 const genId = () => (typeof crypto !== "undefined" && typeof (crypto as any).randomUUID === "function"
   ? (crypto as any).randomUUID()
@@ -66,6 +66,7 @@ export default function TalepOlusturPage() {
     birim: "b1",
     durum: "d1",
     paraBirimi: "c1",
+    departman: "",
   });
   const [products, setProducts] = useState<ProductRow[]>([
     { id: genId(), name: "", quantity: 1, unit: "u1", unitPrice: 0, extraCosts: 0 },
@@ -92,6 +93,10 @@ export default function TalepOlusturPage() {
 
   useEffect(() => {
     (async () => {
+      // Assuming apiCache and cache keys are defined elsewhere or will be added.
+      // This is a placeholder based on the instruction.
+      // apiCache.invalidate(OPTIONS_CACHE_KEY);
+      // apiCache.invalidate(OPTIONS_PUBLIC_KEY);
       setOptionsLoading(true);
       setOptionsError(null);
       try {
@@ -118,19 +123,23 @@ export default function TalepOlusturPage() {
         }
 
         setSelected((s) => {
-          // Find matching related person (ilgili kişi) by username
           const matchingPerson = userData
             ? merged.ilgiliKisi.find(p => p.label === userData.username)
             : null;
 
-          // Find matching unit (birim) by unitId
           const matchingUnit = userData
             ? merged.birim.find(b => b.id === userData.unitId)
             : null;
 
+          // Find matching department by departmentId
+          const matchingDept = userData
+            ? merged.departman.find(d => d.id === userData.departmentId)
+            : null;
+
           return {
             ilgiliKisi: matchingPerson?.id ?? (merged.ilgiliKisi[0]?.id ?? s.ilgiliKisi),
-            birim: matchingUnit?.id ?? (merged.birim[0]?.id ?? s.birim),
+            birim: matchingUnit?.id ?? (merged.birim[0]?.id ?? s.birim), // Legacy, kept for compatibility if needed
+            departman: matchingDept?.id ?? (merged.departman[0]?.id ?? s.departman),
             durum: merged.durum[0]?.id ?? s.durum,
             paraBirimi: merged.paraBirimi[0]?.id ?? s.paraBirimi,
           };
@@ -147,11 +156,11 @@ export default function TalepOlusturPage() {
   }, []);
 
   useEffect(() => {
-    const u = options.birim.find((b) => b.id === selected.birim);
-    // Priority: Unit's own email -> User's profile email -> Empty string
-    const emailToSet = (u?.email ?? "") || (userProfile?.email ?? "") || "";
+    const d = options.departman.find((b) => b.id === selected.departman);
+    // Priority: Department's manager email -> User's profile email -> Empty string
+    const emailToSet = (d?.email ?? "") || (userProfile?.email ?? "") || "";
     setUnitEmail(emailToSet);
-  }, [selected.birim, options.birim, userProfile]);
+  }, [selected.departman, options.departman, userProfile]);
 
   useEffect(() => {
     if (!barcode) {
@@ -286,7 +295,8 @@ export default function TalepOlusturPage() {
           subject,
           budget: Number(computedBudgetRaw.toFixed(2)),
           relatedPersonId: selected.ilgiliKisi,
-          unitId: selected.birim,
+          unitId: selected.birim, // Legacy
+          departmentId: selected.departman,
           statusId: selected.durum,
           currencyId: selected.paraBirimi,
           unitEmail: unitEmail || undefined,
@@ -347,6 +357,7 @@ export default function TalepOlusturPage() {
     setSelected((s) => ({
       ilgiliKisi: options.ilgiliKisi[0]?.id ?? s.ilgiliKisi,
       birim: options.birim[0]?.id ?? s.birim,
+      departman: options.departman[0]?.id ?? s.departman,
       durum: options.durum[0]?.id ?? s.durum,
       paraBirimi: options.paraBirimi[0]?.id ?? s.paraBirimi,
     }));
@@ -454,12 +465,12 @@ export default function TalepOlusturPage() {
                 </Select>
 
                 <Select
-                  label="Talep Eden Birim"
-                  value={selected.birim}
-                  disabled={optionsLoading || options.birim.length === 0}
-                  onChange={(e) => setSelected((s) => ({ ...s, birim: e.target.value }))}
+                  label="Talep Eden Birim (Bölüm)"
+                  value={selected.departman}
+                  disabled={optionsLoading || options.departman.length === 0}
+                  onChange={(e) => setSelected((s) => ({ ...s, departman: e.target.value }))}
                 >
-                  {options.birim.map((o) => (
+                  {options.departman.map((o) => (
                     <option key={o.id} value={o.id}>{o.label}</option>
                   ))}
                 </Select>

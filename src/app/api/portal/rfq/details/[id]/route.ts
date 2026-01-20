@@ -13,23 +13,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         // Fetch user and their supplier relation
         const user = await prisma.user.findUnique({
             where: { id: auth.userId },
-            select: { supplierId: true }
+            select: { tenantId: true }
         });
 
-        if (!user?.supplierId) return jsonError(403, "supplier_access_denied");
+        if (!user?.tenantId) return jsonError(403, "supplier_access_denied");
 
         // Ensure the supplier is assigned to this RFX
         const participation = await prisma.rfqSupplier.findFirst({
-            where: { rfqId, supplierId: user.supplierId },
+            where: { rfqId, supplierId: user.tenantId },
             include: {
                 rfq: {
                     include: {
                         items: true,
                         deliveryAddress: true,
-                        company: true
+                        buyer: true
                     }
                 },
-                offer: {
+                offers: {
+                    orderBy: { round: 'desc' },
+                    take: 1,
                     include: {
                         items: true
                     }
@@ -48,9 +50,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         }
 
         return NextResponse.json({
-            participationId: participation.id,
-            rfq: participation.rfq,
-            existingOffer: participation.offer
+            participationId: (participation as any).id,
+            rfq: (participation as any).rfq,
+            existingOffer: (participation as any).offers?.[0] || null
         });
     } catch (e: any) {
         return jsonError(500, "server_error", { message: e.message });
@@ -66,22 +68,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
         const user = await prisma.user.findUnique({
             where: { id: auth.userId },
-            select: { supplierId: true }
+            select: { tenantId: true }
         });
-        if (!user?.supplierId) return jsonError(403, "forbidden");
+        if (!user?.tenantId) return jsonError(403, "forbidden");
 
         const body = await req.json();
         const { items, totalAmount, currency, notes, validUntil } = body;
 
         // Find participation
         const participation = await prisma.rfqSupplier.findFirst({
-            where: { rfqId, supplierId: user.supplierId }
+            where: { rfqId, supplierId: user.tenantId }
         });
         if (!participation) return jsonError(404, "participation_not_found");
 
-        // Upsert the Offer
-        const offerData = {
+        // Fetch RFQ to get current round
+        const rfq = await prisma.rfq.findUnique({
+            where: { id: rfqId },
+            select: { negotiationRound: true }
+        }) as any;
+        const currentRound = rfq?.negotiationRound || 0;
+
+        // Upsert the Offer relative to the current round
+        const offerData: any = {
             rfqSupplierId: participation.id,
+            round: currentRound,
             totalAmount: Number(totalAmount),
             currency: currency || "TRY",
             notes,
@@ -90,7 +100,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         };
 
         const offer = await prisma.offer.upsert({
-            where: { rfqSupplierId: participation.id },
+            where: {
+                rfqSupplierId_round: {
+                    rfqSupplierId: participation.id,
+                    round: currentRound
+                }
+            },
             update: {
                 ...offerData,
                 items: {
@@ -99,7 +114,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
                         rfqItemId: item.rfqItemId,
                         quantity: Number(item.quantity),
                         unitPrice: Number(item.unitPrice),
-                        vatRate: Number(item.vatRate || 20)
+                        vatRate: Number(item.vatRate || 20),
+                        totalPrice: Number(item.quantity) * Number(item.unitPrice)
                     }))
                 }
             },
@@ -110,7 +126,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
                         rfqItemId: item.rfqItemId,
                         quantity: Number(item.quantity),
                         unitPrice: Number(item.unitPrice),
-                        vatRate: Number(item.vatRate || 20)
+                        vatRate: Number(item.vatRate || 20),
+                        totalPrice: Number(item.quantity) * Number(item.unitPrice)
                     }))
                 }
             }

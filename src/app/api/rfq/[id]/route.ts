@@ -16,7 +16,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                 items: true,
                 suppliers: {
                     include: {
-                        offer: {
+                        offers: {
+                            orderBy: { round: 'desc' },
                             include: { items: true }
                         }
                     }
@@ -36,26 +37,40 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
         // Authorization check (unit isolation if needed, for now simplified)
 
-        // Transform Decimal to Number for UI
+        // Transform Decimal to Number for UI and convert currency
+        const { convertAmount, getExchangeRates } = await import("@/lib/currency");
+        const rates = await getExchangeRates();
+
+        const mappedSuppliers = rfq.suppliers.map(s => {
+            const latestOffer = s.offers[0] || null;
+            if (!latestOffer) return { ...s, offer: null };
+
+            const totalAmount = Number(latestOffer.totalAmount);
+            const baseTotalAmount = convertAmount(totalAmount, latestOffer.currency, "TRY", rates);
+
+            return {
+                ...s,
+                offer: {
+                    ...latestOffer,
+                    totalAmount,
+                    baseTotalAmount: Number(baseTotalAmount.toFixed(2)),
+                    items: latestOffer.items.map(oi => ({
+                        ...oi,
+                        quantity: Number(oi.quantity),
+                        unitPrice: Number(oi.unitPrice),
+                        totalPrice: Number(oi.totalPrice)
+                    }))
+                }
+            };
+        });
+
         const mappedRfq = {
             ...rfq,
             items: rfq.items.map(i => ({
                 ...i,
                 quantity: Number(i.quantity)
             })),
-            suppliers: rfq.suppliers.map(s => ({
-                ...s,
-                offer: s.offer ? {
-                    ...s.offer,
-                    totalAmount: Number(s.offer.totalAmount),
-                    items: s.offer.items.map(oi => ({
-                        ...oi,
-                        quantity: Number(oi.quantity),
-                        unitPrice: Number(oi.unitPrice),
-                        totalPrice: Number(oi.totalPrice)
-                    }))
-                } : null
-            }))
+            suppliers: mappedSuppliers
         };
 
         return NextResponse.json(mappedRfq);

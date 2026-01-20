@@ -15,7 +15,7 @@ type HistoryEntry = {
     title: string;
     rfqStatus: string;
     deadline: string | null;
-    offer: {
+    offers: {
         id: string;
         totalAmount: number;
         currency: string;
@@ -24,7 +24,8 @@ type HistoryEntry = {
         validUntil: string | null;
         itemCount: number;
         items: OfferItem[];
-    } | null;
+        round: number;
+    }[];
 };
 
 export default function RfqHistoryPage() {
@@ -66,8 +67,9 @@ export default function RfqHistoryPage() {
     };
 
     const getResultBadge = (entry: HistoryEntry) => {
-        if (!entry.offer) return null;
-        if (entry.offer.isWinner) {
+        const latestOffer = entry.offers?.[0];
+        if (!latestOffer) return null;
+        if (latestOffer.isWinner) {
             return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-blue-700">🏆 Kazandınız</span>;
         }
         if (entry.rfqStatus === "COMPLETED" || entry.rfqStatus === "CLOSED") {
@@ -134,10 +136,13 @@ export default function RfqHistoryPage() {
                                                 <span className="text-sm text-slate-700 line-clamp-1">{entry.title}</span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                {entry.offer ? (
-                                                    <span className="font-semibold text-slate-800">
-                                                        {formatCurrency(entry.offer.totalAmount, entry.offer.currency)}
-                                                    </span>
+                                                {entry.offers?.[0] ? (
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="font-semibold text-slate-800">
+                                                            {formatCurrency(entry.offers[0].totalAmount, entry.offers[0].currency)}
+                                                        </span>
+                                                        <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-500 font-bold uppercase tracking-tight">Tur: {entry.offers[0].round}</span>
+                                                    </div>
                                                 ) : (
                                                     <span className="text-slate-400 italic">-</span>
                                                 )}
@@ -147,7 +152,7 @@ export default function RfqHistoryPage() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="text-sm text-slate-500">
-                                                    {entry.offer ? formatDate(entry.offer.submittedAt) : "-"}
+                                                    {entry.offers?.[0] ? formatDate(entry.offers[0].submittedAt) : "-"}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
@@ -162,21 +167,24 @@ export default function RfqHistoryPage() {
                                             </td>
                                         </tr>
                                         {/* Expanded Items Row */}
-                                        {expandedEntry === entry.participationId && entry.offer && (
+                                        {expandedEntry === entry.participationId && entry.offers?.[0] && (
                                             <tr>
                                                 <td colSpan={6} className="px-6 py-4 bg-slate-50/70">
                                                     <div className="space-y-3">
-                                                        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Teklif Kalemleri ({entry.offer.itemCount})</h4>
+                                                        <div className="flex justify-between items-center">
+                                                            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Teklif Kalemleri ({entry.offers[0].itemCount})</h4>
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Mevcut Tur: {entry.offers[0].round}</span>
+                                                        </div>
                                                         <div className="grid gap-2">
-                                                            {entry.offer.items.map((item, idx) => (
+                                                            {entry.offers[0].items.map((item, idx) => (
                                                                 <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-100">
                                                                     <div className="flex-1">
                                                                         <span className="text-sm font-medium text-slate-700">{item.name}</span>
                                                                     </div>
                                                                     <div className="flex items-center gap-6 text-sm">
                                                                         <span className="text-slate-500">{item.quantity} Adet</span>
-                                                                        <span className="text-slate-500">@ {formatCurrency(item.unitPrice, entry.offer!.currency)}</span>
-                                                                        <span className="font-semibold text-slate-700">{formatCurrency(item.totalPrice, entry.offer!.currency)}</span>
+                                                                        <span className="text-slate-500">@ {formatCurrency(item.unitPrice, entry.offers[0].currency)}</span>
+                                                                        <span className="font-semibold text-slate-700">{formatCurrency(item.totalPrice, entry.offers[0].currency)}</span>
                                                                     </div>
                                                                 </div>
                                                             ))}

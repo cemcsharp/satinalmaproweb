@@ -20,8 +20,9 @@ type OptionsPayload = {
   durum: Option[];
   paraBirimi: Option[];
   birimTipi: Option[];
+  departman: Option[];
 };
-const emptyOptions: OptionsPayload = { ilgiliKisi: [], birim: [], durum: [], paraBirimi: [], birimTipi: [] };
+const emptyOptions: OptionsPayload = { ilgiliKisi: [], birim: [], durum: [], paraBirimi: [], birimTipi: [], departman: [] };
 
 export default function TalepDuzenlePage() {
   const { id } = useParams();
@@ -42,6 +43,7 @@ export default function TalepDuzenlePage() {
   const [requestDate, setRequestDate] = useState("");
   const [budget, setBudget] = useState("");
   const [unitEmail, setUnitEmail] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
 
   const [items, setItems] = useState<ProductRow[]>([]);
 
@@ -62,11 +64,11 @@ export default function TalepDuzenlePage() {
     loadOpts();
   }, []);
 
-  // Update Unit Email when Unit changes
+  // Update Unit Email when Department changes
   useEffect(() => {
-    const u = options.birim.find(x => x.id === unitId);
-    setUnitEmail(u?.email || "");
-  }, [unitId, options.birim]);
+    const d = options.departman.find(x => x.id === departmentId);
+    setUnitEmail(d?.email || "");
+  }, [departmentId, options.departman]);
 
   // Load Detail
   useEffect(() => {
@@ -85,6 +87,7 @@ export default function TalepDuzenlePage() {
           setUnitId(d.unitId || "");
           setStatusId(d.statusId || "");
           setCurrencyId(d.currencyId || "");
+          setDepartmentId(d.departmentId || "");
           // Date handling: d.createdAt or d.date? Schema has createdAt. TalepOlustur uses createdAt default usually? 
           // Request model has createdAt. d.date might be a custom field or not exist in schema (didn't see explicit date field in schema, only createdAt).
           // Checking schema Request again: Line 117 createdAt. Line 123 statusId.
@@ -139,6 +142,7 @@ export default function TalepDuzenlePage() {
         unitId,
         statusId,
         currencyId,
+        departmentId,
         budget: parseDecimalFlexible(budget),
         // We might update createdAt if backend allows, or just date.
         // If backend logic allows date update (rare for CreatedAt), otherwise we ignore.
@@ -201,11 +205,11 @@ export default function TalepDuzenlePage() {
                   {options.ilgiliKisi?.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </Select>
                 <div>
-                  <Select label="Birim" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
+                  <Select label="Talep Eden Birim (Bölüm)" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
                     <option value="">Seçiniz</option>
-                    {options.birim?.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                    {options.departman?.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
                   </Select>
-                  {unitEmail && <div className="text-xs text-blue-600 mt-1 truncate">{unitEmail}</div>}
+                  {unitEmail && <div className="text-xs text-blue-600 mt-1 truncate">Bileşen E-Postası: {unitEmail}</div>}
                 </div>
               </div>
             </div>

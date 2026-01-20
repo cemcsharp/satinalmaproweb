@@ -243,6 +243,8 @@ model OptionItem {
   requestsAsUnit           Request[]         @relation("RequestUnit")
   requestItemsAsUnit       RequestItem[]     @relation("RequestItemUnit")
   usersAsUnit              User[]            @relation("UserUnit")
+  approvalWorkflowId       String?
+  approvalWorkflow         ApprovalWorkflow? @relation(fields: [approvalWorkflowId], references: [id])
 }
 
 model SupplierCategory {
@@ -291,7 +293,7 @@ model Request {
   subject           String        @db.VarChar(500)
   budget            Decimal       @db.Decimal(18, 2)
   relatedPersonId   String
-  unitId            String
+  unitId            String?
   statusId          String
   currencyId        String
   ownerUserId       String?
@@ -312,7 +314,7 @@ model Request {
   rfq               Rfq?          @relation(fields: [rfqId], references: [id])
   status            OptionItem    @relation("RequestStatus", fields: [statusId], references: [id])
   tenant            Tenant?       @relation(fields: [tenantId], references: [id])
-  unit              OptionItem    @relation("RequestUnit", fields: [unitId], references: [id])
+  unit              OptionItem?   @relation("RequestUnit", fields: [unitId], references: [id])
   items             RequestItem[]
 
   @@unique([requestNumber])
@@ -768,6 +770,7 @@ model ApprovalWorkflow {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   steps       ApprovalStep[]
+  units       OptionItem[]
 }
 
 model ApprovalStep {
@@ -826,6 +829,11 @@ model Rfq {
   items             RfqItem[]
   messages          RfqMessage[]
   suppliers         RfqSupplier[]
+  
+  // Negotiation Fields
+  negotiationStatus   String       @default("NONE") // NONE, ACTIVE, FINISHED
+  negotiationRound    Int          @default(0)
+  negotiationDeadline DateTime?
 
   @@index([tenantId])
 }
@@ -855,7 +863,7 @@ model RfqSupplier {
   tokenExpiry DateTime
   stage       String       @default("PENDING")
   createdAt   DateTime     @default(now())
-  offer       Offer?
+  offers      Offer[]
   rfqMessages RfqMessage[]
   rfq         Rfq          @relation(fields: [rfqId], references: [id], onDelete: Cascade)
   supplier    Tenant?      @relation("SupplierLink", fields: [supplierId], references: [id])
@@ -865,7 +873,7 @@ model RfqSupplier {
 
 model Offer {
   id                 String      @id @default(cuid())
-  rfqSupplierId      String      @unique
+  rfqSupplierId      String
   totalAmount        Decimal     @db.Decimal(18, 2)
   currency           String      @default("TRY")
   validUntil         DateTime?
@@ -882,8 +890,11 @@ model Offer {
   partialDelivery    Boolean?    @default(false)
   shippingIncluded   Boolean?    @default(false)
   validityDays       Int?        @default(30)
+  round              Int         @default(0)
   rfqSupplier        RfqSupplier @relation(fields: [rfqSupplierId], references: [id])
   items              OfferItem[]
+
+  @@unique([rfqSupplierId, round])
 }
 
 model OfferItem {

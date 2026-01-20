@@ -61,6 +61,12 @@ const defaultSettings: GeneralSettings = {
     ctaSubtitle: ""
 };
 
+const TabButton = ({ id, label, icon, activeTab, setActiveTab }: { id: string, label: string, icon: string, activeTab: string, setActiveTab: (id: any) => void }) => (
+    <button onClick={() => setActiveTab(id)} className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${activeTab === id ? "border-sky-500 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+        {icon} {label}
+    </button>
+);
+
 export default function GeneralSettingsPage() {
     const [settings, setSettings] = useState<GeneralSettings>(defaultSettings);
     const [loading, setLoading] = useState(true);
@@ -130,12 +136,6 @@ export default function GeneralSettingsPage() {
 
     if (loading) return <div className="p-6 flex items-center justify-center min-h-[400px]"><div className="animate-spin rounded-full h-12 w-12 border-4 border-sky-500 border-t-transparent"></div></div>;
 
-    const TabButton = ({ id, label, icon }: { id: typeof activeTab, label: string, icon: string }) => (
-        <button onClick={() => setActiveTab(id)} className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${activeTab === id ? "border-sky-500 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {icon} {label}
-        </button>
-    );
-
     return (
         <div className="p-6 max-w-5xl mx-auto space-y-6">
             <div><h1 className="text-2xl font-bold text-slate-800">Gelişmiş Genel Ayarlar</h1><p className="text-slate-500">Platformun tüm alanlarını buradan yönetin.</p></div>
@@ -143,11 +143,11 @@ export default function GeneralSettingsPage() {
             {message && <div className={`p-4 rounded-lg border ${message.type === "success" ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}>{message.text}</div>}
 
             <div className="flex gap-2 border-b border-slate-200 overflow-x-auto pb-px">
-                <TabButton id="system" label="Sistem" icon="🔧" />
-                <TabButton id="hero" label="Hero & Stats" icon="🚀" />
-                <TabButton id="solutions" label="Çözümler" icon="💎" />
-                <TabButton id="features" label="Özellikler" icon="⚡" />
-                <TabButton id="faq_cta" label="SSS & CTA" icon="💬" />
+                <TabButton id="system" label="Sistem" icon="🔧" activeTab={activeTab} setActiveTab={setActiveTab} />
+                <TabButton id="hero" label="Hero & Stats" icon="🚀" activeTab={activeTab} setActiveTab={setActiveTab} />
+                <TabButton id="solutions" label="Çözümler" icon="💎" activeTab={activeTab} setActiveTab={setActiveTab} />
+                <TabButton id="features" label="Özellikler" icon="⚡" activeTab={activeTab} setActiveTab={setActiveTab} />
+                <TabButton id="faq_cta" label="SSS & CTA" icon="💬" activeTab={activeTab} setActiveTab={setActiveTab} />
             </div>
 
             {activeTab === "system" && <div className="space-y-6">

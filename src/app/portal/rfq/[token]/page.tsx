@@ -14,6 +14,7 @@ import Badge from "@/components/ui/Badge";
 import Alert from "@/components/ui/Alert";
 import { Table, TableContainer, THead, TBody, TR, TH, TD } from "@/components/ui/Table";
 import { SystemSettings, defaultSettings } from "@/lib/settings";
+import PortalNegotiationPanel from "@/components/portal/PortalNegotiationPanel";
 
 type RfqPublicDetail = {
     ok: boolean;
@@ -641,6 +642,8 @@ export default function SupplierPortalRfqPage() {
                     </div>
                 }
             />
+
+            <PortalNegotiationPanel token={token} />
 
             {submitted && (
                 <Alert

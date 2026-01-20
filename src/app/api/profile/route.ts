@@ -65,7 +65,7 @@ export async function GET() {
             email: user.email,
             phoneNumber: (user as any).phoneNumber || null,
             role: roleKey,
-            roleName: roleKey,
+            roleName: user.roleRef?.name || roleKey,
             createdAt: user.createdAt,
             lastLoginAt: (user as any).lastLoginAt || null,
             unitId: user.unitId,

@@ -1,13 +1,13 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 
-export default function InviteAcceptPage({ params }: { params: { token: string } }) {
-    const { token } = params;
+export default function InviteAcceptPage({ params }: { params: Promise<{ token: string }> }) {
+    const { token } = use(params);
     const router = useRouter();
     const { show } = useToast();
 

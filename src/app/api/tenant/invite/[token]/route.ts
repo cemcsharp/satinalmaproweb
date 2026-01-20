@@ -7,10 +7,10 @@ import bcrypt from "bcryptjs";
  */
 export async function GET(
     req: NextRequest,
-    { params }: { params: { token: string } }
+    context: { params: Promise<{ token: string }> }
 ) {
     try {
-        const { token } = params;
+        const { token } = await context.params;
 
         const invitation = await prisma.invitation.findUnique({
             where: { token },
@@ -45,14 +45,17 @@ export async function GET(
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { token: string } }
+    context: { params: Promise<{ token: string }> }
 ) {
     try {
-        const { token } = params;
+        const { token } = await context.params;
         const body = await req.json();
         const { fullName, password } = body;
 
+        console.log("[Invite Accept Debug] Body received:", { fullName, password: "***" });
+
         if (!fullName || !password) {
+            console.log("[Invite Accept Debug] Missing fullName or password");
             return NextResponse.json({ error: "Ad soyad ve şifre zorunludur" }, { status: 400 });
         }
 
@@ -62,6 +65,12 @@ export async function POST(
         });
 
         if (!invitation || invitation.status !== "pending" || invitation.expiresAt < new Date()) {
+            console.log("[Invite Accept Debug] Invalid invitation state:", {
+                found: !!invitation,
+                status: invitation?.status,
+                expiresAt: invitation?.expiresAt,
+                now: new Date()
+            });
             return NextResponse.json({ error: "Geçersiz veya süresi dolmuş davetiye" }, { status: 400 });
         }
 
